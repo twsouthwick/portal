@@ -11,10 +11,11 @@ builder.AddServiceDefaults();
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
+builder.Services.AddAuthentication();
+
 builder.Services.AddOutputCache();
 
-// Register subsite service
-builder.Services.AddSingleton<ISubsiteService, SubsiteService>();
+await builder.AddSite();
 
 var app = builder.Build();
 
@@ -27,9 +28,14 @@ if (!app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.UseAuthentication();
+app.UseAuthorization();
+
 app.UseAntiforgery();
 
 app.UseOutputCache();
+
+app.UseSiteContentFolder();
 
 app.MapStaticAssets();
 

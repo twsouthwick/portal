@@ -1,0 +1,9 @@
+﻿{
+  "id": "site1",
+  "name": "Site 1",
+  "description": "Some interesting description.",
+  "url": "https://site1.localhost",
+  "icon": "bi bi-globe",
+  "requiredsPermission": true,
+  "category": "general"
+}

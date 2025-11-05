@@ -1,6 +1,6 @@
 ﻿@page "/"
 @rendermode InteractiveServer
-@inject ISubsiteService SubsiteService
+@inject ISiteDetails SubsiteService
 
 <PageTitle>@SubsiteService.Name</PageTitle>
 
@@ -47,7 +47,7 @@
     protected override async Task OnInitializedAsync()
     {
         // Load subsites from the service
-        var allSubsites = await SubsiteService.GetAllSubsitesAsync();
+        var allSubsites = SubsiteService.Sites;
         
         // Group subsites by category
         categorizedSubsites = allSubsites

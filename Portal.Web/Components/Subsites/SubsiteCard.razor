@@ -1,9 +1,7 @@
-@using Portal.Web.Models
-
 <div class="subsite-card @(IsSelected ? "selected" : "")" @onclick="HandleClick">
     <div class="subsite-card-header">
         <div class="subsite-icon">
-            <i class="@Subsite.IconClass"></i>
+            <i class="@Subsite.Icon"></i>
         </div>
         @if (Subsite.RequiresPermission)
         {
