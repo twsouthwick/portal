@@ -29,7 +29,23 @@ public class SubsiteService : ISubsiteService
                 IconClass = "bi bi-person-circle",
                 Category = "HR",
                 TargetAudience = "All Employees",
-                UsageInstructions = "Log in with your corporate credentials to access your employee profile, view pay stubs, update personal information, and review company policies. You can also submit time-off requests and view your benefits information.",
+                UsageInstructions = @"## Getting Started
+
+Log in with your **corporate credentials** to access your employee profile and personal information.
+
+### What You Can Do
+
+- **View and update** your personal information
+- **Access** pay stubs and tax documents
+- **Submit** time-off requests
+- **Review** benefits enrollment
+- **Access** company policies and procedures
+
+### Quick Tips
+
+> ?? Remember to update your contact information when you move or change phone numbers.
+
+For assistance, contact HR at hr@company.com",
                 Features = new List<string>
                 {
                     "View and update personal information",
@@ -50,7 +66,32 @@ public class SubsiteService : ISubsiteService
                 IconClass = "bi bi-headset",
                 Category = "IT",
                 TargetAudience = "All Employees",
-                UsageInstructions = "Submit support tickets for any IT-related issues including hardware problems, software requests, access issues, or general questions. Track the status of your requests and communicate with IT staff through the ticketing system.",
+                UsageInstructions = @"## How to Submit a Ticket
+
+1. Click **New Ticket** in the main menu
+2. Select the appropriate **category** (Hardware, Software, Access, etc.)
+3. Provide a **clear description** of your issue
+4. Attach **screenshots** if applicable
+5. Click **Submit**
+
+### Tracking Your Requests
+
+Navigate to **My Tickets** to:
+- View ticket status
+- Add comments or updates
+- Communicate with IT staff
+- Close resolved tickets
+
+### Response Times
+
+| Priority | Response Time |
+|----------|---------------|
+| Critical | 1 hour |
+| High | 4 hours |
+| Medium | 1 business day |
+| Low | 3 business days |
+
+> ?? You'll receive email notifications for all ticket updates.",
                 Features = new List<string>
                 {
                     "Submit and track support tickets",
@@ -71,7 +112,31 @@ public class SubsiteService : ISubsiteService
                 IconClass = "bi bi-file-earmark-text",
                 Category = "General",
                 TargetAudience = "All Employees",
-                UsageInstructions = "Store, organize, and share documents with your team. Use folders to organize content, set permissions for sensitive documents, and collaborate on files in real-time. All documents are automatically versioned and backed up.",
+                UsageInstructions = @"## Organizing Your Documents
+
+### Creating Folders
+1. Navigate to your workspace
+2. Click **New Folder**
+3. Name your folder and set permissions
+4. Start uploading files
+
+### Sharing Documents
+- Click the **Share** icon next to any file or folder
+- Enter email addresses or select groups
+- Set permissions: `View`, `Edit`, or `Admin`
+- Click **Send Invitation**
+
+### Version Control
+All documents are **automatically versioned**. To view previous versions:
+1. Right-click on the file
+2. Select **Version History**
+3. Preview or restore any previous version
+
+### Best Practices
+- Use descriptive file names
+- Organize with folders and tags
+- Set appropriate permissions
+- Delete old versions when no longer needed",
                 Features = new List<string>
                 {
                     "Secure document storage",
@@ -92,7 +157,33 @@ public class SubsiteService : ISubsiteService
                 IconClass = "bi bi-graph-up",
                 Category = "Finance",
                 TargetAudience = "Finance Team, Department Heads",
-                UsageInstructions = "Access real-time financial data, submit expense reports, view budget allocations, and generate financial reports. Department heads can monitor their department budgets and approve expenditures.",
+                UsageInstructions = @"## Dashboard Overview
+
+Access **real-time financial data** through customizable dashboards.
+
+### Submitting Expense Reports
+1. Navigate to **Expense Reports** ? **New Report**
+2. Enter report details (date, purpose, project code)
+3. Add individual expenses with receipts
+4. Submit for approval
+
+**Important:** Receipts are required for expenses over $25.
+
+### Budget Monitoring
+Department heads can:
+- View current budget allocation
+- Track spending against budget
+- Approve departmental expenditures
+- Generate custom reports
+
+### Financial Reports
+Generate reports by:
+- Date range
+- Department
+- Project code
+- Expense category
+
+> ?? This portal contains sensitive financial information. Access is restricted and monitored.",
                 Features = new List<string>
                 {
                     "Real-time budget tracking",
@@ -113,7 +204,39 @@ public class SubsiteService : ISubsiteService
                 IconClass = "bi bi-book",
                 Category = "HR",
                 TargetAudience = "All Employees",
-                UsageInstructions = "Browse and enroll in training courses, complete required compliance training, and track your professional development progress. Courses include on-demand videos, interactive modules, and downloadable resources.",
+                UsageInstructions = @"## Enrolling in Courses
+
+### Browse Available Courses
+- Use the **search bar** to find specific topics
+- Filter by category, skill level, or department
+- View course ratings and reviews
+
+### Enrollment Process
+1. Click on a course to view details
+2. Review the course outline and duration
+3. Click **Enroll Now**
+4. Access course materials immediately
+
+### Completing Training
+
+**Required Courses:**
+- Must be completed by the specified deadline
+- Automatic reminders sent weekly
+- Certificate issued upon completion
+
+**Optional Courses:**
+- Self-paced learning
+- No deadlines
+- Earn badges and certificates
+
+### Tracking Progress
+Your **Learning Dashboard** shows:
+- Courses in progress
+- Completion percentage
+- Earned certificates
+- Recommended courses based on your role
+
+> ?? Complete at least 20 hours of professional development annually.",
                 Features = new List<string>
                 {
                     "Self-paced online courses",
@@ -134,7 +257,49 @@ public class SubsiteService : ISubsiteService
                 IconClass = "bi bi-diagram-3",
                 Category = "IT",
                 TargetAudience = "IT Department",
-                UsageInstructions = "Access network monitoring dashboards, configure network devices, run diagnostic tools, and manage network security settings. This portal is restricted to IT staff with appropriate credentials.",
+                UsageInstructions = @"## Network Monitoring Dashboard
+
+Real-time monitoring of all network devices and infrastructure.
+
+### Key Sections
+
+**Device Management**
+- View all network devices
+- Monitor device status and health
+- Configure device settings
+- Update firmware remotely
+
+**Bandwidth Analytics**
+- Real-time bandwidth usage
+- Historical trends and patterns
+- Identify bandwidth bottlenecks
+- Generate usage reports
+
+**Security Monitoring**
+- Active threat detection
+- Security event logs
+- Firewall rule management
+- Intrusion detection alerts
+
+### Common Tasks
+
+#### Running Diagnostics
+```bash
+# From the Tools menu, select:
+- Ping Test
+- Traceroute
+- Port Scanner
+- DNS Lookup
+```
+
+### Alert Configuration
+Set up custom alerts for:
+- Device downtime
+- High CPU/memory usage
+- Bandwidth thresholds
+- Security events
+
+> ?? **Access restricted to IT staff only.** All actions are logged and audited.",
                 Features = new List<string>
                 {
                     "Real-time network monitoring",

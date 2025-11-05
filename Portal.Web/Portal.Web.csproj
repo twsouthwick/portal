@@ -10,4 +10,8 @@
     <ProjectReference Include="..\Portal.ServiceDefaults\Portal.ServiceDefaults.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Markdig" Version="0.43.0" />
+  </ItemGroup>
+
 </Project>

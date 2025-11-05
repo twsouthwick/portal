@@ -6,7 +6,8 @@
         <SubsiteCard 
             Subsite="@subsite" 
             IsSelected="@(SelectedSubsite?.Id == subsite.Id)"
-            OnSelected="@HandleSubsiteSelected" />
+            OnSelected="@HandleSubsiteSelected"
+            OnUsageRequested="@HandleUsageRequested" />
     }
 </div>
 
@@ -20,8 +21,16 @@
     [Parameter]
     public EventCallback<SubsiteInfo> OnSubsiteSelected { get; set; }
 
+    [Parameter]
+    public EventCallback<SubsiteInfo> OnUsageRequested { get; set; }
+
     private async Task HandleSubsiteSelected(SubsiteInfo subsite)
     {
         await OnSubsiteSelected.InvokeAsync(subsite);
+    }
+
+    private async Task HandleUsageRequested(SubsiteInfo subsite)
+    {
+        await OnUsageRequested.InvokeAsync(subsite);
     }
 }

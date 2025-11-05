@@ -21,6 +21,9 @@
         }
     </div>
     <div class="subsite-card-footer">
+        <button type="button" class="btn btn-sm btn-outline-info" @onclick="HandleUsageClick" @onclick:stopPropagation="true">
+            <i class="bi bi-question-circle"></i> How to Use
+        </button>
         <a href="@Subsite.Url" class="btn btn-sm btn-outline-primary" @onclick:stopPropagation="true">
             Visit Site <i class="bi bi-arrow-right"></i>
         </a>
@@ -37,8 +40,16 @@
     [Parameter]
     public EventCallback<SubsiteInfo> OnSelected { get; set; }
 
+    [Parameter]
+    public EventCallback<SubsiteInfo> OnUsageRequested { get; set; }
+
     private async Task HandleClick()
     {
         await OnSelected.InvokeAsync(Subsite);
+    }
+
+    private async Task HandleUsageClick()
+    {
+        await OnUsageRequested.InvokeAsync(Subsite);
     }
 }
