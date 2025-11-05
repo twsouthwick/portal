@@ -1,4 +1,5 @@
 using Microsoft.Extensions.FileProviders;
+using System.Security.Claims;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -23,6 +24,24 @@ public static class SubsiteParser
         }
     }
 
+    public static bool IsAuthorized(this SubsiteInfo info, ClaimsPrincipal user)
+    {
+        if (info.Roles.Count == 0)
+        {
+            return true;
+        }
+
+        foreach (var role in info.Roles)
+        {
+            if (user.IsInRole(role))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public static void UseSiteContentFolder(this IApplicationBuilder app)
     {
         var siteDetails = app.ApplicationServices.GetRequiredService<ISiteDetails>();
@@ -40,20 +59,7 @@ public static class SubsiteParser
 
             var roles = site.Roles.ToList();
 
-            app.UseWhen(ctx =>
-            {
-                var user = ctx.User;
-
-                foreach (var role in roles)
-                {
-                    if (user.IsInRole(role))
-                    {
-                        return true;
-                    }
-                }
-
-                return false;
-            }, app =>
+            app.UseWhen(ctx => site.IsAuthorized(ctx.User), app =>
             {
                 app.UseStaticFiles(new StaticFileOptions()
                 {
@@ -155,6 +161,17 @@ public static class SubsiteParser
         public string Description => portal.Description;
 
         public IEnumerable<SubsiteInfo> Sites => subsites;
+
+        public IEnumerable<SubsiteInfo> GetSites(ClaimsPrincipal user)
+        {
+            foreach (var site in subsites)
+            {
+                if (site.IsAuthorized(user))
+                {
+                    yield return site;
+                }
+            }
+        }
     }
 }
 /// <summary>

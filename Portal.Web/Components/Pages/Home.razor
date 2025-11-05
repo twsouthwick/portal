@@ -18,24 +18,21 @@
     {
         <div class="category-section mb-5">
             <h2 class="category-title">@category</h2>
-            <SubsiteGrid 
-                Subsites="@categorizedSubsites[category]" 
-                SelectedSubsite="@selectedSubsite"
-                OnSubsiteSelected="@HandleSubsiteSelected"
-                OnUsageRequested="@HandleUsageRequested" />
+            <SubsiteGrid Subsites="@categorizedSubsites[category]"
+                         SelectedSubsite="@selectedSubsite"
+                         OnSubsiteSelected="@HandleSubsiteSelected"
+                         OnUsageRequested="@HandleUsageRequested" />
         </div>
     }
 </div>
 
-<SubsiteDetailsPane 
-    Subsite="@selectedSubsite" 
-    IsOpen="@isPaneOpen"
-    OnClose="@CloseDetailsPane" />
+<SubsiteDetailsPane Subsite="@selectedSubsite"
+                    IsOpen="@isPaneOpen"
+                    OnClose="@CloseDetailsPane" />
 
-<UsageModal
-    Subsite="@usageSubsite"
-    IsOpen="@isUsageModalOpen"
-    OnClose="@CloseUsageModal" />
+<UsageModal Subsite="@usageSubsite"
+            IsOpen="@isUsageModalOpen"
+            OnClose="@CloseUsageModal" />
 
 @code {
     private Dictionary<string, List<SubsiteInfo>> categorizedSubsites = new();
@@ -44,15 +41,21 @@
     private SubsiteInfo? usageSubsite;
     private bool isUsageModalOpen = false;
 
-    protected override async Task OnInitializedAsync()
+    [CascadingParameter]
+    public HttpContext? Context { get; set; }
+
+    protected override void OnParametersSet()
     {
-        // Load subsites from the service
-        var allSubsites = SubsiteService.Sites;
-        
-        // Group subsites by category
-        categorizedSubsites = allSubsites
-            .GroupBy(s => s.Category)
-            .ToDictionary(g => g.Key, g => g.ToList());
+        if (Context?.User is { } user)
+        {
+            // Load subsites from the service
+            var allSubsites = SubsiteService.GetSites(user);
+
+            // Group subsites by category
+            categorizedSubsites = allSubsites
+                .GroupBy(s => s.Category)
+                .ToDictionary(g => g.Key, g => g.ToList());
+        }
     }
 
     private void HandleSubsiteSelected(SubsiteInfo subsite)

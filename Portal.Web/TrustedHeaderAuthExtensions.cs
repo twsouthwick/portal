@@ -17,6 +17,19 @@ internal static class TrustedHeaderAuthExtensions
 
     }
 
+    public static void UseTestUser(this IApplicationBuilder app, string user, params string[] roles)
+    {
+        var options = app.ApplicationServices.GetRequiredService<IOptionsMonitor<TrustedHeaderAuthenticationOptions>>().Get(TrustedHeaderAuth.DefaultScheme);
+
+        app.Use((ctx, next) =>
+        {
+            ctx.Request.Headers[options.UsernameHeader] = user;
+            ctx.Request.Headers[options.RoleHeader] = roles;
+
+            return next(ctx);
+        });
+    }
+
     private sealed class TrustedHeaderAuthenticationHandler(
         IOptionsMonitor<TrustedHeaderAuthenticationOptions> options,
         ILoggerFactory logger,
@@ -30,7 +43,11 @@ internal static class TrustedHeaderAuthExtensions
         {
             if (Context.Request.Headers.TryGetValue(Options.UsernameHeader, out var value) && value is [{ } username])
             {
-                var identity = new ClaimsIdentity(authenticationType: "TrustedHeader");
+                var identity = new ClaimsIdentity(
+                    authenticationType: "TrustedHeader",
+                    nameType: ClaimTypes.Name,
+                    roleType: ClaimTypes.Role
+                    );
 
                 identity.AddClaim(new Claim(ClaimTypes.NameIdentifier, username));
 
