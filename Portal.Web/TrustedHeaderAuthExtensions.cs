@@ -17,17 +17,22 @@ internal static class TrustedHeaderAuthExtensions
 
     }
 
-    public static void UseTestUser(this IApplicationBuilder app, string user, params string[] roles)
+    public static void UseTestUser(this IApplicationBuilder app)
     {
-        var options = app.ApplicationServices.GetRequiredService<IOptionsMonitor<TrustedHeaderAuthenticationOptions>>().Get(TrustedHeaderAuth.DefaultScheme);
+        var config = app.ApplicationServices.GetRequiredService<IConfiguration>();
 
-        app.Use((ctx, next) =>
+        if (config["TEST_USER"] is { } testUser && config["TEST_ROLES"] is { } testRoles)
         {
-            ctx.Request.Headers[options.UsernameHeader] = user;
-            ctx.Request.Headers[options.RoleHeader] = roles;
+            var options = app.ApplicationServices.GetRequiredService<IOptionsMonitor<TrustedHeaderAuthenticationOptions>>().Get(TrustedHeaderAuth.DefaultScheme);
 
-            return next(ctx);
-        });
+            app.Use((ctx, next) =>
+            {
+                ctx.Request.Headers[options.UsernameHeader] = testUser;
+                ctx.Request.Headers[options.RoleHeader] = testRoles.Split(',');
+
+                return next(ctx);
+            });
+        }
     }
 
     private sealed class TrustedHeaderAuthenticationHandler(

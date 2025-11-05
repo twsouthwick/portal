@@ -30,8 +30,7 @@ if (!app.Environment.IsDevelopment())
 }
 else
 {
-    app.UseTestUser("testuser1", "admin");
-}
+    app.UseTestUser();}
 
     app.UseHttpsRedirection();
 
