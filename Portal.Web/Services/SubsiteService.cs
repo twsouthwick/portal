@@ -10,6 +10,10 @@ public class SubsiteService : ISubsiteService
 {
     private readonly List<SubsiteInfo> _subsites;
 
+    public string Name => "Test Portal";
+
+    public string Description => string.Empty;
+
     public SubsiteService()
     {
         // Initialize with sample data

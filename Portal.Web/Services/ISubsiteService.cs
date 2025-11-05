@@ -7,6 +7,10 @@ namespace Portal.Web.Services;
 /// </summary>
 public interface ISubsiteService
 {
+    string Name { get; }
+
+    string Description { get; }
+
     /// <summary>
     /// Get all available subsites
     /// </summary>
