@@ -11,9 +11,12 @@ builder.AddServiceDefaults();
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
-builder.Services.AddAuthentication();
+builder.Services.AddAuthentication()
+    .AddTrustedHeaderAuth(options => { });
 
 builder.Services.AddOutputCache();
+
+builder.Services.AddSingleton<IMarkdownConverter, MarkdownConverter>();
 
 await builder.AddSite();
 

@@ -1,3 +1,3 @@
 ﻿Here's how you use it: 
 
-[![content/icon.png]]
+![test](content/icon.png)
