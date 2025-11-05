@@ -1,5 +1,6 @@
 using Portal.Web;
 using Portal.Web.Components;
+using Portal.Web.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -11,6 +12,9 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
 builder.Services.AddOutputCache();
+
+// Register subsite service
+builder.Services.AddSingleton<ISubsiteService, SubsiteService>();
 
 var app = builder.Build();
 

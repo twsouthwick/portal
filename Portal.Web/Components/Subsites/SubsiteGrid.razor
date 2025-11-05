@@ -1,0 +1,27 @@
+@using Portal.Web.Models
+
+<div class="subsite-grid">
+    @foreach (var subsite in Subsites)
+    {
+        <SubsiteCard 
+            Subsite="@subsite" 
+            IsSelected="@(SelectedSubsite?.Id == subsite.Id)"
+            OnSelected="@HandleSubsiteSelected" />
+    }
+</div>
+
+@code {
+    [Parameter]
+    public List<SubsiteInfo> Subsites { get; set; } = new();
+
+    [Parameter]
+    public SubsiteInfo? SelectedSubsite { get; set; }
+
+    [Parameter]
+    public EventCallback<SubsiteInfo> OnSubsiteSelected { get; set; }
+
+    private async Task HandleSubsiteSelected(SubsiteInfo subsite)
+    {
+        await OnSubsiteSelected.InvokeAsync(subsite);
+    }
+}

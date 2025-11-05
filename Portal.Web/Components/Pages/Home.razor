@@ -1,7 +1,84 @@
 ﻿@page "/"
+@inject ISubsiteService SubsiteService
 
-<PageTitle>Home</PageTitle>
+<PageTitle>Intranet Portal - Home</PageTitle>
 
-<h1>Hello, world!</h1>
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h1>Welcome to the Intranet Portal</h1>
+            <p class="lead">Explore our subsites and resources</p>
+        </div>
+    </div>
 
-Welcome to your new app.
+    <div class="row mb-3">
+        <div class="col">
+            <div class="btn-group" role="group">
+                <button class="btn @(selectedCategory == null ? "btn-primary" : "btn-outline-primary")" 
+                        @onclick="@(() => FilterByCategory(null))">
+                    All Sites
+                </button>
+                @foreach (var category in categories)
+                {
+                    <button class="btn @(selectedCategory == category ? "btn-primary" : "btn-outline-primary")" 
+                            @onclick="@(() => FilterByCategory(category))">
+                        @category
+                    </button>
+                }
+            </div>
+        </div>
+    </div>
+
+    <SubsiteGrid 
+        Subsites="@filteredSubsites" 
+        SelectedSubsite="@selectedSubsite"
+        OnSubsiteSelected="@HandleSubsiteSelected" />
+</div>
+
+<SubsiteDetailsPane 
+    Subsite="@selectedSubsite" 
+    IsOpen="@isPaneOpen"
+    OnClose="@CloseDetailsPane" />
+
+@code {
+    private List<SubsiteInfo> allSubsites = new();
+    private List<SubsiteInfo> filteredSubsites = new();
+    private List<string> categories = new();
+    private SubsiteInfo? selectedSubsite;
+    private bool isPaneOpen = false;
+    private string? selectedCategory = null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Load subsites from the service
+        allSubsites = await SubsiteService.GetAllSubsitesAsync();
+        filteredSubsites = allSubsites;
+        
+        // Load categories dynamically
+        categories = await SubsiteService.GetCategoriesAsync();
+    }
+
+    private void HandleSubsiteSelected(SubsiteInfo subsite)
+    {
+        selectedSubsite = subsite;
+        isPaneOpen = true;
+    }
+
+    private void CloseDetailsPane()
+    {
+        isPaneOpen = false;
+    }
+
+    private async Task FilterByCategory(string? category)
+    {
+        selectedCategory = category;
+        if (string.IsNullOrEmpty(category))
+        {
+            filteredSubsites = await SubsiteService.GetAllSubsitesAsync();
+        }
+        else
+        {
+            filteredSubsites = await SubsiteService.GetSubsitesByCategoryAsync(category);
+        }
+    }
+}

@@ -1,0 +1,44 @@
+@using Portal.Web.Models
+
+<div class="subsite-card @(IsSelected ? "selected" : "")" @onclick="HandleClick">
+    <div class="subsite-card-header">
+        <div class="subsite-icon">
+            <i class="@Subsite.IconClass"></i>
+        </div>
+        @if (Subsite.RequiresPermission)
+        {
+            <span class="badge bg-warning text-dark ms-auto">
+                <i class="bi bi-lock-fill"></i>
+            </span>
+        }
+    </div>
+    <div class="subsite-card-body">
+        <h5 class="subsite-title">@Subsite.Name</h5>
+        <p class="subsite-description">@Subsite.Description</p>
+        @if (!string.IsNullOrEmpty(Subsite.Category))
+        {
+            <span class="badge bg-primary">@Subsite.Category</span>
+        }
+    </div>
+    <div class="subsite-card-footer">
+        <a href="@Subsite.Url" class="btn btn-sm btn-outline-primary" @onclick:stopPropagation="true">
+            Visit Site <i class="bi bi-arrow-right"></i>
+        </a>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public SubsiteInfo Subsite { get; set; } = new();
+
+    [Parameter]
+    public bool IsSelected { get; set; }
+
+    [Parameter]
+    public EventCallback<SubsiteInfo> OnSelected { get; set; }
+
+    private async Task HandleClick()
+    {
+        await OnSelected.InvokeAsync(Subsite);
+    }
+}

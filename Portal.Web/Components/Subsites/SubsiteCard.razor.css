@@ -1,0 +1,194 @@
+.subsite-card {
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 1.5rem;
+    background: white;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.subsite-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+    border-color: #007bff;
+}
+
+.subsite-card.selected {
+    border-color: #007bff;
+    border-width: 2px;
+    background-color: #f8f9fa;
+}
+
+.subsite-card-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.subsite-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.5rem;
+}
+
+.subsite-card-body {
+    flex: 1;
+    margin-bottom: 1rem;
+}
+
+.subsite-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: #333;
+}
+
+.subsite-description {
+    color: #666;
+    font-size: 0.9rem;
+    margin-bottom: 0.75rem;
+    line-height: 1.5;
+}
+
+.subsite-card-footer {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.subsite-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.subsite-details-pane {
+    position: fixed;
+    top: 0;
+    right: -500px;
+    width: 500px;
+    height: 100vh;
+    background: white;
+    box-shadow: -2px 0 8px rgba(0, 0, 0, 0.15);
+    transition: right 0.3s ease;
+    z-index: 1000;
+    overflow-y: auto;
+}
+
+.subsite-details-pane.open {
+    right: 0;
+}
+
+.subsite-details-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 2rem;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+.subsite-details-close {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: transparent;
+    border: none;
+    color: white;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0.5rem;
+    line-height: 1;
+}
+
+.subsite-details-close:hover {
+    opacity: 0.8;
+}
+
+.subsite-details-body {
+    padding: 2rem;
+}
+
+.subsite-details-section {
+    margin-bottom: 2rem;
+}
+
+.subsite-details-section h6 {
+    font-weight: 600;
+    margin-bottom: 1rem;
+    color: #333;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    letter-spacing: 0.5px;
+}
+
+.subsite-details-section ul {
+    list-style: none;
+    padding: 0;
+}
+
+.subsite-details-section ul li {
+    padding: 0.5rem 0;
+    padding-left: 1.5rem;
+    position: relative;
+}
+
+.subsite-details-section ul li:before {
+    content: "?";
+    position: absolute;
+    left: 0;
+    color: #28a745;
+    font-weight: bold;
+}
+
+.subsite-details-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+}
+
+.subsite-details-overlay.open {
+    opacity: 1;
+    pointer-events: all;
+}
+
+.info-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: #f8f9fa;
+    border-radius: 4px;
+    margin-bottom: 0.5rem;
+}
+
+.info-badge i {
+    color: #007bff;
+}
+
+@media (max-width: 768px) {
+    .subsite-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .subsite-details-pane {
+        width: 100%;
+        right: -100%;
+    }
+}
