@@ -24,6 +24,24 @@ public static class SubsiteParser
         }
     }
 
+    public static bool IsAuthorized(this SubsiteInfo info, IReadOnlyCollection<string> roles)
+    {
+        if (info.Roles.Count == 0)
+        {
+            return true;
+        }
+
+        foreach (var role in info.Roles)
+        {
+            if (roles.Contains(role))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public static bool IsAuthorized(this SubsiteInfo info, ClaimsPrincipal user)
     {
         if (info.Roles.Count == 0)
@@ -162,11 +180,11 @@ public static class SubsiteParser
 
         public IEnumerable<SubsiteInfo> Sites => subsites;
 
-        public IEnumerable<SubsiteInfo> GetSites(ClaimsPrincipal user)
+        public IEnumerable<SubsiteInfo> GetSites(IReadOnlyCollection<string> roles)
         {
             foreach (var site in subsites)
             {
-                if (site.IsAuthorized(user))
+                if (site.IsAuthorized(roles))
                 {
                     yield return site;
                 }

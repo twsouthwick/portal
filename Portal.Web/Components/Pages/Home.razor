@@ -1,82 +1,24 @@
 ﻿@page "/"
-@rendermode InteractiveServer
+@using System.Security.Claims
 @inject ISiteDetails SubsiteService
 
 <PageTitle>@SubsiteService.Name</PageTitle>
 
-<div class="container-fluid">
-    @if (!string.IsNullOrEmpty(SubsiteService.Description))
-    {
-        <div class="row mb-4">
-            <div class="col">
-                <p class="lead">@SubsiteService.Description</p>
-            </div>
-        </div>
-    }
-
-    @foreach (var category in categorizedSubsites.Keys.OrderBy(k => k))
-    {
-        <div class="category-section mb-5">
-            <h2 class="category-title">@category</h2>
-            <SubsiteGrid Subsites="@categorizedSubsites[category]"
-                         SelectedSubsite="@selectedSubsite"
-                         OnSubsiteSelected="@HandleSubsiteSelected"
-                         OnUsageRequested="@HandleUsageRequested" />
-        </div>
-    }
-</div>
-
-<SubsiteDetailsPane Subsite="@selectedSubsite"
-                    IsOpen="@isPaneOpen"
-                    OnClose="@CloseDetailsPane" />
-
-<UsageModal Subsite="@usageSubsite"
-            IsOpen="@isUsageModalOpen"
-            OnClose="@CloseUsageModal" />
+<SubsiteList Roles="@GetRoles()" />
 
 @code {
-    private Dictionary<string, List<SubsiteInfo>> categorizedSubsites = new();
-    private SubsiteInfo? selectedSubsite;
-    private bool isPaneOpen = false;
-    private SubsiteInfo? usageSubsite;
-    private bool isUsageModalOpen = false;
-
     [CascadingParameter]
     public HttpContext? Context { get; set; }
 
-    protected override void OnParametersSet()
+    public string[] GetRoles()
     {
         if (Context?.User is { } user)
         {
-            // Load subsites from the service
-            var allSubsites = SubsiteService.GetSites(user);
-
-            // Group subsites by category
-            categorizedSubsites = allSubsites
-                .GroupBy(s => s.Category)
-                .ToDictionary(g => g.Key, g => g.ToList());
+            return [.. user.Claims
+                .Where(c => c.Type == ClaimTypes.Role)
+                .Select(c => c.Value)];
         }
-    }
 
-    private void HandleSubsiteSelected(SubsiteInfo subsite)
-    {
-        selectedSubsite = subsite;
-        isPaneOpen = true;
-    }
-
-    private void CloseDetailsPane()
-    {
-        isPaneOpen = false;
-    }
-
-    private void HandleUsageRequested(SubsiteInfo subsite)
-    {
-        usageSubsite = subsite;
-        isUsageModalOpen = true;
-    }
-
-    private void CloseUsageModal()
-    {
-        isUsageModalOpen = false;
+        return [];
     }
 }

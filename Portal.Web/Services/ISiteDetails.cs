@@ -11,7 +11,7 @@ public interface ISiteDetails
 
     string Description { get; }
 
-    IEnumerable<SubsiteInfo> GetSites(ClaimsPrincipal user);
+    IEnumerable<SubsiteInfo> GetSites(IReadOnlyCollection<string> roles);
 
     IEnumerable<SubsiteInfo> Sites { get; }
 }
