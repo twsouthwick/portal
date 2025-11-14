@@ -1,4 +1,4 @@
-<FluentCard Class="@GetCardClass()" Style="cursor: pointer;">
+<FluentCard Class="subsite-card">
     <FluentStack Orientation="Orientation.Vertical" Width="100%" VerticalGap="12">
         <div class="subsite-icon" style="font-size: 2rem;">
             <i class="@Subsite.Icon"></i>
@@ -11,11 +11,11 @@
             </FluentLabel>
         </FluentStack>
 
-        <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.End" HorizontalGap="8" Style="margin-top: auto;" @onclick:stopPropagation="true">
+        <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.End" HorizontalGap="8" Style="margin-top: auto;">
             @if (!string.IsNullOrEmpty(Subsite.UsageInstructions))
             {
                 <FluentButton Appearance="Appearance.Outline" 
-                              OnClick="@HandleUsageClick"
+                              OnClick="@ShowUsageModal"
                               IconStart="@(new Icons.Regular.Size16.QuestionCircle())">
                     How to Use
                 </FluentButton>
@@ -29,21 +29,28 @@
     </FluentStack>
 </FluentCard>
 
+@inject IDialogService DialogService
+@inject NavigationManager NavigationManager
+
 @code {
     [Parameter]
-    public SubsiteInfo Subsite { get; set; } = new();
+    public SubsiteInfo Subsite { get; set; } = null!;
 
-    [Parameter]
-    public EventCallback<SubsiteInfo> OnUsageRequested { get; set; }
-
-    [Inject]
-    private NavigationManager NavigationManager { get; set; } = default!;
-
-    private string GetCardClass() => "subsite-card";
-
-    private async Task HandleUsageClick()
+    private async Task ShowUsageModal()
     {
-        await OnUsageRequested.InvokeAsync(Subsite);
+        var dialog = await DialogService.ShowDialogAsync<UsageModal>(Subsite, new DialogParameters()
+        {
+            Title = $"{Subsite.Name} - Usage Guide",
+            PrimaryAction = "Close",
+            SecondaryAction = null,
+            Width = "600px",
+            Height = "auto",
+            Modal = true,
+            PreventDismissOnOverlayClick = false,
+            ShowDismiss = true
+        });
+
+        var result = await dialog.Result;
     }
 
     private void NavigateToSite()
