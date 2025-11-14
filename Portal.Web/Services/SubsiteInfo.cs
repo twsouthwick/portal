@@ -180,11 +180,11 @@ public static class SubsiteParser
 
         public IEnumerable<SubsiteInfo> Sites => subsites;
 
-        public IEnumerable<SubsiteInfo> GetSites(IReadOnlyCollection<string> roles)
+        public IEnumerable<SubsiteInfo> GetSites(ClaimsPrincipal user)
         {
             foreach (var site in subsites)
             {
-                if (site.IsAuthorized(roles))
+                if (site.IsAuthorized(user))
                 {
                     yield return site;
                 }
