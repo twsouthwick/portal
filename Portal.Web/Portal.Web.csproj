@@ -8,6 +8,8 @@
 
   <ItemGroup>
     <Compile Remove="sites/**/*" />
+    <Content Remove="sites/**/*" />
+    <None Remove="sites/**/*" />
   </ItemGroup>
   
   <ItemGroup>
