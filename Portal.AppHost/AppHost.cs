@@ -1,16 +1,12 @@
 var builder = DistributedApplication.CreateBuilder(args);
 
-builder.AddProject<Projects.Portal_Web>("media")
-    .WithHttpEndpoint(6110)
-    .WithHttpsEndpoint(6111)
+builder.AddProject<Projects.Portal_Web>("media", launchProfileName: "media")
     .WithExternalHttpEndpoints()
     .AddPortalDefaults("testuser1", "media")
     .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Development")
     .WithHttpHealthCheck("/health");
 
-builder.AddProject<Projects.Portal_Web>("admin")
-    .WithHttpEndpoint(6000)
-    .WithHttpsEndpoint(6001)
+builder.AddProject<Projects.Portal_Web>("admin", launchProfileName: "admin")
     .WithExternalHttpEndpoints()
     .AddPortalDefaults("testuser1", "admin", "media")
     .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Development")

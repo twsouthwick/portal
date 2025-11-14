@@ -4,12 +4,15 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <EnableSdkContainerDebugging>True</EnableSdkContainerDebugging>
+    <ContainerBaseImage>mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled-extra</ContainerBaseImage>
+    <UserSecretsId>24692884-3f6a-4a3a-b173-aa05231f66df</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
     <Compile Remove="sites/**/*" />
     <Content Remove="sites/**/*" />
-    <None Remove="sites/**/*" />
+    <None Include="sites/**/*" />
   </ItemGroup>
   
   <ItemGroup>
@@ -21,6 +24,10 @@
     <PackageReference Include="Microsoft.FluentUI.AspNetCore.Components" Version="4.13.1" />
     <PackageReference Include="Microsoft.FluentUI.AspNetCore.Components.Emoji" Version="4.13.1" />
     <PackageReference Include="Microsoft.FluentUI.AspNetCore.Components.Icons" Version="4.13.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ContainerPort Include="8081" />
   </ItemGroup>
 
 </Project>
