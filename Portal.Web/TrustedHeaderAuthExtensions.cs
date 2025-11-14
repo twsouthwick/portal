@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Primitives;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
 
@@ -24,11 +25,12 @@ internal static class TrustedHeaderAuthExtensions
         if (config["TEST_USER"] is { } testUser && config["TEST_ROLES"] is { } testRoles)
         {
             var options = app.ApplicationServices.GetRequiredService<IOptionsMonitor<TrustedHeaderAuthenticationOptions>>().Get(TrustedHeaderAuth.DefaultScheme);
+            var roles = new StringValues(testRoles.Split(','));
 
             app.Use((ctx, next) =>
             {
                 ctx.Request.Headers[options.UsernameHeader] = testUser;
-                ctx.Request.Headers[options.RoleHeader] = testRoles.Split(',');
+                ctx.Request.Headers[options.RoleHeader] = roles;
 
                 return next(ctx);
             });
