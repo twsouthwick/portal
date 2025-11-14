@@ -47,16 +47,6 @@
                 </FluentStack>
             }
 
-            @if (Subsite.RequiresPermission)
-            {
-                <FluentMessageBar Intent="MessageIntent.Warning" Style="margin-bottom: 1rem;">
-                    <FluentStack Orientation="Orientation.Horizontal">
-                        <span>??</span>
-                        <span>This subsite requires special permissions to access.</span>
-                    </FluentStack>
-                </FluentMessageBar>
-            }
-
             @if (!string.IsNullOrEmpty(Subsite.UsageInstructions))
             {
                 <FluentStack Orientation="Orientation.Vertical" Width="100%" Style="margin-bottom: 1rem;">

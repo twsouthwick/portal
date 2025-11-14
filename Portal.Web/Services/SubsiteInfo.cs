@@ -245,11 +245,6 @@ public class SubsiteInfo
     /// </summary>
     public string Contact { get; set; } = string.Empty;
 
-    /// <summary>
-    /// Whether the subsite requires special permissions
-    /// </summary>
-    public bool RequiresPermission { get; set; } = false;
-
     public IReadOnlyCollection<string> Roles { get; set; } = [];
 
     /// <summary>
