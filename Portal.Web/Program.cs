@@ -1,4 +1,3 @@
-using Portal.Web;
 using Portal.Web.Components;
 using Portal.Web.Services;
 using Microsoft.FluentUI.AspNetCore.Components;
@@ -33,9 +32,10 @@ if (!app.Environment.IsDevelopment())
 }
 else
 {
-    app.UseTestUser();}
+    app.UseTestUser();
+}
 
-    app.UseHttpsRedirection();
+app.UseHttpsRedirection();
 
 app.UseAuthentication();
 app.UseAuthorization();
@@ -44,12 +44,12 @@ app.UseAntiforgery();
 
 app.UseOutputCache();
 
-app.UseSiteContentFolder();
-
 app.MapStaticAssets();
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
+
+app.MapSiteContentEndpoints();
 
 app.MapDefaultEndpoints();
 

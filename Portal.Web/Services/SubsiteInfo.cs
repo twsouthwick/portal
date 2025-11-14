@@ -2,6 +2,7 @@ using Microsoft.Extensions.FileProviders;
 using System.Security.Claims;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.StaticFiles;
 
 namespace Portal.Web.Services;
 
@@ -60,32 +61,53 @@ public static class SubsiteParser
         return false;
     }
 
-    public static void UseSiteContentFolder(this IApplicationBuilder app)
+    public static void MapSiteContentEndpoints(this IEndpointRouteBuilder endpoints)
     {
-        var siteDetails = app.ApplicationServices.GetRequiredService<ISiteDetails>();
+        var siteDetails = endpoints.ServiceProvider.GetRequiredService<ISiteDetails>();
 
         foreach (var site in siteDetails.Sites)
         {
-            if (site.Roles.Count == 0)
+            var group = endpoints.MapGroup($"/{site.Id}/content");
+
+            // Apply authorization if roles are specified
+            if (site.Roles.Count > 0)
             {
-                app.UseStaticFiles(new StaticFileOptions()
+                group.RequireAuthorization(policy =>
                 {
-                    FileProvider = site.Content,
-                    RequestPath = $"/{site.Id}/content",
+                    policy.RequireAssertion(context =>
+                        site.IsAuthorized(context.User));
                 });
             }
 
-            var roles = site.Roles.ToList();
-
-            app.UseWhen(ctx => site.IsAuthorized(ctx.User), app =>
+            // Map the file serving endpoint using Results.File
+            group.MapGet("/{**path}", (string path) =>
             {
-                app.UseStaticFiles(new StaticFileOptions()
+                if (site.Content?.GetFileInfo(path) is not { Exists: true, IsDirectory: false } fileInfo)
                 {
-                    FileProvider = site.Content,
-                    RequestPath = $"/{site.Id}/content",
-                });
-            });
+                    return Results.NotFound();
+                }
+
+                var contentType = GetContentType(fileInfo.Name);
+
+                return Results.File(
+                    fileInfo.CreateReadStream(),
+                    contentType,
+                    fileInfo.Name,
+                    fileInfo.LastModified,
+                    enableRangeProcessing: true);
+            })
+            .WithName($"SiteContent_{site.Id}")
+            .WithDisplayName($"{site.Name} Content")
+            .DisableAntiforgery();
         }
+    }
+
+    private static string GetContentType(string fileName)
+    {
+        var provider = new FileExtensionContentTypeProvider();
+        return provider.TryGetContentType(fileName, out var contentType)
+            ? contentType
+            : "application/octet-stream";
     }
 
     public static async ValueTask<ISiteDetails> CreateSite(IFileProvider files)
