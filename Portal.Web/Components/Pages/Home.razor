@@ -17,14 +17,35 @@
         </div>
     }
 
-    @foreach (var category in categorizedSubsites.Keys.OrderBy(k => k))
+    @if (categorizedSubsites.Any())
     {
-        <div class="category-section mb-5">
-            <h2 class="category-title">@category</h2>
-            <SubsiteGrid Subsites="@categorizedSubsites[category]"
-                         SelectedSubsite="@selectedSubsite"
-                         OnSubsiteSelected="@HandleSubsiteSelected"
-                         OnUsageRequested="@HandleUsageRequested" />
+        @foreach (var category in categorizedSubsites.Keys.OrderBy(k => k))
+        {
+            <div class="category-section mb-5">
+                <h2 class="category-title">@category</h2>
+                <SubsiteGrid Subsites="@categorizedSubsites[category]"
+                             SelectedSubsite="@selectedSubsite"
+                             OnSubsiteSelected="@HandleSubsiteSelected"
+                             OnUsageRequested="@HandleUsageRequested" />
+            </div>
+        }
+    }
+    else
+    {
+        <div class="row">
+            <div class="col">
+                <div class="alert alert-warning" role="alert">
+                    <h4 class="alert-heading">No Sites Available</h4>
+                    <p class="mb-0">There are currently no sites available for you to view. This may be because:</p>
+                    <ul class="mb-0 mt-2">
+                        <li>No sites have been configured yet</li>
+                        <li>You don't have permission to access any sites</li>
+                        <li>All sites are currently unavailable</li>
+                    </ul>
+                    <hr />
+                    <p class="mb-0">Please contact your administrator if you believe you should have access to sites.</p>
+                </div>
+            </div>
         </div>
     }
 </div>
