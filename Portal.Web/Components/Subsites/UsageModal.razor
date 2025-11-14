@@ -1,77 +1,78 @@
 @using Markdig
 @inject IMarkdownConverter Markdown
 
-@* Overlay *@
-<div class="usage-modal-overlay @(IsOpen ? "open" : "")" @onclick="Close"></div>
-
-@* Modal *@
-<div class="usage-modal @(IsOpen ? "open" : "")">
-    @if (Subsite != null)
-    {
-        <div class="usage-modal-header">
-            <div class="d-flex align-items-center gap-3">
-                <div class="usage-modal-icon">
-                    <i class="@Subsite.Icon"></i>
-                </div>
-                <div>
-                    <h4 class="mb-1">@Subsite.Name</h4>
-                    <p class="mb-0 text-white-50">Usage Guide</p>
-                </div>
-            </div>
-            <button type="button" class="usage-modal-close" @onclick="Close">
-                <i class="bi bi-x-lg"></i>
-            </button>
-        </div>
-
-        <div class="usage-modal-body">
-            @if (!string.IsNullOrEmpty(Subsite.UsageInstructions))
-            {
-                <div class="markdown-content">
-                    @((MarkupString)RenderMarkdown(Subsite.UsageInstructions))
-                </div>
-            }
-            else
-            {
-                <div class="alert alert-info">
-                    <i class="bi bi-info-circle me-2"></i>
-                    No usage instructions available for this subsite.
-                </div>
-            }
-
-            @if (Subsite.Features.Any())
-            {
-                <div class="mt-4">
-                    <h6 class="text-uppercase fw-bold text-muted mb-3" style="font-size: 0.75rem; letter-spacing: 0.1em;">Key Features</h6>
-                    <ul class="feature-list">
-                        @foreach (var feature in Subsite.Features)
-                        {
-                            <li>@feature</li>
-                        }
-                    </ul>
-                </div>
-            }
-
-            @if (!string.IsNullOrEmpty(Subsite.Contact))
-            {
-                <div class="mt-4 p-3 bg-light rounded">
-                    <div class="d-flex align-items-center gap-2 text-muted">
-                        <i class="bi bi-envelope-fill"></i>
-                        <strong>Need help?</strong>
-                        <a href="mailto:@Subsite.Contact" class="ms-2">@Subsite.Contact</a>
+@if (IsOpen)
+{
+    <FluentDialog Hidden="@(!IsOpen)" 
+                  Modal="true"
+                  TrapFocus="true"
+                  OnDismiss="Close">
+        @if (Subsite != null)
+        {
+            <FluentDialogHeader>
+                <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center">
+                    <div class="usage-modal-icon" style="font-size: 2rem;">
+                        <i class="@Subsite.Icon"></i>
                     </div>
-                </div>
-            }
-        </div>
+                    <FluentStack Orientation="Orientation.Vertical">
+                        <FluentLabel Typo="Typography.H4">@Subsite.Name</FluentLabel>
+                        <FluentLabel Typo="Typography.Body" Style="opacity: 0.7;">Usage Guide</FluentLabel>
+                    </FluentStack>
+                </FluentStack>
+            </FluentDialogHeader>
 
-        <div class="usage-modal-footer">
-            <button type="button" class="btn btn-secondary" @onclick="Close">Close</button>
-            <a href="@Subsite.Url" class="btn btn-primary">
-                <i class="bi bi-box-arrow-up-right me-2"></i>
-                Open @Subsite.Name
-            </a>
-        </div>
-    }
-</div>
+            <FluentDialogBody>
+                @if (!string.IsNullOrEmpty(Subsite.UsageInstructions))
+                {
+                    <div style="margin-bottom: 1rem;">
+                        <MarkdownContent Content="@Subsite.UsageInstructions" Context="@Subsite" />
+                    </div>
+                }
+                else
+                {
+                    <FluentMessageBar Intent="MessageIntent.Info" Style="margin-bottom: 1rem;">
+                        <FluentStack Orientation="Orientation.Horizontal">
+                            <span>??</span>
+                            <span>No usage instructions available for this subsite.</span>
+                        </FluentStack>
+                    </FluentMessageBar>
+                }
+
+                @if (Subsite.Features.Any())
+                {
+                    <FluentStack Orientation="Orientation.Vertical" Width="100%" Style="margin-top: 1rem;">
+                        <FluentLabel Typo="Typography.H6" Style="text-transform: uppercase; opacity: 0.7;">Key Features</FluentLabel>
+                        <ul class="feature-list">
+                            @foreach (var feature in Subsite.Features)
+                            {
+                                <li>@feature</li>
+                            }
+                        </ul>
+                    </FluentStack>
+                }
+
+                @if (!string.IsNullOrEmpty(Subsite.Contact))
+                {
+                    <FluentCard Style="margin-top: 1rem; padding: 1rem; background-color: var(--neutral-layer-2);">
+                        <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center">
+                            <span>??</span>
+                            <FluentLabel Style="font-weight: bold;">Need help?</FluentLabel>
+                            <a href="mailto:@Subsite.Contact" style="margin-left: auto;">@Subsite.Contact</a>
+                        </FluentStack>
+                    </FluentCard>
+                }
+            </FluentDialogBody>
+
+            <FluentDialogFooter>
+                <FluentButton Appearance="Appearance.Neutral" @onclick="Close">Close</FluentButton>
+                <FluentAnchor Href="@Subsite.Url" 
+                              Appearance="Appearance.Accent">
+                    Open @Subsite.Name ?
+                </FluentAnchor>
+            </FluentDialogFooter>
+        }
+    </FluentDialog>
+}
 
 @code {
     [Parameter]
@@ -86,14 +87,5 @@
     private async Task Close()
     {
         await OnClose.InvokeAsync();
-    }
-
-    private string RenderMarkdown(string markdown)
-    {
-        if (string.IsNullOrWhiteSpace(markdown) || Subsite is null)
-            return string.Empty;
-
-
-        return Markdown.Convert(Subsite, markdown);
     }
 }

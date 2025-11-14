@@ -1,32 +1,40 @@
-<div class="subsite-card @(IsSelected ? "selected" : "")" @onclick="HandleClick">
-    <div class="subsite-card-header">
-        <div class="subsite-icon">
-            <i class="@Subsite.Icon"></i>
-        </div>
-        @if (Subsite.RequiresPermission)
-        {
-            <span class="badge bg-warning text-dark ms-auto">
-                <i class="bi bi-lock-fill"></i>
-            </span>
-        }
-    </div>
-    <div class="subsite-card-body">
-        <h5 class="subsite-title">@Subsite.Name</h5>
-        <p class="subsite-description">@Subsite.Description</p>
-        @if (!string.IsNullOrEmpty(Subsite.Category))
-        {
-            <span class="badge bg-primary">@Subsite.Category</span>
-        }
-    </div>
-    <div class="subsite-card-footer">
-        <button type="button" class="btn btn-sm btn-outline-info" @onclick="HandleUsageClick" @onclick:stopPropagation="true">
-            <i class="bi bi-question-circle"></i> How to Use
-        </button>
-        <a href="@Subsite.Url" class="btn btn-sm btn-outline-primary" @onclick:stopPropagation="true">
-            Visit Site <i class="bi bi-arrow-right"></i>
-        </a>
-    </div>
-</div>
+<FluentCard Class="@GetCardClass()" @onclick="HandleClick" Style="cursor: pointer;">
+    <FluentStack Orientation="Orientation.Vertical" Width="100%">
+        <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.SpaceBetween">
+            <div class="subsite-icon" style="font-size: 2rem;">
+                <i class="@Subsite.Icon"></i>
+            </div>
+            @if (Subsite.RequiresPermission)
+            {
+                <FluentBadge Appearance="Appearance.Accent" BackgroundColor="var(--warning)">
+                    ??
+                </FluentBadge>
+            }
+        </FluentStack>
+
+        <FluentStack Orientation="Orientation.Vertical" Width="100%">
+            <FluentLabel Typo="Typography.H5">@Subsite.Name</FluentLabel>
+            <FluentLabel Typo="Typography.Body" Style="color: var(--neutral-foreground-rest);">
+                @Subsite.Description
+            </FluentLabel>
+            @if (!string.IsNullOrEmpty(Subsite.Category))
+            {
+                <FluentBadge Appearance="Appearance.Accent">@Subsite.Category</FluentBadge>
+            }
+        </FluentStack>
+
+        <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.End" Style="margin-top: auto; gap: 0.5rem;">
+            <FluentButton Appearance="Appearance.Outline" 
+                          OnClick="@HandleUsageClick">
+                ? How to Use
+            </FluentButton>
+            <FluentAnchor Href="@Subsite.Url" 
+                          Appearance="Appearance.Accent">
+                Visit Site ?
+            </FluentAnchor>
+        </FluentStack>
+    </FluentStack>
+</FluentCard>
 
 @code {
     [Parameter]
@@ -40,6 +48,8 @@
 
     [Parameter]
     public EventCallback<SubsiteInfo> OnUsageRequested { get; set; }
+
+    private string GetCardClass() => IsSelected ? "subsite-card selected" : "subsite-card";
 
     private async Task HandleClick()
     {

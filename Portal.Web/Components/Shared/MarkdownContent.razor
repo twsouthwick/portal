@@ -1,0 +1,34 @@
+@using Markdig
+@inject IMarkdownConverter Markdown
+
+@if (!string.IsNullOrWhiteSpace(Content))
+{
+    <div class="markdown-content">
+        @((MarkupString)RenderMarkdown())
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public string Content { get; set; } = string.Empty;
+
+    [Parameter]
+    public SubsiteInfo? Context { get; set; }
+
+    [Parameter]
+    public string? CssClass { get; set; }
+
+    private string RenderMarkdown()
+    {
+        if (string.IsNullOrWhiteSpace(Content))
+            return string.Empty;
+
+        if (Context != null)
+        {
+            return Markdown.Convert(Context, Content);
+        }
+
+        // Fallback to basic markdown conversion if no context
+        return Markdig.Markdown.ToHtml(Content);
+    }
+}

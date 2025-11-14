@@ -1,95 +1,102 @@
-@* Overlay *@
-<div class="subsite-details-overlay @(IsOpen ? "open" : "")" @onclick="Close"></div>
+@* Details Panel using FluentDialog *@
+@if (IsOpen && Subsite != null)
+{
+    <FluentDialog Hidden="@(!IsOpen)" 
+                  Modal="false"
+                  TrapFocus="false"
+                  OnDismiss="Close"
+                  Style="width: 400px; position: fixed; right: 0; top: 0; height: 100vh; margin: 0; z-index: 1000;">
+        <FluentStack Orientation="Orientation.Vertical" Width="100%">
+            <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.SpaceBetween">
+                <FluentLabel Typo="Typography.H3">Details</FluentLabel>
+                <FluentButton Appearance="Appearance.Stealth" 
+                              @onclick="Close">
+                    ?
+                </FluentButton>
+            </FluentStack>
 
-@* Details Pane *@
-<div class="subsite-details-pane @(IsOpen ? "open" : "")">
-    @if (Subsite != null)
-    {
-        <div class="subsite-details-header">
-            <button class="subsite-details-close" @onclick="Close">
-                <i class="bi bi-x-lg"></i>
-            </button>
-            <div class="subsite-icon mb-3">
-                <i class="@Subsite.Icon"></i>
-            </div>
-            <h3>@Subsite.Name</h3>
-            <p class="mb-0">@Subsite.Description</p>
-        </div>
+            <FluentDivider Style="margin: 1rem 0;" />
 
-        <div class="subsite-details-body">
+            <FluentStack Orientation="Orientation.Vertical" Width="100%" Style="align-items: center; margin-bottom: 1rem;">
+                <div class="subsite-icon mb-3" style="font-size: 3rem;">
+                    <i class="@Subsite.Icon"></i>
+                </div>
+                <FluentLabel Typo="Typography.H3">@Subsite.Name</FluentLabel>
+                <FluentLabel Typo="Typography.Body" Style="text-align: center;">@Subsite.Description</FluentLabel>
+            </FluentStack>
+
             @if (!string.IsNullOrEmpty(Subsite.TargetAudience))
             {
-                <div class="subsite-details-section">
-                    <h6>Target Audience</h6>
-                    <div class="info-badge">
-                        <i class="bi bi-people-fill"></i>
-                        <span>@Subsite.TargetAudience</span>
-                    </div>
-                </div>
+                <FluentStack Orientation="Orientation.Vertical" Width="100%" Style="margin-bottom: 1rem;">
+                    <FluentLabel Typo="Typography.H6">Target Audience</FluentLabel>
+                    <FluentStack Orientation="Orientation.Horizontal">
+                        <span>??</span>
+                        <FluentLabel>@Subsite.TargetAudience</FluentLabel>
+                    </FluentStack>
+                </FluentStack>
             }
 
             @if (!string.IsNullOrEmpty(Subsite.Category))
             {
-                <div class="subsite-details-section">
-                    <h6>Category</h6>
-                    <div class="info-badge">
-                        <i class="bi bi-tag-fill"></i>
-                        <span>@Subsite.Category</span>
-                    </div>
-                </div>
+                <FluentStack Orientation="Orientation.Vertical" Width="100%" Style="margin-bottom: 1rem;">
+                    <FluentLabel Typo="Typography.H6">Category</FluentLabel>
+                    <FluentStack Orientation="Orientation.Horizontal">
+                        <span>???</span>
+                        <FluentLabel>@Subsite.Category</FluentLabel>
+                    </FluentStack>
+                </FluentStack>
             }
 
             @if (Subsite.RequiresPermission)
             {
-                <div class="subsite-details-section">
-                    <div class="alert alert-warning d-flex align-items-center">
-                        <i class="bi bi-lock-fill me-2"></i>
+                <FluentMessageBar Intent="MessageIntent.Warning" Style="margin-bottom: 1rem;">
+                    <FluentStack Orientation="Orientation.Horizontal">
+                        <span>??</span>
                         <span>This subsite requires special permissions to access.</span>
-                    </div>
-                </div>
+                    </FluentStack>
+                </FluentMessageBar>
             }
 
             @if (!string.IsNullOrEmpty(Subsite.UsageInstructions))
             {
-                <div class="subsite-details-section">
-                    <h6>How to Use</h6>
-                    <p class="text-muted">@Subsite.UsageInstructions</p>
-                </div>
+                <FluentStack Orientation="Orientation.Vertical" Width="100%" Style="margin-bottom: 1rem;">
+                    <FluentLabel Typo="Typography.H6">How to Use</FluentLabel>
+                    <MarkdownContent Content="@Subsite.UsageInstructions" Context="@Subsite" />
+                </FluentStack>
             }
 
             @if (Subsite.Features.Any())
             {
-                <div class="subsite-details-section">
-                    <h6>Key Features</h6>
+                <FluentStack Orientation="Orientation.Vertical" Width="100%" Style="margin-bottom: 1rem;">
+                    <FluentLabel Typo="Typography.H6">Key Features</FluentLabel>
                     <ul>
                         @foreach (var feature in Subsite.Features)
                         {
                             <li>@feature</li>
                         }
                     </ul>
-                </div>
+                </FluentStack>
             }
 
             @if (!string.IsNullOrEmpty(Subsite.Contact))
             {
-                <div class="subsite-details-section">
-                    <h6>Contact</h6>
-                    <div class="info-badge">
-                        <i class="bi bi-envelope-fill"></i>
-                        <span>@Subsite.Contact</span>
-                    </div>
-                </div>
+                <FluentStack Orientation="Orientation.Vertical" Width="100%" Style="margin-bottom: 1rem;">
+                    <FluentLabel Typo="Typography.H6">Contact</FluentLabel>
+                    <FluentStack Orientation="Orientation.Horizontal">
+                        <span>??</span>
+                        <FluentLabel>@Subsite.Contact</FluentLabel>
+                    </FluentStack>
+                </FluentStack>
             }
 
-            <div class="subsite-details-section">
-                <a href="@Subsite.Url" class="btn btn-primary w-100">
-                    <i class="bi bi-box-arrow-up-right me-2"></i>
-                    Open @Subsite.Name
-                </a>
-            </div>
-        </div>
-    }
-</div>
+            <FluentAnchor Href="@Subsite.Url" 
+                          Appearance="Appearance.Accent" 
+                          Style="width: 100%;">
+                Open @Subsite.Name ?
+            </FluentAnchor>
+        </FluentStack>
+    </FluentDialog>
+}
 
 @code {
     [Parameter]

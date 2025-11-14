@@ -1,12 +1,20 @@
 ﻿@inherits LayoutComponentBase
 
-<div class="page">
-    <main>
-        <article class="content px-4">
+<FluentLayout>
+    <FluentHeader>
+        <!-- You can add header content here if needed -->
+    </FluentHeader>
+    <FluentBodyContent>
+        <div class="content px-4">
             @Body
-        </article>
-    </main>
-</div>
+        </div>
+    </FluentBodyContent>
+</FluentLayout>
+
+<FluentMessageBarProvider />
+<FluentDialogProvider />
+<FluentToastProvider />
+<FluentMenuProvider />
 
 <div id="blazor-error-ui">
     An unhandled error has occurred.

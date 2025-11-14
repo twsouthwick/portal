@@ -7,48 +7,44 @@
 
 <PageTitle>@SubsiteService.Name</PageTitle>
 
-<div class="container-fluid">
+<FluentStack Orientation="Orientation.Vertical" Width="100%">
     @if (!string.IsNullOrEmpty(SubsiteService.Description))
     {
-        <div class="row mb-4">
-            <div class="col">
-                <p class="lead">@SubsiteService.Description</p>
-            </div>
-        </div>
+        <FluentCard>
+            <FluentLabel Typo="Typography.Body">@SubsiteService.Description</FluentLabel>
+        </FluentCard>
     }
 
     @if (categorizedSubsites.Any())
     {
         @foreach (var category in categorizedSubsites.Keys.OrderBy(k => k))
         {
-            <div class="category-section mb-5">
-                <h2 class="category-title">@category</h2>
+            <FluentStack Orientation="Orientation.Vertical" Width="100%" Style="margin-bottom: 2rem;">
+                <FluentLabel Typo="Typography.H2">@category</FluentLabel>
                 <SubsiteGrid Subsites="@categorizedSubsites[category]"
                              SelectedSubsite="@selectedSubsite"
                              OnSubsiteSelected="@HandleSubsiteSelected"
                              OnUsageRequested="@HandleUsageRequested" />
-            </div>
+            </FluentStack>
         }
     }
     else
     {
-        <div class="row">
-            <div class="col">
-                <div class="alert alert-warning" role="alert">
-                    <h4 class="alert-heading">No Sites Available</h4>
-                    <p class="mb-0">There are currently no sites available for you to view. This may be because:</p>
-                    <ul class="mb-0 mt-2">
-                        <li>No sites have been configured yet</li>
-                        <li>You don't have permission to access any sites</li>
-                        <li>All sites are currently unavailable</li>
-                    </ul>
-                    <hr />
-                    <p class="mb-0">Please contact your administrator if you believe you should have access to sites.</p>
-                </div>
-            </div>
-        </div>
+        <FluentMessageBar Intent="MessageIntent.Warning">
+            <FluentStack Orientation="Orientation.Vertical">
+                <FluentLabel Typo="Typography.H4">No Sites Available</FluentLabel>
+                <FluentLabel Typo="Typography.Body">There are currently no sites available for you to view. This may be because:</FluentLabel>
+                <ul style="margin-top: 0.5rem;">
+                    <li>No sites have been configured yet</li>
+                    <li>You don't have permission to access any sites</li>
+                    <li>All sites are currently unavailable</li>
+                </ul>
+                <FluentDivider Style="margin: 1rem 0;" />
+                <FluentLabel Typo="Typography.Body">Please contact your administrator if you believe you should have access to sites.</FluentLabel>
+            </FluentStack>
+        </FluentMessageBar>
     }
-</div>
+</FluentStack>
 
 <SubsiteDetailsPane Subsite="@selectedSubsite"
                     IsOpen="@isPaneOpen"
