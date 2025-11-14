@@ -12,11 +12,14 @@
         </FluentStack>
 
         <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.End" HorizontalGap="8" Style="margin-top: auto;" @onclick:stopPropagation="true">
-            <FluentButton Appearance="Appearance.Outline" 
-                          OnClick="@HandleUsageClick"
-                          IconStart="@(new Icons.Regular.Size16.QuestionCircle())">
-                How to Use
-            </FluentButton>
+            @if (!string.IsNullOrEmpty(Subsite.UsageInstructions))
+            {
+                <FluentButton Appearance="Appearance.Outline" 
+                              OnClick="@HandleUsageClick"
+                              IconStart="@(new Icons.Regular.Size16.QuestionCircle())">
+                    How to Use
+                </FluentButton>
+            }
             <FluentButton Appearance="Appearance.Accent"
                           OnClick="@NavigateToSite"
                           IconEnd="@(new Icons.Regular.Size16.ArrowRight())">

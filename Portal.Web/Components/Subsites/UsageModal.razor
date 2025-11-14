@@ -3,7 +3,7 @@
 
 @if (IsOpen)
 {
-    <FluentDialog Hidden="@(!IsOpen)" 
+    <FluentDialog Hidden="@(!IsOpen)"
                   Modal="true"
                   TrapFocus="true"
                   OnDismiss="Close">
@@ -22,53 +22,22 @@
             </FluentDialogHeader>
 
             <FluentDialogBody>
-                @if (!string.IsNullOrEmpty(Subsite.UsageInstructions))
-                {
-                    <div style="margin-bottom: 1rem;">
-                        <MarkdownContent Content="@Subsite.UsageInstructions" Context="@Subsite" />
-                    </div>
-                }
-                else
-                {
-                    <FluentMessageBar Intent="MessageIntent.Info" Style="margin-bottom: 1rem;">
-                        <FluentStack Orientation="Orientation.Horizontal">
-                            <span>??</span>
-                            <span>No usage instructions available for this subsite.</span>
-                        </FluentStack>
-                    </FluentMessageBar>
-                }
-
-                @if (Subsite.Features.Any())
-                {
-                    <FluentStack Orientation="Orientation.Vertical" Width="100%" Style="margin-top: 1rem;">
-                        <FluentLabel Typo="Typography.H6" Style="text-transform: uppercase; opacity: 0.7;">Key Features</FluentLabel>
-                        <ul class="feature-list">
-                            @foreach (var feature in Subsite.Features)
-                            {
-                                <li>@feature</li>
-                            }
-                        </ul>
+                <FluentStack Orientation="Orientation.Vertical" VerticalGap="8" Style="margin-bottom: 1rem;">
+                    <FluentStack Orientation="Orientation.Horizontal" HorizontalGap="8" VerticalAlignment="VerticalAlignment.Center">
+                        <FluentIcon Value="@(new Icons.Regular.Size20.Info())" />
+                        <FluentLabel Typo="Typography.H6" Style="margin: 0;">Usage Instructions</FluentLabel>
                     </FluentStack>
-                }
-
-                @if (!string.IsNullOrEmpty(Subsite.Contact))
-                {
-                    <FluentCard Style="margin-top: 1rem; padding: 1rem; background-color: var(--neutral-layer-2);">
-                        <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center">
-                            <span>??</span>
-                            <FluentLabel Style="font-weight: bold;">Need help?</FluentLabel>
-                            <a href="mailto:@Subsite.Contact" style="margin-left: auto;">@Subsite.Contact</a>
-                        </FluentStack>
-                    </FluentCard>
-                }
+                    <MarkdownContent Content="@Subsite.UsageInstructions" Context="@Subsite" />
+                </FluentStack>
             </FluentDialogBody>
 
             <FluentDialogFooter>
                 <FluentButton Appearance="Appearance.Neutral" @onclick="Close">Close</FluentButton>
-                <FluentAnchor Href="@Subsite.Url" 
-                              Appearance="Appearance.Accent">
-                    Open @Subsite.Name ?
-                </FluentAnchor>
+                <FluentButton Appearance="Appearance.Accent"
+                              OnClick="@NavigateToSite"
+                              IconEnd="@(new Icons.Regular.Size16.ArrowUpRight())">
+                    Open @Subsite.Name
+                </FluentButton>
             </FluentDialogFooter>
         }
     </FluentDialog>
@@ -84,8 +53,19 @@
     [Parameter]
     public EventCallback OnClose { get; set; }
 
+    [Inject]
+    private NavigationManager NavigationManager { get; set; } = default!;
+
     private async Task Close()
     {
         await OnClose.InvokeAsync();
+    }
+
+    private void NavigateToSite()
+    {
+        if (Subsite != null)
+        {
+            NavigationManager.NavigateTo(Subsite.Url, forceLoad: true);
+        }
     }
 }

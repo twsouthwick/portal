@@ -235,16 +235,6 @@ public class SubsiteInfo
     [JsonIgnore]
     public IFileProvider? Content { get; set; }
 
-    /// <summary>
-    /// Key features of the subsite
-    /// </summary>
-    public List<string> Features { get; set; } = new();
-
-    /// <summary>
-    /// Contact person or team for the subsite
-    /// </summary>
-    public string Contact { get; set; } = string.Empty;
-
     public IReadOnlyCollection<string> Roles { get; set; } = [];
 
     /// <summary>

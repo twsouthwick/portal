@@ -55,30 +55,6 @@
                 </FluentStack>
             }
 
-            @if (Subsite.Features.Any())
-            {
-                <FluentStack Orientation="Orientation.Vertical" Width="100%" Style="margin-bottom: 1rem;">
-                    <FluentLabel Typo="Typography.H6">Key Features</FluentLabel>
-                    <ul>
-                        @foreach (var feature in Subsite.Features)
-                        {
-                            <li>@feature</li>
-                        }
-                    </ul>
-                </FluentStack>
-            }
-
-            @if (!string.IsNullOrEmpty(Subsite.Contact))
-            {
-                <FluentStack Orientation="Orientation.Vertical" Width="100%" Style="margin-bottom: 1rem;">
-                    <FluentLabel Typo="Typography.H6">Contact</FluentLabel>
-                    <FluentStack Orientation="Orientation.Horizontal">
-                        <span>??</span>
-                        <FluentLabel>@Subsite.Contact</FluentLabel>
-                    </FluentStack>
-                </FluentStack>
-            }
-
             <FluentAnchor Href="@Subsite.Url" 
                           Appearance="Appearance.Accent" 
                           Style="width: 100%;">
