@@ -30,19 +30,15 @@
     }
     else
     {
-        <FluentMessageBar Intent="MessageIntent.Warning">
-            <FluentStack Orientation="Orientation.Vertical">
-                <FluentLabel Typo="Typography.H4">No Sites Available</FluentLabel>
-                <FluentLabel Typo="Typography.Body">There are currently no sites available for you to view. This may be because:</FluentLabel>
-                <ul style="margin-top: 0.5rem;">
-                    <li>No sites have been configured yet</li>
-                    <li>You don't have permission to access any sites</li>
-                    <li>All sites are currently unavailable</li>
-                </ul>
-                <FluentDivider Style="margin: 1rem 0;" />
-                <FluentLabel Typo="Typography.Body">Please contact your administrator if you believe you should have access to sites.</FluentLabel>
+        <FluentCard>
+            <FluentStack Orientation="Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.Center" Style="padding: 2rem;">
+                <FluentIcon Value="@(new Icons.Regular.Size48.Warning())" Color="Color.Warning" Style="font-size: 48px;" />
+                <FluentLabel Typo="Typography.H3" Style="text-align: center;">No Sites Available</FluentLabel>
+                <FluentLabel Typo="Typography.Body" Style="text-align: center; color: var(--neutral-foreground-rest);">
+                    There are currently no sites configured or you don't have permission to view any sites.
+                </FluentLabel>
             </FluentStack>
-        </FluentMessageBar>
+        </FluentCard>
     }
 </FluentStack>
 

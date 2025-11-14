@@ -17,6 +17,8 @@
   <ItemGroup>
     <PackageReference Include="Markdig" Version="0.43.0" />
     <PackageReference Include="Microsoft.FluentUI.AspNetCore.Components" Version="4.13.1" />
+    <PackageReference Include="Microsoft.FluentUI.AspNetCore.Components.Emoji" Version="4.13.1" />
+    <PackageReference Include="Microsoft.FluentUI.AspNetCore.Components.Icons" Version="4.13.1" />
   </ItemGroup>
 
 </Project>
