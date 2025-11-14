@@ -1,4 +1,4 @@
-<FluentCard Class="@GetCardClass()" @onclick="HandleClick" Style="cursor: pointer;">
+<FluentCard Class="@GetCardClass()" Style="cursor: pointer;">
     <FluentStack Orientation="Orientation.Vertical" Width="100%" VerticalGap="12">
         <div class="subsite-icon" style="font-size: 2rem;">
             <i class="@Subsite.Icon"></i>
@@ -34,23 +34,12 @@
     public SubsiteInfo Subsite { get; set; } = new();
 
     [Parameter]
-    public bool IsSelected { get; set; }
-
-    [Parameter]
-    public EventCallback<SubsiteInfo> OnSelected { get; set; }
-
-    [Parameter]
     public EventCallback<SubsiteInfo> OnUsageRequested { get; set; }
 
     [Inject]
     private NavigationManager NavigationManager { get; set; } = default!;
 
-    private string GetCardClass() => IsSelected ? "subsite-card selected" : "subsite-card";
-
-    private async Task HandleClick()
-    {
-        await OnSelected.InvokeAsync(Subsite);
-    }
+    private string GetCardClass() => "subsite-card";
 
     private async Task HandleUsageClick()
     {

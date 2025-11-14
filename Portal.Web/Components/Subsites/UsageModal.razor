@@ -1,71 +1,50 @@
-@using Markdig
-@inject IMarkdownConverter Markdown
+@implements IDialogContentComponent<SubsiteInfo>
+@inject NavigationManager NavigationManager
 
-@if (IsOpen)
-{
-    <FluentDialog Hidden="@(!IsOpen)"
-                  Modal="true"
-                  TrapFocus="true"
-                  OnDismiss="Close">
-        @if (Subsite != null)
-        {
-            <FluentDialogHeader>
-                <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center">
-                    <div class="usage-modal-icon" style="font-size: 2rem;">
-                        <i class="@Subsite.Icon"></i>
-                    </div>
-                    <FluentStack Orientation="Orientation.Vertical">
-                        <FluentLabel Typo="Typography.H4">@Subsite.Name</FluentLabel>
-                        <FluentLabel Typo="Typography.Body" Style="opacity: 0.7;">Usage Guide</FluentLabel>
-                    </FluentStack>
-                </FluentStack>
-            </FluentDialogHeader>
+<FluentDialogBody>
+    <FluentStack Orientation="Orientation.Vertical" VerticalGap="12">
+        <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center" HorizontalGap="12">
+            <div class="usage-modal-icon" style="font-size: 2rem;">
+                <i class="@Content.Icon"></i>
+            </div>
+            <FluentStack Orientation="Orientation.Vertical">
+                <FluentLabel Typo="Typography.H4">@Content.Name</FluentLabel>
+                <FluentLabel Typo="Typography.Body" Style="opacity: 0.7;">Usage Guide</FluentLabel>
+            </FluentStack>
+        </FluentStack>
 
-            <FluentDialogBody>
-                <FluentStack Orientation="Orientation.Vertical" VerticalGap="8" Style="margin-bottom: 1rem;">
-                    <FluentStack Orientation="Orientation.Horizontal" HorizontalGap="8" VerticalAlignment="VerticalAlignment.Center">
-                        <FluentIcon Value="@(new Icons.Regular.Size20.Info())" />
-                        <FluentLabel Typo="Typography.H6" Style="margin: 0;">Usage Instructions</FluentLabel>
-                    </FluentStack>
-                    <MarkdownContent Content="@Subsite.UsageInstructions" Context="@Subsite" />
-                </FluentStack>
-            </FluentDialogBody>
+        <FluentDivider Style="margin: 0.5rem 0;" />
 
-            <FluentDialogFooter>
-                <FluentButton Appearance="Appearance.Neutral" @onclick="Close">Close</FluentButton>
-                <FluentButton Appearance="Appearance.Accent"
-                              OnClick="@NavigateToSite"
-                              IconEnd="@(new Icons.Regular.Size16.ArrowUpRight())">
-                    Open @Subsite.Name
-                </FluentButton>
-            </FluentDialogFooter>
-        }
-    </FluentDialog>
-}
+        <FluentStack Orientation="Orientation.Vertical" VerticalGap="8">
+            <FluentStack Orientation="Orientation.Horizontal" HorizontalGap="8" VerticalAlignment="VerticalAlignment.Center">
+                <FluentIcon Value="@(new Icons.Regular.Size20.Info())" />
+                <FluentLabel Typo="Typography.H6" Style="margin: 0;">Usage Instructions</FluentLabel>
+            </FluentStack>
+            <MarkdownContent Content="@Content.UsageInstructions" Context="@Content" />
+        </FluentStack>
+    </FluentStack>
+</FluentDialogBody>
+
+<FluentDialogFooter>
+    <FluentButton Appearance="Appearance.Neutral" OnClick="@(() => Dialog.CancelAsync())">
+        Close
+    </FluentButton>
+    <FluentButton Appearance="Appearance.Accent"
+                  OnClick="@NavigateToSite"
+                  IconEnd="@(new Icons.Regular.Size16.ArrowUpRight())">
+        Open @Content.Name
+    </FluentButton>
+</FluentDialogFooter>
 
 @code {
     [Parameter]
-    public SubsiteInfo? Subsite { get; set; }
+    public SubsiteInfo Content { get; set; } = default!;
 
-    [Parameter]
-    public bool IsOpen { get; set; }
-
-    [Parameter]
-    public EventCallback OnClose { get; set; }
-
-    [Inject]
-    private NavigationManager NavigationManager { get; set; } = default!;
-
-    private async Task Close()
-    {
-        await OnClose.InvokeAsync();
-    }
+    [CascadingParameter]
+    public FluentDialog Dialog { get; set; } = default!;
 
     private void NavigateToSite()
     {
-        if (Subsite != null)
-        {
-            NavigationManager.NavigateTo(Subsite.Url, forceLoad: true);
-        }
+        NavigationManager.NavigateTo(Content.Url, forceLoad: true);
     }
 }
