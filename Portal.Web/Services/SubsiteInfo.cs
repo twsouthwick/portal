@@ -1,8 +1,8 @@
+using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.Extensions.FileProviders;
 using System.Security.Claims;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Microsoft.AspNetCore.StaticFiles;
 
 namespace Portal.Web.Services;
 
@@ -10,18 +10,29 @@ public static class SubsiteParser
 {
     public static async ValueTask AddSite(this IHostApplicationBuilder host)
     {
-        if (host.Configuration["SITE_DIRECTORY"] is { } dir)
+        if (host.Configuration["SITE_PATH"] is { } path)
         {
-            var p = new PhysicalFileProvider(dir);
-
-            // Track it so it gets disposed
-            host.Services.AddSingleton(p);
-
-            host.Services.AddSingleton<ISiteDetails>(await CreateSite(new PhysicalFileProvider(dir)));
+            if (File.Exists(path) && Path.GetExtension(path).Equals(".zip", StringComparison.OrdinalIgnoreCase))
+            {
+                var zipProvider = new ZipFileProvider(path);
+                host.Services.AddSingleton<ISiteDetails>(await CreateSite(zipProvider));
+            }
+            else if (Directory.Exists(path))
+            {
+                // Load from directory
+                var physicalProvider = new PhysicalFileProvider(path);
+                host.Services.AddSingleton<ISiteDetails>(await CreateSite(physicalProvider));
+            }
+            else
+            {
+                throw new FileNotFoundException($"SITE_PATH '{path}' does not exist or is not a valid ZIP file or directory.");
+            }
         }
         else
         {
-            host.Services.AddSingleton<ISiteDetails>(await CreateSite(host.Environment.ContentRootFileProvider.GetSubdirectory("sites")));
+            // Default to sites subdirectory
+            var fileProvider = host.Environment.ContentRootFileProvider.GetSubdirectory("sites");
+            host.Services.AddSingleton<ISiteDetails>(await CreateSite(fileProvider));
         }
     }
 
@@ -115,7 +126,7 @@ public static class SubsiteParser
         var details = await PortalDetails.Parse(files.GetFileInfo("manifest.json"));
         var subsites = await ParseAllSiteDetails(files).ToListAsync();
 
-        return new ParsedDetaisl(details, subsites);
+        return new ParsedSiteDetails(files, details, subsites);
     }
 
     private static async IAsyncEnumerable<SubsiteInfo> ParseAllSiteDetails(IFileProvider files)
@@ -194,13 +205,15 @@ public static class SubsiteParser
         }
     }
 
-    private sealed class ParsedDetaisl(PortalDetails portal, List<SubsiteInfo> subsites) : ISiteDetails
+    private sealed class ParsedSiteDetails(IFileProvider files, PortalDetails portal, List<SubsiteInfo> subsites) : IDisposable, ISiteDetails
     {
         public string Name => portal.Name;
 
         public string Description => portal.Description;
 
         public IEnumerable<SubsiteInfo> Sites => subsites;
+
+        public void Dispose() => (files as IDisposable)?.Dispose();
 
         public IEnumerable<SubsiteInfo> GetSites(ClaimsPrincipal user)
         {
