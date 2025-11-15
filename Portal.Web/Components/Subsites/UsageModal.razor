@@ -9,7 +9,7 @@
             </div>
             <FluentStack Orientation="Orientation.Vertical">
                 <FluentLabel Typo="Typography.H4">@Content.Name</FluentLabel>
-                <FluentLabel Typo="Typography.Body" Style="opacity: 0.7;">Usage Guide</FluentLabel>
+                <FluentLabel Typo="Typography.Body" Style="color: var(--text-secondary);">Usage Guide</FluentLabel>
             </FluentStack>
         </FluentStack>
 
@@ -29,11 +29,12 @@
     <FluentButton Appearance="Appearance.Neutral" OnClick="@(() => Dialog.CancelAsync())">
         Close
     </FluentButton>
-    <FluentButton Appearance="Appearance.Accent"
-                  OnClick="@NavigateToSite"
-                  IconEnd="@(new Icons.Regular.Size16.ArrowUpRight())">
+    <FluentAnchor Appearance="Appearance.Accent"
+                  Href="@Content.Url"
+                  Target="_blank">
         Open @Content.Name
-    </FluentButton>
+        <FluentIcon Value="@(new Icons.Regular.Size16.ArrowUpRight())" Slot="end" />
+    </FluentAnchor>
 </FluentDialogFooter>
 
 @code {
@@ -42,9 +43,4 @@
 
     [CascadingParameter]
     public FluentDialog Dialog { get; set; } = default!;
-
-    private void NavigateToSite()
-    {
-        NavigationManager.NavigateTo(Content.Url, forceLoad: true);
-    }
 }

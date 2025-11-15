@@ -11,10 +11,11 @@ A Blazor-based intranet portal system built with .NET 10 and Aspire that allows 
 
 ## Quick Start
 
-1. Create a sites directory with a `manifest.json` file
+1. Create a sites directory (or ZIP file) with a `manifest.json` file
 2. Add subdirectories for each subsite with their own `manifest.json` files
 3. Optionally add `usage.md` and `content/` folders for documentation and static files
-4. Deploy using docker
+4. Set `SITE_PATH` environment variable to your sites directory or ZIP file path
+5. Deploy using docker
 
 ## Authentication
 
@@ -142,7 +143,7 @@ services:
     ports:
       - "8080:8080"
     environment:
-      - SITE_DIRECTORY=/sites
+      - SITE_PATH=/sites
     volumes:
       - ./my-sites:/sites:ro
     restart: unless-stopped
