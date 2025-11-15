@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Primitives;
 using System.Security.Claims;
@@ -14,27 +15,10 @@ internal static class TrustedHeaderAuthExtensions
     public static AuthenticationBuilder AddTrustedHeaderAuth(this AuthenticationBuilder builder, Action<TrustedHeaderAuthenticationOptions> configure)
     {
         builder.AddScheme<TrustedHeaderAuthenticationOptions, TrustedHeaderAuthenticationHandler>(TrustedHeaderAuth.DefaultScheme, configure);
+        builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IStartupFilter, TestUserStartupFilter>());
+
         return builder;
 
-    }
-
-    public static void UseTestUser(this IApplicationBuilder app)
-    {
-        var config = app.ApplicationServices.GetRequiredService<IConfiguration>();
-
-        if (config["TEST_USER"] is { } testUser && config["TEST_ROLES"] is { } testRoles)
-        {
-            var options = app.ApplicationServices.GetRequiredService<IOptionsMonitor<TrustedHeaderAuthenticationOptions>>().Get(TrustedHeaderAuth.DefaultScheme);
-            var roles = new StringValues(testRoles.Split(','));
-
-            app.Use((ctx, next) =>
-            {
-                ctx.Request.Headers[options.UsernameHeader] = testUser;
-                ctx.Request.Headers[options.RoleHeader] = roles;
-
-                return next(ctx);
-            });
-        }
     }
 
     private sealed class TrustedHeaderAuthenticationHandler(
@@ -76,6 +60,30 @@ internal static class TrustedHeaderAuthExtensions
 
             return AuthenticateResult.NoResult();
         }
+    }
+
+    private sealed class TestUserStartupFilter(IConfiguration config, IHostEnvironment env, IOptionsMonitor<TrustedHeaderAuthenticationOptions> trustedHeaders) : IStartupFilter
+    {
+        public Action<IApplicationBuilder> Configure(Action<IApplicationBuilder> next) => builder =>
+        {
+            if (env.IsDevelopment())
+            {
+                if (config["TEST_USER"] is { } testUser && config["TEST_ROLES"] is { } testRoles)
+                {
+                    var options = trustedHeaders.Get(TrustedHeaderAuth.DefaultScheme);
+                    var roles = new StringValues(testRoles.Split(','));
+                    builder.Use((ctx, next) =>
+                    {
+                        ctx.Request.Headers[options.UsernameHeader] = testUser;
+                        ctx.Request.Headers[options.RoleHeader] = roles;
+
+                        return next(ctx);
+                    });
+                }
+            }
+
+            next(builder);
+        };
     }
 }
 
