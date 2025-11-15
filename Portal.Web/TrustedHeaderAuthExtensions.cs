@@ -42,6 +42,15 @@ internal static class TrustedHeaderAuthExtensions
 
                 identity.AddClaim(new Claim(ClaimTypes.NameIdentifier, username));
 
+                if (Context.Request.Headers.TryGetValue(Options.NameHeader, out var names) && names.FirstOrDefault() is { } name)
+                {
+                    identity.AddClaim(new Claim(ClaimTypes.Name, name));
+                }
+                else
+                {
+                    identity.AddClaim(new Claim(ClaimTypes.Name, username));
+                }
+
                 if (Context.Request.Headers.TryGetValue(Options.RoleHeader, out var roles))
                 {
                     foreach (var role in roles)
@@ -76,6 +85,7 @@ internal static class TrustedHeaderAuthExtensions
                     {
                         ctx.Request.Headers[options.UsernameHeader] = testUser;
                         ctx.Request.Headers[options.RoleHeader] = roles;
+                        ctx.Request.Headers[options.NameHeader] = "Test User";
 
                         return next(ctx);
                     });
@@ -89,7 +99,9 @@ internal static class TrustedHeaderAuthExtensions
 
 internal sealed class TrustedHeaderAuthenticationOptions : AuthenticationSchemeOptions
 {
-    public string UsernameHeader { get; set; } = "REMOTE_USER";
+    public string UsernameHeader { get; set; } = "Remote-User";
 
-    public string RoleHeader { get; set; } = "REMOTE_ROLES";
+    public string RoleHeader { get; set; } = "Remote-Groups";
+
+    public string NameHeader { get; set; } = "Remote-Name";
 }
