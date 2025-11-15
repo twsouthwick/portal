@@ -1,0 +1,262 @@
+﻿/*
+ * Fluent UI Typography Mappings for Markdown Elements
+ * 
+ * This CSS file maps standard HTML elements generated from markdown
+ * to Fluent UI Typography styles to ensure consistent design.
+ * 
+ * Mappings:
+ * - <p>  → Typography.Body       (type-ramp-base, weight 400)
+ * - <h1> → Typography.Header     (type-ramp-plus-3, weight 400)
+ * - <h2> → Typography.PaneHeader (type-ramp-plus-2, weight 400)
+ * - <h3> → Typography.H6         (type-ramp-minus-1, weight 400)
+ * - <h4> → Base typography       (type-ramp-base, weight 400)
+ * - <h5> → Smaller typography    (type-ramp-minus-1, weight 400)
+ * - <h6> → Smallest typography   (type-ramp-minus-2, weight 400)
+ * 
+ * All styles use Fluent UI design tokens for theming support.
+ * Reference: https://github.com/microsoft/fluentui-blazor
+ *
+ * For specific styles: https://github.com/microsoft/fluentui-blazor/blob/v4.13.1/src/Core/Components/Label/FluentLabel.razor.css
+ */
+
+/* h1: Typography.Header */
+::deep h1 {
+    font-family: var(--body-font);
+    font-size: var(--type-ramp-plus-3-font-size);
+    line-height: var(--type-ramp-plus-3-line-height);
+    font-weight: 400;
+    color: var(--neutral-foreground-rest);
+    margin-top: 1.5rem;
+    margin-bottom: 0.75rem;
+}
+
+/* h2: Typography.PaneHeader */
+::deep h2 {
+    font-family: var(--body-font);
+    font-size: var(--type-ramp-plus-2-font-size);
+    line-height: var(--type-ramp-plus-2-line-height);
+    font-weight: 400;
+    color: var(--neutral-foreground-rest);
+    margin-top: 1.25rem;
+    margin-bottom: 0.5rem;
+}
+
+/* h3: Typography.H6 */
+::deep h3 {
+    font-family: var(--body-font);
+    font-size: var(--type-ramp-minus-1-font-size);
+    line-height: var(--type-ramp-minus-1-line-height);
+    font-weight: 400;
+    color: var(--neutral-foreground-rest);
+    margin-top: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+/* h4-h6: Use base type ramp for remaining headings */
+::deep h4 {
+    font-family: var(--body-font);
+    font-size: var(--type-ramp-base-font-size);
+    line-height: var(--type-ramp-base-line-height);
+    font-weight: 400;
+    color: var(--neutral-foreground-rest);
+    margin-top: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+::deep h5 {
+    font-family: var(--body-font);
+    font-size: var(--type-ramp-minus-1-font-size);
+    line-height: var(--type-ramp-minus-1-line-height);
+    font-weight: 400;
+    color: var(--neutral-foreground-rest);
+    margin-top: 0.75rem;
+    margin-bottom: 0.5rem;
+}
+
+::deep h6 {
+    font-family: var(--body-font);
+    font-size: var(--type-ramp-minus-2-font-size);
+    line-height: var(--type-ramp-minus-2-line-height);
+    font-weight: 400;
+    color: var(--neutral-foreground-rest);
+    margin-top: 0.75rem;
+    margin-bottom: 0.5rem;
+}
+
+/* p: Typography.Body */
+::deep p {
+    font-family: var(--body-font);
+    font-size: var(--type-ramp-base-font-size);
+    line-height: var(--type-ramp-base-line-height);
+    font-weight: 400;
+    color: var(--neutral-foreground-rest);
+    margin-bottom: 0.75rem;
+}
+
+/* Lists */
+::deep ul,
+::deep ol {
+    font-family: var(--body-font);
+    font-size: var(--type-ramp-base-font-size);
+    line-height: var(--type-ramp-base-line-height);
+    font-weight: 400;
+    color: var(--neutral-foreground-rest);
+    margin-bottom: 0.75rem;
+    padding-left: 1.5rem;
+}
+
+::deep li {
+    margin-bottom: 0.25rem;
+}
+
+/* Links */
+::deep a {
+    color: var(--accent-foreground-rest);
+    text-decoration: none;
+}
+
+::deep a:hover {
+    color: var(--accent-foreground-hover);
+    text-decoration: underline;
+}
+
+::deep a:active {
+    color: var(--accent-foreground-active);
+}
+
+/* Blockquotes */
+::deep blockquote {
+    font-family: var(--body-font);
+    font-size: var(--type-ramp-base-font-size);
+    line-height: var(--type-ramp-base-line-height);
+    font-weight: 400;
+    color: var(--neutral-foreground-rest);
+    border-left: 4px solid var(--accent-fill-rest);
+    padding-left: 1rem;
+    margin: 1rem 0;
+    font-style: italic;
+}
+
+/* Code blocks */
+::deep pre {
+    font-family: var(--code-font);
+    font-size: var(--type-ramp-minus-1-font-size);
+    line-height: var(--type-ramp-base-line-height);
+    background-color: var(--neutral-layer-2);
+    border: calc(var(--stroke-width) * 1px) solid var(--neutral-stroke-rest);
+    border-radius: calc(var(--control-corner-radius) * 1px);
+    padding: 1rem;
+    margin-bottom: 1rem;
+    overflow-x: auto;
+}
+
+::deep code {
+    font-family: var(--code-font);
+    font-size: 0.875em;
+    background-color: var(--neutral-layer-2);
+    padding: 0.125rem 0.375rem;
+    border-radius: calc(var(--control-corner-radius) * 1px);
+}
+
+::deep pre code {
+    background-color: transparent;
+    padding: 0;
+}
+
+/* Horizontal rule */
+::deep hr {
+    border: none;
+    border-top: calc(var(--stroke-width) * 1px) solid var(--neutral-stroke-rest);
+    margin: 1.5rem 0;
+}
+
+/* Strong and emphasis */
+::deep strong,
+::deep b {
+    font-weight: 600;
+}
+
+::deep em,
+::deep i {
+    font-style: italic;
+}
+
+/* Tables */
+::deep table {
+    font-family: var(--body-font);
+    font-size: var(--type-ramp-base-font-size);
+    line-height: var(--type-ramp-base-line-height);
+    border-collapse: collapse;
+    width: 100%;
+    margin-bottom: 1rem;
+}
+
+::deep th {
+    padding: 0.5rem;
+    border: calc(var(--stroke-width) * 1px) solid var(--neutral-stroke-rest);
+    background-color: var(--neutral-layer-2);
+    font-weight: 600;
+    text-align: left;
+}
+
+::deep td {
+    padding: 0.5rem;
+    border: calc(var(--stroke-width) * 1px) solid var(--neutral-stroke-rest);
+}
+
+/* Images */
+::deep img {
+    max-width: 100%;
+    height: auto;
+    border-radius: calc(var(--control-corner-radius) * 1px);
+}
+
+/* Code highlighting styles */
+::deep .snippet {
+    margin-bottom: 0.5rem;
+    border: calc(var(--stroke-width) * 1px) solid var(--neutral-stroke-rest);
+    border-radius: calc(var(--control-corner-radius) * 1px);
+    overflow-y: auto;
+}
+
+::deep .hljs {
+    background-color: var(--neutral-layer-2);
+    tab-size: 2em;
+}
+
+::deep .hljs-copy-button {
+    border-color: var(--neutral-fill-strong-rest);
+    color: var(--accent-fill-rest);
+    top: 0.4rem;
+}
+
+::deep .hljs-copy-button:hover {
+    border-color: var(--neutral-fill-strong-hover);
+}
+
+::deep .hljs-copy-button:active {
+    border-color: var(--neutral-fill-strong-active);
+}
+
+::deep .hljs-copy {
+    cursor: pointer;
+    border-color: var(--neutral-stroke-rest);
+    border-radius: calc(var(--control-corner-radius) * 1px);
+    color: var(--accent-fill-rest);
+    background-color: var(--neutral-layer-2);
+    top: 0.4rem;
+    position: absolute;
+    transform: translateX(calc(100% + 1.125em));
+    right: 1em;
+    transition: background-color 200ms ease, transform 200ms ease-out;
+}
+
+::deep .hljs-copy-wrapper {
+    position: relative;
+    overflow: hidden;
+}
+
+::deep .hljs-copy-wrapper:hover .hljs-copy,
+::deep .hljs-copy:focus {
+    transform: translateX(0);
+}
