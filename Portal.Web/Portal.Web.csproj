@@ -6,6 +6,7 @@
     <Nullable>enable</Nullable>
     <EnableSdkContainerDebugging>True</EnableSdkContainerDebugging>
     <ContainerBaseImage>mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled-extra</ContainerBaseImage>
+    <ContainerRepository>tasou/portal</ContainerRepository>
     <UserSecretsId>24692884-3f6a-4a3a-b173-aa05231f66df</UserSecretsId>
   </PropertyGroup>
 
