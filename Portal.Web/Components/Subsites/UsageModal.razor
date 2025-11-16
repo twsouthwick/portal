@@ -3,28 +3,20 @@
 @inject IMarkdownConverter MarkdownConverter
 
 <FluentDialogBody>
-    <FluentStack Orientation="Orientation.Vertical" VerticalGap="12">
-        <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center" HorizontalGap="12">
-            <div class="usage-modal-icon" style="font-size: 2rem;">
-                <i class="@Content.Icon"></i>
-            </div>
-            <FluentStack Orientation="Orientation.Vertical">
-                <FluentLabel Typo="Typography.H4">@Content.Name</FluentLabel>
-                <FluentLabel Typo="Typography.Body" Style="color: var(--text-secondary);">Usage Guide</FluentLabel>
-            </FluentStack>
-        </FluentStack>
+    <MarkdownSection HtmlContent="@GetMarkup()" />
+</FluentDialogBody>
 
-        <FluentDivider Style="margin: 0.5rem 0;" />
-
-        <FluentStack Orientation="Orientation.Vertical" VerticalGap="8">
-            <FluentStack Orientation="Orientation.Horizontal" HorizontalGap="8" VerticalAlignment="VerticalAlignment.Center">
-                <FluentIcon Value="@(new Icons.Regular.Size20.Info())" />
-                <FluentLabel Typo="Typography.H6" Style="margin: 0;">Usage Instructions</FluentLabel>
-            </FluentStack>
-            <MarkdownSection HtmlContent="@GetMarkup()" />
+<FluentDialogHeader>
+    <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center" HorizontalGap="12">
+        <div class="usage-modal-icon" style="font-size: 2rem;">
+            <i class="@Content.Icon"></i>
+        </div>
+        <FluentStack Orientation="Orientation.Vertical">
+            <FluentLabel Typo="Typography.H4">@Content.Name</FluentLabel>
+            <FluentLabel Typo="Typography.Body" Style="color: var(--text-secondary);">@Content.Description</FluentLabel>
         </FluentStack>
     </FluentStack>
-</FluentDialogBody>
+</FluentDialogHeader>
 
 <FluentDialogFooter>
     <FluentButton Appearance="Appearance.Neutral" OnClick="@(() => Dialog.CancelAsync())">
