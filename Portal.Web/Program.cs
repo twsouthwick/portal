@@ -32,7 +32,7 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-
+app.UseForwardedHeaders();
 app.UseAuthentication();
 app.UseAuthorization();
 
