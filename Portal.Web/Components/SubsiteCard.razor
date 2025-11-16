@@ -1,42 +1,46 @@
 @rendermode InteractiveServer
 
-<FluentCard Class="subsite-card">
-    <FluentStack Orientation="Orientation.Vertical" Width="100%" VerticalGap="12" Style="height: 100%;">
-        <div class="subsite-icon" style="font-size: 2rem;">
-            <i class="@Subsite.Icon"></i>
-        </div>
+<div class="subsite-card-wrapper" @onclick="NavigateToSite">
+    <FluentCard Class="subsite-card">
+        <FluentStack Orientation="Orientation.Vertical" Width="100%" VerticalGap="12" Style="height: 100%;">
+            <div class="subsite-icon" style="font-size: 2rem;">
+                <i class="@Subsite.Icon"></i>
+            </div>
 
-        <FluentStack Orientation="Orientation.Vertical" VerticalGap="8" Style="flex: 1;">
-            <FluentLabel Typo="Typography.H5">@Subsite.Name</FluentLabel>
-            <FluentLabel Typo="Typography.Body" Style="color: var(--neutral-foreground-rest);">
-                @Subsite.Description
-            </FluentLabel>
-        </FluentStack>
+            <FluentStack Orientation="Orientation.Vertical" VerticalGap="8" Style="flex: 1;">
+                <FluentLabel Typo="Typography.H5">@Subsite.Name</FluentLabel>
+                <FluentLabel Typo="Typography.Body" Style="color: var(--neutral-foreground-rest);">
+                    @Subsite.Description
+                </FluentLabel>
+            </FluentStack>
 
-        <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.End" HorizontalGap="8">
-            @if (!string.IsNullOrEmpty(Subsite.UsageInstructions))
-            {
-                <FluentButton Appearance="Appearance.Outline" 
-                              OnClick="@ShowUsageModal"
-                              IconStart="@(new Icons.Regular.Size16.QuestionCircle())">
-                    How to Use
-                </FluentButton>
-            }
-            <FluentAnchor Appearance="Appearance.Accent"
-                          Href="@Subsite.Url"
-                          Target="_blank">
-                Visit Site
-                <FluentIcon Value="@(new Icons.Regular.Size16.ArrowRight())" Color="@Color.Info" Slot="end" />
-            </FluentAnchor>
+            <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.End" HorizontalGap="8">
+                @if (!string.IsNullOrEmpty(Subsite.UsageInstructions))
+                {
+                    <div @onclick:stopPropagation="true">
+                        <FluentButton Appearance="Appearance.Outline" 
+                                      OnClick="@ShowUsageModal"
+                                      IconStart="@(new Icons.Regular.Size16.QuestionCircle())">
+                            How to Use
+                        </FluentButton>
+                    </div>
+                }
+            </FluentStack>
         </FluentStack>
-    </FluentStack>
-</FluentCard>
+    </FluentCard>
+</div>
 
 @inject IDialogService DialogService
+@inject NavigationManager NavigationManager
 
 @code {
     [Parameter]
     public SubsiteInfo Subsite { get; set; } = null!;
+
+    private void NavigateToSite()
+    {
+        NavigationManager.NavigateTo(Subsite.Url, true);
+    }
 
     private async Task ShowUsageModal()
     {
