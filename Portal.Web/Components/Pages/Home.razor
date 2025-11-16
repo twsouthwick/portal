@@ -19,16 +19,7 @@
     {
         @foreach (var category in categorizedSubsites.Keys.OrderBy(k => k))
         {
-            <FluentStack Orientation="Orientation.Vertical" Width="100%" Style="margin-bottom: 2rem;">
-                <FluentLabel Typo="Typography.H2">@category</FluentLabel>
-
-                <div class="subsite-grid">
-                    @foreach (var subsite in categorizedSubsites[category])
-                    {
-                        <SubsiteCard Subsite="@subsite" />
-                    }
-                </div>
-            </FluentStack>
+            <SubsiteGrid Category="@category" Subsites="@categorizedSubsites[category]" />
         }
     }
     else

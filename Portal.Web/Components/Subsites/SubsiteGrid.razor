@@ -1,0 +1,43 @@
+@* Grid container for displaying subsites with optional category *@
+@if (!string.IsNullOrEmpty(Category))
+{
+    <FluentStack Orientation="Orientation.Vertical" Width="100%" Style="margin-bottom: 2rem;">
+        <FluentLabel Typo="Typography.H2">@Category</FluentLabel>
+
+        <div class="subsite-grid">
+            @if (Subsites is not null)
+            {
+                @foreach (var subsite in Subsites)
+                {
+                    <SubsiteCard Subsite="@subsite" />
+                }
+            }
+        </div>
+    </FluentStack>
+}
+else
+{
+    <div class="subsite-grid">
+        @if (Subsites is not null)
+        {
+            @foreach (var subsite in Subsites)
+            {
+                <SubsiteCard Subsite="@subsite" />
+            }
+        }
+    </div>
+}
+
+@code {
+    /// <summary>
+    /// List of subsites to display in the grid
+    /// </summary>
+    [Parameter]
+    public IEnumerable<SubsiteInfo>? Subsites { get; set; }
+
+    /// <summary>
+    /// Optional category name to display above the grid
+    /// </summary>
+    [Parameter]
+    public string? Category { get; set; }
+}

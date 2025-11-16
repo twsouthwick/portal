@@ -1,0 +1,15 @@
+/* Subsite grid layout */
+.subsite-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1.5rem;
+    width: 100%;
+    margin-top: 1rem;
+}
+
+@media (max-width: 768px) {
+    .subsite-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+}

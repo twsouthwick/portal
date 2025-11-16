@@ -1,40 +1,18 @@
-:root {
-    --primary-color: #2563eb;
-    --primary-dark: #1e40af;
-    --primary-light: #3b82f6;
-    --secondary-color: #0891b2;
-    --secondary-dark: #0e7490;
-    --accent-color: #06b6d4;
-    --success-color: #10b981;
-    --warning-color: #f59e0b;
-    --danger-color: #ef4444;
-    --background-light: #f8fafc;
-    --background-white: #ffffff;
-    --text-primary: #0f172a;
-    --text-secondary: #475569;
-    --text-muted: #64748b;
-    --border-color: #e2e8f0;
-    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-}
-
+/* Main card styles */
 .subsite-card {
     position: relative;
     border: 1px solid var(--border-color);
     border-radius: 12px;
-    padding: 0;
     background: var(--background-white);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     cursor: pointer;
     height: 100%;
-    display: flex;
-    flex-direction: column;
+    min-height: 250px;
     overflow: hidden;
     box-shadow: var(--shadow-sm);
 }
 
+/* Animated top border on hover */
 .subsite-card::before {
     content: '';
     position: absolute;
@@ -58,23 +36,7 @@
     transform: scaleX(1);
 }
 
-.subsite-card.selected {
-    border-color: var(--primary-color);
-    border-width: 2px;
-    box-shadow: var(--shadow-lg), 0 0 0 3px rgba(37, 99, 235, 0.1);
-}
-
-.subsite-card.selected::before {
-    transform: scaleX(1);
-}
-
-.subsite-card-header {
-    display: flex;
-    align-items: center;
-    padding: 1rem 1rem 0.75rem 1rem;
-    background: linear-gradient(135deg, var(--background-light) 0%, var(--background-white) 100%);
-}
-
+/* Icon styling */
 .subsite-icon {
     width: 40px;
     height: 40px;
@@ -84,300 +46,9 @@
     align-items: center;
     justify-content: center;
     color: white;
-    font-size: 1.25rem;
-    box-shadow: var(--shadow-md);
     transition: transform 0.3s ease;
 }
 
 .subsite-card:hover .subsite-icon {
     transform: scale(1.05) rotate(5deg);
-}
-
-.subsite-card-header .badge {
-    margin-left: auto;
-    padding: 0.3rem 0.5rem;
-    border-radius: 6px;
-    font-size: 0.7rem;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    gap: 0.25rem;
-}
-
-.subsite-card-header .bg-warning {
-    background: linear-gradient(135deg, #fbbf24 0%, var(--warning-color) 100%) !important;
-    color: white !important;
-    box-shadow: 0 2px 4px rgba(245, 158, 11, 0.2);
-}
-
-.subsite-card-body {
-    flex: 1;
-    padding: 0 1rem 0.75rem 1rem;
-    display: flex;
-    flex-direction: column;
-}
-
-.subsite-title {
-    font-size: 1rem;
-    font-weight: 700;
-    margin-bottom: 0.4rem;
-    color: var(--text-primary);
-    line-height: 1.4;
-    letter-spacing: -0.01em;
-}
-
-.subsite-description {
-    color: var(--text-secondary);
-    font-size: 0.8rem;
-    margin-bottom: 0.75rem;
-    line-height: 1.5;
-    flex: 1;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-}
-
-.subsite-card-body .badge {
-    align-self: flex-start;
-    padding: 0.25rem 0.6rem;
-    border-radius: 6px;
-    font-size: 0.7rem;
-    font-weight: 600;
-    letter-spacing: 0.025em;
-}
-
-.subsite-card-body .bg-primary {
-    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%) !important;
-    box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);
-}
-
-.subsite-card-footer {
-    display: flex;
-    gap: 0.5rem;
-    justify-content: flex-end;
-    padding: 0 1rem 1rem 1rem;
-    margin-top: auto;
-}
-
-.subsite-card-footer .btn {
-    padding: 0.4rem 1rem;
-    border-radius: 8px;
-    font-weight: 600;
-    font-size: 0.8rem;
-    transition: all 0.2s ease;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    border: 2px solid;
-}
-
-.subsite-card-footer .btn-outline-primary {
-    border-color: var(--primary-color);
-    color: var(--primary-color);
-    background: transparent;
-}
-
-.subsite-card-footer .btn-outline-primary:hover {
-    background: var(--primary-color);
-    color: white;
-    transform: translateX(2px);
-    box-shadow: var(--shadow-md);
-}
-
-.subsite-card-footer .btn-outline-info {
-    border-color: var(--accent-color);
-    color: var(--accent-color);
-    background: transparent;
-}
-
-.subsite-card-footer .btn-outline-info:hover {
-    background: var(--accent-color);
-    color: white;
-    box-shadow: var(--shadow-md);
-}
-
-.subsite-card-footer .btn i {
-    transition: transform 0.2s ease;
-}
-
-.subsite-card-footer .btn-outline-primary:hover i {
-    transform: translateX(3px);
-}
-
-.subsite-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 1.25rem;
-    margin-bottom: 1rem;
-}
-
-.subsite-details-pane {
-    position: fixed;
-    top: 0;
-    right: -550px;
-    width: 550px;
-    height: 100vh;
-    background: var(--background-white);
-    box-shadow: -4px 0 24px rgba(0, 0, 0, 0.12);
-    transition: right 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    z-index: 1000;
-    overflow-y: auto;
-    border-left: 1px solid var(--border-color);
-}
-
-.subsite-details-pane.open {
-    right: 0;
-}
-
-.subsite-details-header {
-    background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
-    color: white;
-    padding: 2.5rem;
-    position: sticky;
-    top: 0;
-    z-index: 1;
-    box-shadow: var(--shadow-md);
-}
-
-.subsite-details-close {
-    position: absolute;
-    top: 1.25rem;
-    right: 1.25rem;
-    background: rgba(255, 255, 255, 0.15);
-    border: none;
-    color: white;
-    font-size: 1.5rem;
-    cursor: pointer;
-    padding: 0.5rem;
-    line-height: 1;
-    border-radius: 8px;
-    width: 40px;
-    height: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s ease;
-    backdrop-filter: blur(10px);
-}
-
-.subsite-details-close:hover {
-    background: rgba(255, 255, 255, 0.25);
-    transform: rotate(90deg);
-}
-
-.subsite-details-body {
-    padding: 2rem 2.5rem;
-}
-
-.subsite-details-section {
-    margin-bottom: 2.5rem;
-}
-
-.subsite-details-section h6 {
-    font-weight: 700;
-    margin-bottom: 1rem;
-    color: var(--text-primary);
-    text-transform: uppercase;
-    font-size: 0.75rem;
-    letter-spacing: 0.1em;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.subsite-details-section h6::before {
-    content: '';
-    width: 3px;
-    height: 16px;
-    background: linear-gradient(180deg, var(--primary-color) 0%, var(--accent-color) 100%);
-    border-radius: 2px;
-}
-
-.subsite-details-section ul {
-    list-style: none;
-    padding: 0;
-}
-
-.subsite-details-section ul li {
-    padding: 0.75rem 0;
-    padding-left: 2rem;
-    position: relative;
-    color: var(--text-secondary);
-    line-height: 1.6;
-    border-bottom: 1px solid var(--border-color);
-}
-
-.subsite-details-section ul li:last-child {
-    border-bottom: none;
-}
-
-.subsite-details-section ul li:before {
-    content: "?";
-    position: absolute;
-    left: 0;
-    top: 0.75rem;
-    color: var(--success-color);
-    font-weight: bold;
-    width: 20px;
-    height: 20px;
-    background: rgba(16, 185, 129, 0.1);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.75rem;
-}
-
-.subsite-details-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(15, 23, 42, 0.6);
-    backdrop-filter: blur(4px);
-    z-index: 999;
-    opacity: 0;
-    transition: opacity 0.4s ease;
-    pointer-events: none;
-}
-
-.subsite-details-overlay.open {
-    opacity: 1;
-    pointer-events: all;
-}
-
-.info-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0.875rem 1.25rem;
-    background: var(--background-light);
-    border-radius: 8px;
-    margin-bottom: 0.75rem;
-    border: 1px solid var(--border-color);
-    transition: all 0.2s ease;
-}
-
-.info-badge:hover {
-    background: var(--background-white);
-    box-shadow: var(--shadow-sm);
-}
-
-.info-badge i {
-    color: var(--primary-color);
-    font-size: 1.1rem;
-}
-
-@media (max-width: 768px) {
-    .subsite-grid {
-        grid-template-columns: 1fr;
-        gap: 1.5rem;
-    }
-    
-    .subsite-details-pane {
-        width: 100%;
-        right: -100%;
-    }
 }
