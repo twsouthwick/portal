@@ -1,31 +1,23 @@
-@if (!string.IsNullOrEmpty(Category))
-{
+<div class="subsite-grid-container">
     <FluentStack Orientation="Orientation.Vertical" Width="100%" Style="margin-bottom: 2rem;">
-        <FluentLabel Typo="Typography.H2">@Category</FluentLabel>
+        @if (!string.IsNullOrEmpty(Category))
+        {
+            <FluentLabel Typo="Typography.H2">@Category</FluentLabel>
+        }
 
-        <div class="subsite-grid">
+        <FluentGrid Spacing="3" Justify="JustifyContent.FlexStart" Style="width: 100%;">
             @if (Subsites is not null)
             {
                 @foreach (var subsite in Subsites)
                 {
-                    <SubsiteCard Subsite="@subsite" />
+                    <FluentGridItem xs="12" sm="6" md="4" lg="3">
+                        <SubsiteCard Subsite="@subsite" />
+                    </FluentGridItem>
                 }
             }
-        </div>
+        </FluentGrid>
     </FluentStack>
-}
-else
-{
-    <div class="subsite-grid">
-        @if (Subsites is not null)
-        {
-            @foreach (var subsite in Subsites)
-            {
-                <SubsiteCard Subsite="@subsite" />
-            }
-        }
-    </div>
-}
+</div>
 
 @code {
     [Parameter]
