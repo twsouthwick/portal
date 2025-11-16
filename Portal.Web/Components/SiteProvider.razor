@@ -1,0 +1,52 @@
+﻿@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims;
+
+@if (_filtered is { })
+{
+    <CascadingValue TValue="ISiteDetails" Value="_filtered">
+        @if (ChildContent is { })
+        {
+            @ChildContent(_filtered)
+        }
+    </CascadingValue>
+}
+
+@code {
+    private ISiteDetails? _filtered;
+
+    [Parameter]
+    public RenderFragment<ISiteDetails>? ChildContent { get; set; }
+
+    [Inject]
+    public ISiteDetails SubsiteService { get; set; } = null!;
+
+    [Inject]
+    public AuthenticationStateProvider AuthStateProvider { get; set; } = null!;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var state = await AuthStateProvider.GetAuthenticationStateAsync();
+        _filtered = new Filtered(SubsiteService, state.User);
+    }
+
+    private sealed class Filtered(ISiteDetails main, ClaimsPrincipal user) : ISiteDetails
+    {
+        public string Name => main.Name;
+
+        public string Description => main.Description;
+
+        public IEnumerable<SubsiteInfo> Sites
+        {
+            get
+            {
+                foreach (var other in main.Sites)
+                {
+                    if (other.IsAuthorized(user))
+                    {
+                        yield return other;
+                    }
+                }
+            }
+        }
+    }
+}

@@ -1,20 +1,6 @@
 ﻿@page "/"
 
-@using System.Security.Claims
-@inject ISiteDetails SubsiteService
-@inject Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider AuthStateProvider
-@rendermode InteractiveServer
-
-<PageTitle>@SubsiteService.Name</PageTitle>
-
 <FluentStack Orientation="Orientation.Vertical">
-    @if (!string.IsNullOrEmpty(SubsiteService.Description))
-    {
-        <FluentCard>
-            <FluentLabel Typo="Typography.Body">@SubsiteService.Description</FluentLabel>
-        </FluentCard>
-    }
-
     @if (categorizedSubsites.Any())
     {
         @foreach (var category in categorizedSubsites.Keys.OrderBy(k => k))
@@ -29,17 +15,18 @@
 </FluentStack>
 
 @code {
+    [CascadingParameter]
+    public ISiteDetails? SiteDetails { get; set; } = null!;
+
     private Dictionary<string, List<SubsiteInfo>> categorizedSubsites = new();
 
     protected override async Task OnParametersSetAsync()
     {
-        var state = await AuthStateProvider.GetAuthenticationStateAsync();
-        // Load subsites from the service
-        var allSubsites = SubsiteService.GetSites(state.User);
-
-        // Group subsites by category
-        categorizedSubsites = allSubsites
-            .GroupBy(s => s.Category)
-            .ToDictionary(g => g.Key, g => g.ToList());
+        if (SiteDetails is { } details)
+        {
+            categorizedSubsites = details.Sites
+                .GroupBy(s => s.Category)
+                .ToDictionary(g => g.Key, g => g.ToList());
+        }
     }
 }

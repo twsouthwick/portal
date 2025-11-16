@@ -1,13 +1,28 @@
 ﻿@inherits LayoutComponentBase
 
 <RemoteNetworkMessageBar />
-<FluentLayout>
-    <FluentBodyContent>
-        <div class="centered-container">
-            @Body
-        </div>
-    </FluentBodyContent>
-</FluentLayout>
+
+<SiteProvider>
+    <FluentLayout>
+        <FluentHeader>
+            <PageTitle>@context.Name</PageTitle>
+
+            @if (string.IsNullOrEmpty(context.Description))
+            {
+                <span>@context.Name</span>
+            }
+            else
+            {
+                <span>@context.Name - @context.Description</span>
+            }
+        </FluentHeader>
+        <FluentBodyContent>
+            <div class="centered-container">
+                @Body
+            </div>
+        </FluentBodyContent>
+    </FluentLayout>
+</SiteProvider>
 
 <FluentMessageBarProvider @rendermode="@InteractiveServer" />
 <FluentDialogProvider @rendermode="@InteractiveServer" />

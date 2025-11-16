@@ -1,4 +1,3 @@
-@* Grid container for displaying subsites with optional category *@
 @if (!string.IsNullOrEmpty(Category))
 {
     <FluentStack Orientation="Orientation.Vertical" Width="100%" Style="margin-bottom: 2rem;">
@@ -29,15 +28,9 @@ else
 }
 
 @code {
-    /// <summary>
-    /// List of subsites to display in the grid
-    /// </summary>
     [Parameter]
     public IEnumerable<SubsiteInfo>? Subsites { get; set; }
 
-    /// <summary>
-    /// Optional category name to display above the grid
-    /// </summary>
     [Parameter]
     public string? Category { get; set; }
 }
