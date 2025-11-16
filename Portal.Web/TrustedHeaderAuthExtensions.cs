@@ -58,32 +58,23 @@ internal static class TrustedHeaderAuthExtensions
                     {
                         if (role is { })
                         {
-                            identity.AddClaim(new Claim(ClaimTypes.Role, role));
+                            foreach (var split in role.Split([',']))
+                            {
+                                identity.AddClaim(new Claim(ClaimTypes.Role, split));
+                            }
                         }
                     }
                 }
 
                 var user = new ClaimsPrincipal(identity);
 
-                Logger.LogInformation("Trusted Header User: {User}", PrintUserDetails(user));
+                Logger.LogInformation("User logged on: {User}", user.Identity?.Name);
 
                 return AuthenticateResult.Success(new AuthenticationTicket(user, Scheme.Name));
             }
 
             return AuthenticateResult.NoResult();
         }
-    }
-
-    private static string PrintUserDetails(ClaimsPrincipal user)
-    {
-        var sb = new StringBuilder();
-
-        foreach (var claim in user.Claims)
-        {
-            sb.AppendFormat($"[{claim.Type}: {claim.Value}]");
-        }
-
-        return sb.ToString();
     }
 
     private sealed class TrustedHeaderStartup(
