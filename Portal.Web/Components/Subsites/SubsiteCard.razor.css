@@ -30,6 +30,8 @@
     box-shadow: var(--shadow-xl);
     transform: translateY(-4px);
     border-color: var(--primary-light);
+    background: linear-gradient(135deg, var(--primary-color, #0078d4) 0%, var(--accent-color, #106ebe) 100%);
+    background-size: 100% 100%;
 }
 
 .subsite-card:hover::before {
@@ -51,4 +53,17 @@
 
 .subsite-card:hover .subsite-icon {
     transform: scale(1.05) rotate(5deg);
+    background: linear-gradient(135deg, white 0%, rgba(255, 255, 255, 0.95) 100%);
+    color: var(--primary-color, #0078d4);
+}
+
+/* Text color changes on hover */
+.subsite-card:hover fluent-label {
+    color: white !important;
+}
+
+.subsite-card:hover fluent-button,
+.subsite-card:hover fluent-anchor {
+    background-color: white;
+    color: var(--primary-color, #0078d4);
 }
