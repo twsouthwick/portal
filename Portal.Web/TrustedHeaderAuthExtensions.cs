@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Primitives;
 using System.Security.Claims;
+using System.Text;
 using System.Text.Encodings.Web;
 
 internal static class TrustedHeaderAuth
@@ -15,7 +16,7 @@ internal static class TrustedHeaderAuthExtensions
     public static AuthenticationBuilder AddTrustedHeaderAuth(this AuthenticationBuilder builder, Action<TrustedHeaderAuthenticationOptions> configure)
     {
         builder.AddScheme<TrustedHeaderAuthenticationOptions, TrustedHeaderAuthenticationHandler>(TrustedHeaderAuth.DefaultScheme, configure);
-        builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IStartupFilter, TestUserStartupFilter>());
+        builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IStartupFilter, TrustedHeaderStartup>());
 
         return builder;
 
@@ -64,6 +65,8 @@ internal static class TrustedHeaderAuthExtensions
 
                 var user = new ClaimsPrincipal(identity);
 
+                Logger.LogInformation("Trusted Header User: {User}", PrintUserDetails(user));
+
                 return AuthenticateResult.Success(new AuthenticationTicket(user, Scheme.Name));
             }
 
@@ -71,15 +74,37 @@ internal static class TrustedHeaderAuthExtensions
         }
     }
 
-    private sealed class TestUserStartupFilter(IConfiguration config, IHostEnvironment env, IOptionsMonitor<TrustedHeaderAuthenticationOptions> trustedHeaders) : IStartupFilter
+    private static string PrintUserDetails(ClaimsPrincipal user)
+    {
+        var sb = new StringBuilder();
+
+        foreach (var claim in user.Claims)
+        {
+            sb.AppendFormat($"[{claim.Type}: {claim.Value}]");
+        }
+
+        return sb.ToString();
+    }
+
+    private sealed class TrustedHeaderStartup(
+        IConfiguration config,
+        IHostEnvironment env,
+        IOptionsMonitor<TrustedHeaderAuthenticationOptions> trustedHeaders,
+        ILogger<TrustedHeaderStartup> logger
+        ) : IStartupFilter
     {
         public Action<IApplicationBuilder> Configure(Action<IApplicationBuilder> next) => builder =>
         {
+            var options = trustedHeaders.Get(TrustedHeaderAuth.DefaultScheme);
+
+            logger.LogInformation("Initializing trusted header authentication: UserHeader={UserHeader}, NameHeader={NameHeader}, RoleHeader={RoleHeader}", options.UsernameHeader, options.NameHeader, options.RoleHeader);
+
             if (env.IsDevelopment())
             {
+                logger.LogWarning("Enabling test user system via headers");
+
                 if (config["TEST_USER"] is { } testUser && config["TEST_ROLES"] is { } testRoles)
                 {
-                    var options = trustedHeaders.Get(TrustedHeaderAuth.DefaultScheme);
                     var roles = new StringValues(testRoles.Split(','));
                     builder.Use((ctx, next) =>
                     {
