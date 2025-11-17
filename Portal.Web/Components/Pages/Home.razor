@@ -24,9 +24,32 @@
     {
         if (SiteDetails is { } details)
         {
-            categorizedSubsites = details.Sites
-                .GroupBy(s => s.Category)
-                .ToDictionary(g => g.Key, g => g.ToList());
+            categorizedSubsites = new Dictionary<string, List<SubsiteInfo>>();
+
+            foreach (var subsite in details.Sites)
+            {
+                // If subsite has no categories, add it to the empty/uncategorized group
+                if (subsite.Categories.Count == 0)
+                {
+                    if (!categorizedSubsites.ContainsKey(string.Empty))
+                    {
+                        categorizedSubsites[string.Empty] = new List<SubsiteInfo>();
+                    }
+                    categorizedSubsites[string.Empty].Add(subsite);
+                }
+                else
+                {
+                    // Add the subsite to each of its categories
+                    foreach (var category in subsite.Categories)
+                    {
+                        if (!categorizedSubsites.ContainsKey(category))
+                        {
+                            categorizedSubsites[category] = new List<SubsiteInfo>();
+                        }
+                        categorizedSubsites[category].Add(subsite);
+                    }
+                }
+            }
         }
     }
 }

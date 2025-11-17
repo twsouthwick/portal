@@ -258,9 +258,9 @@ public class SubsiteInfo
     public string Icon { get; set; } = "bi bi-globe";
 
     /// <summary>
-    /// Category or department the subsite belongs to
+    /// Categories or departments the subsite belongs to
     /// </summary>
-    public string Category { get; set; } = string.Empty;
+    public IReadOnlyCollection<string> Categories { get; set; } = [];
 
     /// <summary>
     /// Detailed usage instructions
