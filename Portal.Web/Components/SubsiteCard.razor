@@ -1,6 +1,6 @@
 @rendermode InteractiveServer
 
-<div class="subsite-card-wrapper" @onclick="NavigateToSite">
+<div class="subsite-card-wrapper">
     <FluentCard Class="subsite-card">
         <FluentStack Orientation="Orientation.Vertical" Width="100%" VerticalGap="12" Style="height: 100%;">
             <div class="subsite-icon" style="font-size: 2rem;">
@@ -17,14 +17,17 @@
             <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.End" HorizontalGap="8">
                 @if (!string.IsNullOrEmpty(Subsite.UsageInstructions))
                 {
-                    <div @onclick:stopPropagation="true">
-                        <FluentButton Appearance="Appearance.Outline" 
-                                      OnClick="@ShowUsageModal"
-                                      IconStart="@(new Icons.Regular.Size16.QuestionCircle())">
-                            How to Use
-                        </FluentButton>
-                    </div>
+                    <FluentButton Appearance="Appearance.Outline" 
+                                  OnClick="@ShowUsageModal"
+                                  IconStart="@(new Icons.Regular.Size16.QuestionCircle())">
+                        How to Use
+                    </FluentButton>
                 }
+                <FluentButton Appearance="Appearance.Accent" 
+                              OnClick="@NavigateToSite"
+                              IconStart="@(new Icons.Regular.Size16.Open())">
+                    Open
+                </FluentButton>
             </FluentStack>
         </FluentStack>
     </FluentCard>
@@ -32,14 +35,15 @@
 
 @inject IDialogService DialogService
 @inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
 
 @code {
     [Parameter]
     public SubsiteInfo Subsite { get; set; } = null!;
 
-    private void NavigateToSite()
+    private async Task NavigateToSite()
     {
-        NavigationManager.NavigateTo(Subsite.Url, true);
+        await JSRuntime.InvokeVoidAsync("open", Subsite.Url, "_blank");
     }
 
     private async Task ShowUsageModal()
