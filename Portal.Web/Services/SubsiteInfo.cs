@@ -272,8 +272,5 @@ public class SubsiteInfo
 
     public IReadOnlyCollection<string> Roles { get; set; } = [];
 
-    /// <summary>
-    /// Target audience for the subsite
-    /// </summary>
-    public string TargetAudience { get; set; } = string.Empty;
+    public bool IsPrivate { get; set; }
 }

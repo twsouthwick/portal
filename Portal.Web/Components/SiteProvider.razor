@@ -1,5 +1,6 @@
 ﻿@using Microsoft.AspNetCore.Components.Authorization
-@using System.Security.Claims;
+@using System.Security.Claims
+@using Microsoft.JSInterop
 
 @if (_filtered is { })
 {
@@ -23,13 +24,50 @@
     [Inject]
     public AuthenticationStateProvider AuthStateProvider { get; set; } = null!;
 
-    protected override async Task OnParametersSetAsync()
+    [Inject]
+    public IJSRuntime JSRuntime { get; set; } = null!;
+
+    [Inject]
+    public ILogger<SiteProvider> Logger { get; set; } = null!;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        var state = await AuthStateProvider.GetAuthenticationStateAsync();
-        _filtered = new Filtered(SubsiteService, state.User);
+        if (firstRender)
+        {
+            var state = await AuthStateProvider.GetAuthenticationStateAsync();
+            var isPrivate = await CheckIsPrivateModeAsync();
+            _filtered = new Filtered(SubsiteService, state.User, isPrivate);
+
+            StateHasChanged();
+        }
     }
 
-    private sealed class Filtered(ISiteDetails main, ClaimsPrincipal user) : ISiteDetails
+    /// <summary>
+    /// Detects if the browser is currently in private/incognito mode
+    /// </summary>
+    /// <returns>True if in private mode, false otherwise</returns>
+    public async Task<bool> CheckIsPrivateModeAsync()
+    {
+        await using var module = await JSRuntime.InvokeAsync<IJSObjectReference>(
+            "import",
+            "./Components/SiteProvider.razor.js");
+        try
+        {
+            var result = await module.InvokeAsync<bool>("isPrivateMode");
+
+            Logger.LogInformation("Private mode detection result: {IsPrivateMode}", result);
+
+            return result;
+        }
+        catch (JSException ex)
+        {
+            // Log the specific JS error
+            Logger.LogInformation(ex, "JavaScript error in isPrivateMode");
+            return false;
+        }
+    }
+
+    private sealed class Filtered(ISiteDetails main, ClaimsPrincipal user, bool isPrivate) : ISiteDetails
     {
         public string Name => main.Name;
 
@@ -39,11 +77,16 @@
         {
             get
             {
-                foreach (var other in main.Sites)
+                foreach (var site in main.Sites)
                 {
-                    if (other.IsAuthorized(user))
+                    if (site.IsAuthorized(user))
                     {
-                        yield return other;
+                        if (site.IsPrivate && !isPrivate)
+                        {
+                            continue;
+                        }
+
+                        yield return site;
                     }
                 }
             }
