@@ -5,7 +5,7 @@
     {
         @foreach (var category in categorizedSubsites.Keys.OrderBy(k => k))
         {
-            <SubsiteGrid Category="@category" Subsites="@categorizedSubsites[category]" />
+            <SiteGrid Category="@category" Sites="@categorizedSubsites[category]" />
         }
     }
     else
@@ -16,15 +16,15 @@
 
 @code {
     [CascadingParameter]
-    public ISiteDetails? SiteDetails { get; set; } = null!;
+    public IPortalDetails? SiteDetails { get; set; } = null!;
 
-    private Dictionary<string, List<SubsiteInfo>> categorizedSubsites = new();
+    private Dictionary<string, List<SiteInfo>> categorizedSubsites = new();
 
     protected override async Task OnParametersSetAsync()
     {
         if (SiteDetails is { } details)
         {
-            categorizedSubsites = new Dictionary<string, List<SubsiteInfo>>();
+            categorizedSubsites = new Dictionary<string, List<SiteInfo>>();
 
             foreach (var subsite in details.Sites)
             {
@@ -33,7 +33,7 @@
                 {
                     if (!categorizedSubsites.ContainsKey(string.Empty))
                     {
-                        categorizedSubsites[string.Empty] = new List<SubsiteInfo>();
+                        categorizedSubsites[string.Empty] = new List<SiteInfo>();
                     }
                     categorizedSubsites[string.Empty].Add(subsite);
                 }
@@ -44,7 +44,7 @@
                     {
                         if (!categorizedSubsites.ContainsKey(category))
                         {
-                            categorizedSubsites[category] = new List<SubsiteInfo>();
+                            categorizedSubsites[category] = new List<SiteInfo>();
                         }
                         categorizedSubsites[category].Add(subsite);
                     }

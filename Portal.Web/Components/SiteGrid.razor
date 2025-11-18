@@ -6,14 +6,11 @@
         }
 
         <FluentGrid Spacing="3" Justify="JustifyContent.FlexStart" Style="width: 100%;">
-            @if (Subsites is not null)
+            @foreach (var subsite in Sites)
             {
-                @foreach (var subsite in Subsites)
-                {
-                    <FluentGridItem xs="12" sm="6" md="4" lg="3">
-                        <SubsiteCard Subsite="@subsite" />
-                    </FluentGridItem>
-                }
+                <FluentGridItem xs="12" sm="6" md="4" lg="3">
+                    <SiteCard Site="@subsite" />
+                </FluentGridItem>
             }
         </FluentGrid>
     </FluentStack>
@@ -21,7 +18,7 @@
 
 @code {
     [Parameter]
-    public IEnumerable<SubsiteInfo>? Subsites { get; set; }
+    public IEnumerable<SiteInfo> Sites { get; set; } = [];
 
     [Parameter]
     public string? Category { get; set; }

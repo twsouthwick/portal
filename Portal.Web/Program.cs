@@ -20,7 +20,7 @@ builder.Services.AddOutputCache();
 
 builder.Services.AddSingleton<IMarkdownConverter, MarkdownConverter>();
 
-await builder.AddSite();
+builder.AddPortalProvider();
 
 var app = builder.Build();
 

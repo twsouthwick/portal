@@ -21,7 +21,7 @@ internal sealed class MarkdownConverter : IMarkdownConverter, IMarkdownExtension
             .Build();
     }
 
-    public string Convert(SubsiteInfo info, string markdown)
+    public string Convert(SiteInfo info, string markdown)
     {
         var context = new MarkdownParserContext();
         context.Properties.Add(Key, info);
@@ -40,7 +40,7 @@ internal sealed class MarkdownConverter : IMarkdownConverter, IMarkdownExtension
         {
             if (base.Match(processor, ref slice))
             {
-                if (processor.Inline is LinkInline { IsImage: true } inline && processor.Context is { } context && context.Properties.TryGetValue(Key, out var value) && value is SubsiteInfo info)
+                if (processor.Inline is LinkInline { IsImage: true } inline && processor.Context is { } context && context.Properties.TryGetValue(Key, out var value) && value is SiteInfo info)
                 {
                     inline.SetData(Key, info);
                 }
@@ -62,7 +62,7 @@ internal sealed class MarkdownConverter : IMarkdownConverter, IMarkdownExtension
 
     private bool SiteImgRoute(HtmlRenderer renderer, LinkInline obj)
     {
-        if (obj.IsImage && obj.Url is { } && obj.GetData(Key) is SubsiteInfo details)
+        if (obj.IsImage && obj.Url is { } && obj.GetData(Key) is SiteInfo details)
         {
             obj.Url = $"{details.Id}/{obj.Url}";
         }

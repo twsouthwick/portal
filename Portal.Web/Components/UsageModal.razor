@@ -1,4 +1,4 @@
-@implements IDialogContentComponent<SubsiteInfo>
+@implements IDialogContentComponent<SiteInfo>
 @inject NavigationManager NavigationManager
 @inject IMarkdownConverter MarkdownConverter
 
@@ -32,7 +32,7 @@
 
 @code {
     [Parameter]
-    public SubsiteInfo Content { get; set; } = default!;
+    public SiteInfo Content { get; set; } = default!;
 
     [CascadingParameter]
     public FluentDialog Dialog { get; set; } = default!;

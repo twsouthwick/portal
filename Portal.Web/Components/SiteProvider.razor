@@ -4,7 +4,7 @@
 
 @if (_filtered is { })
 {
-    <CascadingValue TValue="ISiteDetails" Value="_filtered">
+    <CascadingValue TValue="IPortalDetails" Value="_filtered">
         @if (ChildContent is { })
         {
             @ChildContent(_filtered)
@@ -13,13 +13,13 @@
 }
 
 @code {
-    private ISiteDetails? _filtered;
+    private IPortalDetails? _filtered;
 
     [Parameter]
-    public RenderFragment<ISiteDetails>? ChildContent { get; set; }
+    public RenderFragment<IPortalDetails>? ChildContent { get; set; }
 
     [Inject]
-    public ISiteDetails SubsiteService { get; set; } = null!;
+    public IPortalProvider PortalProvider { get; set; } = null!;
 
     [Inject]
     public AuthenticationStateProvider AuthStateProvider { get; set; } = null!;
@@ -34,9 +34,10 @@
     {
         if (firstRender)
         {
+            var portal = await PortalProvider.GetSiteDetailsAsync(default);
             var state = await AuthStateProvider.GetAuthenticationStateAsync();
             var isPrivate = await CheckIsPrivateModeAsync();
-            _filtered = new Filtered(SubsiteService, state.User, isPrivate);
+            _filtered = new Filtered(portal, state.User, isPrivate);
 
             StateHasChanged();
         }
@@ -67,13 +68,13 @@
         }
     }
 
-    private sealed class Filtered(ISiteDetails main, ClaimsPrincipal user, bool isPrivate) : ISiteDetails
+    private sealed class Filtered(IPortalDetails main, ClaimsPrincipal user, bool isPrivate) : IPortalDetails
     {
         public string Name => main.Name;
 
         public string Description => main.Description;
 
-        public IEnumerable<SubsiteInfo> Sites
+        public IEnumerable<SiteInfo> Sites
         {
             get
             {
