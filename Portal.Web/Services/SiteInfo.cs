@@ -49,4 +49,6 @@ public class SiteInfo
     public IReadOnlyCollection<string> Roles { get; set; } = [];
 
     public bool IsPrivate { get; set; }
+
+    public bool IsInternal { get; set; }
 }

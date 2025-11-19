@@ -1,6 +1,11 @@
 <div class="subsite-card-wrapper">
     <FluentCard Class="subsite-card">
         <FluentStack Orientation="Orientation.Vertical" Width="100%" VerticalGap="12" Style="height: 100%;">
+            @if (Site.IsInternal && RemoteIp is { })
+            {
+                <FluentMessageBar Title="Remote Connection Required" Intent="@MessageIntent.Warning" AllowDismiss="false" />
+            }
+
             <div class="subsite-icon" style="font-size: 2rem;">
                 <i class="@Site.Icon"></i>
             </div>
@@ -15,13 +20,13 @@
             <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.End" HorizontalGap="8">
                 @if (!string.IsNullOrEmpty(Site.UsageInstructions))
                 {
-                    <FluentButton Appearance="Appearance.Outline" 
+                    <FluentButton Appearance="Appearance.Outline"
                                   OnClick="@ShowUsageModal"
                                   IconStart="@(new Icons.Regular.Size16.QuestionCircle())">
                         How to Use
                     </FluentButton>
                 }
-                <FluentButton Appearance="Appearance.Accent" 
+                <FluentButton Appearance="Appearance.Accent"
                               OnClick="@NavigateToSite"
                               IconStart="@(new Icons.Regular.Size16.Open())">
                     Open
@@ -38,6 +43,9 @@
 @code {
     [Parameter]
     public SiteInfo Site { get; set; } = null!;
+
+    [CascadingParameter(Name = "RemoteIP")]
+    public string? RemoteIp { get; set; } = null!;
 
     private async Task NavigateToSite()
     {

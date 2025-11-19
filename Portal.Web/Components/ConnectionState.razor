@@ -1,10 +1,10 @@
 ﻿@using System.Net
 
-@if (RemoteIP is { } && isInteractive)
+@if (isInteractive && ChildContent is { })
 {
-    <FluentMessageBar Title="Remote Connection Detected" Intent="@MessageIntent.Warning">
-        You are accessing this portal from a remote network (@RemoteIP). Some features may be restricted.
-    </FluentMessageBar>
+    <CascadingValue Name="RemoteIP" TValue="string" Value="RemoteIP">
+        @ChildContent
+    </CascadingValue>
 }
 
 @code {
@@ -14,13 +14,16 @@
     [CascadingParameter]
     public HttpContext? Context { get; set; }
 
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
     private bool isInteractive = false;
 
     protected override void OnParametersSet()
     {
         if (RemoteIP is not { } && Context is { Connection.RemoteIpAddress: { } ip })
         {
-            if (IsRemoteAddress(ip))
+            if (!IsRemoteAddress(ip))
             {
                 RemoteIP = ip.ToString();
             }
