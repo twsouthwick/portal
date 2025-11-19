@@ -23,7 +23,7 @@
     {
         if (RemoteIP is not { } && Context is { Connection.RemoteIpAddress: { } ip })
         {
-            if (!IsRemoteAddress(ip))
+            if (IsRemoteAddress(ip))
             {
                 RemoteIP = ip.ToString();
             }
