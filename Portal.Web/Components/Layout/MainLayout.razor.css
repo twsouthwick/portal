@@ -1,87 +1,9 @@
-.page {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-}
-
 /* Main container centering */
 .centered-container {
     max-width: 90%;
     width: 100%;
     margin: 0 auto;
     padding-top: 2rem;
-}
-
-main {
-    flex: 1;
-}
-
-.sidebar {
-    background-image: linear-gradient(180deg, rgb(5, 39, 103) 0%, #3a0647 70%);
-}
-
-.top-row {
-    background-color: #f7f7f7;
-    border-bottom: 1px solid #d6d5d5;
-    justify-content: flex-end;
-    height: 3.5rem;
-    display: flex;
-    align-items: center;
-}
-
-    .top-row ::deep a, .top-row ::deep .btn-link {
-        white-space: nowrap;
-        margin-left: 1.5rem;
-        text-decoration: none;
-    }
-
-    .top-row ::deep a:hover, .top-row ::deep .btn-link:hover {
-        text-decoration: underline;
-    }
-
-    .top-row ::deep a:first-child {
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-@media (max-width: 640.98px) {
-    .top-row {
-        justify-content: space-between;
-    }
-
-    .top-row ::deep a, .top-row ::deep .btn-link {
-        margin-left: 0;
-    }
-}
-
-@media (min-width: 641px) {
-    .page {
-        flex-direction: row;
-    }
-
-    .sidebar {
-        width: 250px;
-        height: 100vh;
-        position: sticky;
-        top: 0;
-    }
-
-    .top-row {
-        position: sticky;
-        top: 0;
-        z-index: 1;
-    }
-
-    .top-row.auth ::deep a:first-child {
-        flex: 1;
-        text-align: right;
-        width: 0;
-    }
-
-    .top-row, article {
-        padding-left: 2rem !important;
-        padding-right: 1.5rem !important;
-    }
 }
 
 #blazor-error-ui {
@@ -110,3 +32,98 @@ main {
         #blazor-error-ui .dismiss:hover {
             color: var(--accent-foreground-rest);
         }
+
+/* Blazor reconnection UI */
+#components-reconnect-modal {
+    display: none;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 2000;
+    background: var(--neutral-layer-floating);
+    padding: 1.5rem 2rem;
+    border-radius: 8px;
+    box-shadow: var(--elevation-shadow-dialog);
+    border: 1px solid var(--neutral-stroke-layer-rest);
+    min-width: 300px;
+    max-width: 400px;
+}
+
+    #components-reconnect-modal.components-reconnect-show {
+        display: block;
+    }
+
+    #components-reconnect-modal.components-reconnect-hide {
+        display: none;
+    }
+
+    #components-reconnect-modal h5 {
+        margin: 0 0 1rem 0;
+        color: var(--neutral-foreground-rest);
+        font-size: 1.125rem;
+        font-weight: 600;
+    }
+
+    #components-reconnect-modal p {
+        margin: 0.5rem 0;
+        color: var(--neutral-foreground-rest);
+        font-size: 0.875rem;
+    }
+
+    /* Retrying state */
+    #components-reconnect-modal.components-reconnect-retrying {
+        border-left: 4px solid var(--accent-fill-rest);
+    }
+
+    /* Failed state */
+    #components-reconnect-modal.components-reconnect-failed {
+        border-left: 4px solid var(--fill-color-critical);
+        background: var(--neutral-layer-floating);
+    }
+
+        #components-reconnect-modal.components-reconnect-failed h5 {
+            color: var(--fill-color-critical);
+        }
+
+    /* Rejected state */
+    #components-reconnect-modal.components-reconnect-rejected {
+        border-left: 4px solid var(--fill-color-critical);
+        background: var(--neutral-layer-floating);
+    }
+
+        #components-reconnect-modal.components-reconnect-rejected h5 {
+            color: var(--fill-color-critical);
+        }
+
+    /* Spinner for retrying state */
+    #components-reconnect-modal .spinner {
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        border: 2px solid var(--accent-fill-rest);
+        border-top-color: transparent;
+        border-radius: 50%;
+        animation: spinner 0.8s linear infinite;
+        margin-right: 0.5rem;
+        vertical-align: middle;
+    }
+
+@keyframes spinner {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Reconnection modal backdrop */
+#components-reconnect-modal::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--neutral-fill-stealth-rest);
+    opacity: 0.7;
+    z-index: -1;
+}
