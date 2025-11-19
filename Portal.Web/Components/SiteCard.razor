@@ -1,7 +1,7 @@
 <div class="subsite-card-wrapper">
     <FluentCard Class="subsite-card">
         <FluentStack Orientation="Orientation.Vertical" Width="100%" VerticalGap="12" Style="height: 100%;">
-            @if (Site.IsInternal && RemoteIp is { })
+            @if (IsDisabledDueToRemote)
             {
                 <FluentMessageBar Title="Remote Connection Required" Intent="@MessageIntent.Warning" AllowDismiss="false" />
             }
@@ -26,7 +26,8 @@
                         How to Use
                     </FluentButton>
                 }
-                <FluentButton Appearance="Appearance.Accent"
+                <FluentButton Disabled="@IsDisabledDueToRemote"
+                              Appearance="Appearance.Accent"
                               OnClick="@NavigateToSite"
                               IconStart="@(new Icons.Regular.Size16.Open())">
                     Open
@@ -46,6 +47,8 @@
 
     [CascadingParameter(Name = "RemoteIP")]
     public string? RemoteIp { get; set; } = null!;
+
+    private bool IsDisabledDueToRemote => RemoteIp is { } && Site.IsInternal;
 
     private async Task NavigateToSite()
     {
