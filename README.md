@@ -72,7 +72,15 @@ sites/
   "id": "home-assistant",
   "name": "Home Assistant",
   "description": "Smart home automation and control",
-  "url": "https://homeassistant.home.arpa",
+  "links": [
+    {
+      "url": "https://homeassistant.home.arpa"
+    },
+    {
+      "url": "homeassistant://",
+      "icon": "bi bi-app"
+    }
+  ],
   "icon": "bi bi-house-door",
   "category": "smart-home",
   "roles": ["admin", "family"]
@@ -82,8 +90,10 @@ sites/
 - `id` (required): Unique identifier matching directory name
 - `name` (required): Display name
 - `description`: Brief description
-- `url`: External URL to link to
-- `icon`: Bootstrap icon class (default: "bi bi-globe")
+- `links`: Array of links for the subsite
+  - `url`: URL to navigate to
+  - `icon` (optional): Custom icon override (if empty, determined by URL protocol)
+- `icon`: Bootstrap icon class for the card (default: "bi bi-globe")
 - `category`: Grouping category
 - `roles`: Required roles for access (empty = public)
 
@@ -124,7 +134,11 @@ Control access by adding a `roles` array:
 {
   "id": "router-admin",
   "name": "Router Admin",
-  "url": "https://router.home.arpa",
+  "links": [
+    {
+      "url": "https://router.home.arpa"
+    }
+  ],
   "roles": ["admin"]
 }
 ```

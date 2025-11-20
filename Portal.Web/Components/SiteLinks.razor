@@ -1,0 +1,14 @@
+<div style="display: flex; gap: 8px;">
+    @foreach (var link in Links)
+    {
+        <SiteLauncher Url="@link.Url" Icon="@link.Icon" IsDisabled="@IsDisabled" />
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public IReadOnlyCollection<SiteLink> Links { get; set; } = null!;
+
+    [Parameter]
+    public bool IsDisabled { get; set; }
+}

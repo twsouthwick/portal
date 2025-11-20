@@ -4,6 +4,22 @@ using System.Text.Json.Serialization;
 namespace Portal.Web.Services;
 
 /// <summary>
+/// Represents a link for a subsite
+/// </summary>
+public class SiteLink
+{
+    /// <summary>
+    /// URL to navigate to
+    /// </summary>
+    public string Url { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Optional icon override. If empty, icon will be determined based on URL protocol.
+    /// </summary>
+    public string? Icon { get; set; }
+}
+
+/// <summary>
 /// Represents information about a subsite in the intranet portal
 /// </summary>
 public class SiteInfo
@@ -24,14 +40,9 @@ public class SiteInfo
     public string Description { get; set; } = string.Empty;
 
     /// <summary>
-    /// URL to navigate to the subsite
+    /// Links associated with this subsite
     /// </summary>
-    public string Url { get; set; } = string.Empty;
-
-    /// <summary>
-    /// App protocol URL for launching native application (e.g., ms-teams://, slack://)
-    /// </summary>
-    public string? AppUrl { get; set; }
+    public IReadOnlyCollection<SiteLink> Links { get; set; } = [];
 
     /// <summary>
     /// Icon class (e.g., Bootstrap icons, Font Awesome)

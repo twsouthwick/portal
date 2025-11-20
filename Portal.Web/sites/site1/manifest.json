@@ -2,8 +2,14 @@
   "id": "site1",
   "name": "Site 1",
   "description": "Some interesting description.",
-  "url": "https://site1.localhost",
-  "appUrl": "audiobookshelf://",
+  "links": [
+    {
+      "url": "audiobookshelf://"
+    },
+    {
+      "url": "https://site1.localhost"
+    }
+  ],
   "icon": "bi bi-globe",
   "requiredsPermission": true,
   "roles": [ "admin" ],

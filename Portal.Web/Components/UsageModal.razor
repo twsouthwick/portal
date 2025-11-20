@@ -19,15 +19,7 @@
 </FluentDialogHeader>
 
 <FluentDialogFooter>
-    <FluentButton Appearance="Appearance.Neutral" OnClick="@(() => Dialog.CancelAsync())">
-        Close
-    </FluentButton>
-    <FluentAnchor Appearance="Appearance.Accent"
-                  Href="@Content.Url"
-                  Target="_blank">
-        Open @Content.Name
-        <FluentIcon Value="@(new Icons.Regular.Size16.ArrowUpRight())" Color="@Color.Info" Slot="end" />
-    </FluentAnchor>
+    <SiteLinks Links="@Content.Links" IsDisabled="false" />
 </FluentDialogFooter>
 
 @code {

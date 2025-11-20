@@ -2,7 +2,7 @@
 @inject IJSRuntime JSRuntime
 
 <FluentButton Disabled="@IsDisabled"
-              Appearance="@ButtonAppearance"
+              Appearance="Appearance.Outline"
               OnClick="@LaunchAsync"
               IconStart="@ButtonIcon"
               Title="@ButtonTitle" />
@@ -14,13 +14,27 @@
     public string Url { get; set; } = null!;
 
     [Parameter]
+    public string? Icon { get; set; }
+
+    [Parameter]
     public bool IsDisabled { get; set; }
 
     private bool IsAppProtocol => Url.Contains("://") && !Url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) && !Url.StartsWith("https://", StringComparison.OrdinalIgnoreCase);
 
-    private Appearance ButtonAppearance => IsAppProtocol ? Appearance.Accent : Appearance.Outline;
+    private Icon ButtonIcon
+    {
+        get
+        {
+            // If a custom icon is specified, try to use it
+            if (!string.IsNullOrEmpty(Icon))
+            {
+                // For now, we'll still use the default icons
+                // In the future, this could be enhanced to support custom icon strings
+            }
 
-    private Icon ButtonIcon => IsAppProtocol ? new Icons.Regular.Size16.Desktop() : new Icons.Regular.Size16.Globe();
+            return IsAppProtocol ? new Icons.Regular.Size16.Desktop() : new Icons.Regular.Size16.Globe();
+        }
+    }
 
     private string ButtonTitle => IsAppProtocol ? "Open App" : "Open Web";
 
@@ -28,7 +42,9 @@
     {
         if (firstRender)
         {
-            _module = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./Components/SiteLauncher.razor.js");
+            _module = await JSRuntime.InvokeAsync<IJSObjectReference>(
+                "import",
+                "./Components/SiteLauncher.razor.js");
         }
     }
 

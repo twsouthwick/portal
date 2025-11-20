@@ -27,14 +27,7 @@
                     }
                 </div>
                 
-                <div style="display: flex; gap: 8px;">
-                    @if (!string.IsNullOrEmpty(Site.AppUrl))
-                    {
-                        <SiteLauncher Url="@Site.AppUrl" IsDisabled="@IsDisabledDueToRemote" />
-                    }
-                    
-                    <SiteLauncher Url="@Site.Url" IsDisabled="@IsDisabledDueToRemote" />
-                </div>
+                <SiteLinks Links="@Site.Links" IsDisabled="@IsDisabledDueToRemote" />
             </div>
         </FluentStack>
     </FluentCard>
