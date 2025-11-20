@@ -4,7 +4,7 @@
 
 @if (_filtered is { })
 {
-    <CascadingValue TValue="IPortalDetails" Value="_filtered">
+    <CascadingValue TValue="PortalDetails" Value="_filtered">
         @if (ChildContent is { })
         {
             @ChildContent(_filtered)
@@ -13,10 +13,10 @@
 }
 
 @code {
-    private IPortalDetails? _filtered;
+    private PortalDetails? _filtered;
 
     [Parameter]
-    public RenderFragment<IPortalDetails>? ChildContent { get; set; }
+    public RenderFragment<PortalDetails>? ChildContent { get; set; }
 
     [Inject]
     public IPortalProvider PortalProvider { get; set; } = null!;
@@ -37,7 +37,7 @@
             var portal = await PortalProvider.GetSiteDetailsAsync(default);
             var state = await AuthStateProvider.GetAuthenticationStateAsync();
             var isPrivate = await CheckIsPrivateModeAsync();
-            _filtered = new Filtered(portal, state.User, isPrivate);
+            _filtered = portal with { Sites = Filter(portal.Sites, state.User, isPrivate) };
 
             StateHasChanged();
         }
@@ -68,28 +68,18 @@
         }
     }
 
-    private sealed class Filtered(IPortalDetails main, ClaimsPrincipal user, bool isPrivate) : IPortalDetails
+    private IEnumerable<SiteInfo> Filter(IEnumerable<SiteInfo> other, ClaimsPrincipal user, bool isPrivate)
     {
-        public string Name => main.Name;
-
-        public string Description => main.Description;
-
-        public IEnumerable<SiteInfo> Sites
+        foreach (var site in other)
         {
-            get
+            if (site.IsAuthorized(user))
             {
-                foreach (var site in main.Sites)
+                if (site.IsPrivate && !isPrivate)
                 {
-                    if (site.IsAuthorized(user))
-                    {
-                        if (site.IsPrivate && !isPrivate)
-                        {
-                            continue;
-                        }
-
-                        yield return site;
-                    }
+                    continue;
                 }
+
+                yield return site;
             }
         }
     }

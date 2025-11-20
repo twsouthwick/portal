@@ -1,21 +1,24 @@
 using Microsoft.Extensions.FileProviders;
-using System.Security.Claims;
 using System.Text.Json;
 
 namespace Portal.Web.Services;
 
 internal sealed class FilePortalProvider(IFileProvider files) : IPortalProvider
 {
-    private readonly Task<IPortalDetails> _task = CreateSite(files);
+    private readonly Task<Services.PortalDetails> _task = CreateSite(files);
 
-    public async ValueTask<IPortalDetails> GetSiteDetailsAsync(CancellationToken cancellationToken = default) => await _task;
+    public async ValueTask<Services.PortalDetails> GetSiteDetailsAsync(CancellationToken cancellationToken = default) => await _task;
 
-    public static async Task<IPortalDetails> CreateSite(IFileProvider files)
+    public static async Task<Services.PortalDetails> CreateSite(IFileProvider files)
     {
         var details = await PortalDetails.Parse(files.GetFileInfo("manifest.json"));
         var subsites = await ParseAllSiteDetails(files).ToListAsync();
 
-        return new ParsedSiteDetails(files, details, subsites);
+        return new(details.Name)
+        {
+            Description = details.Description,
+            Sites = subsites,
+        };
     }
 
     private static async IAsyncEnumerable<SiteInfo> ParseAllSiteDetails(IFileProvider files)
@@ -42,7 +45,7 @@ internal sealed class FilePortalProvider(IFileProvider files) : IPortalProvider
             {
                 details.Content = dir.GetSubdirectory("content");
 
-                details.UsageInstructions = await GetStringOrNul(dir.GetFileInfo("usage.md"));
+                details.UsageInstructions = await GetStringOrNull(dir.GetFileInfo("usage.md"));
 
                 return details;
             }
@@ -51,7 +54,7 @@ internal sealed class FilePortalProvider(IFileProvider files) : IPortalProvider
         return null;
     }
 
-    private static async ValueTask<string> GetStringOrNul(IFileInfo? file)
+    private static async ValueTask<string> GetStringOrNull(IFileInfo? file)
     {
         if (file is { Exists: true, IsDirectory: false })
         {
@@ -91,28 +94,6 @@ internal sealed class FilePortalProvider(IFileProvider files) : IPortalProvider
             }
 
             return new();
-        }
-    }
-
-    private sealed class ParsedSiteDetails(IFileProvider files, PortalDetails portal, List<SiteInfo> subsites) : IDisposable, IPortalDetails
-    {
-        public string Name => portal.Name;
-
-        public string Description => portal.Description;
-
-        public IEnumerable<SiteInfo> Sites => subsites;
-
-        public void Dispose() => (files as IDisposable)?.Dispose();
-
-        public IEnumerable<SiteInfo> GetSites(ClaimsPrincipal user)
-        {
-            foreach (var site in subsites)
-            {
-                if (site.IsAuthorized(user))
-                {
-                    yield return site;
-                }
-            }
         }
     }
 }
