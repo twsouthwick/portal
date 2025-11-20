@@ -17,29 +17,30 @@
                 </FluentLabel>
             </FluentStack>
 
-            <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.End" HorizontalGap="8">
-                @if (!string.IsNullOrEmpty(Site.UsageInstructions))
-                {
-                    <FluentButton Appearance="Appearance.Outline"
-                                  OnClick="@ShowUsageModal"
-                                  IconStart="@(new Icons.Regular.Size16.QuestionCircle())">
-                        How to Use
-                    </FluentButton>
-                }
-                <FluentButton Disabled="@IsDisabledDueToRemote"
-                              Appearance="Appearance.Accent"
-                              OnClick="@NavigateToSite"
-                              IconStart="@(new Icons.Regular.Size16.Open())">
-                    Open
-                </FluentButton>
-            </FluentStack>
+            <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                <div>
+                    @if (!string.IsNullOrEmpty(Site.UsageInstructions))
+                    {
+                        <FluentButton Appearance="Appearance.Outline"
+                                      OnClick="@ShowUsageModal"
+                                      IconStart="@(new Icons.Regular.Size16.QuestionCircle())" />
+                    }
+                </div>
+                
+                <div style="display: flex; gap: 8px;">
+                    @if (!string.IsNullOrEmpty(Site.AppUrl))
+                    {
+                        <SiteLauncher Url="@Site.AppUrl" IsDisabled="@IsDisabledDueToRemote" />
+                    }
+                    
+                    <SiteLauncher Url="@Site.Url" IsDisabled="@IsDisabledDueToRemote" />
+                </div>
+            </div>
         </FluentStack>
     </FluentCard>
 </div>
 
 @inject IDialogService DialogService
-@inject NavigationManager NavigationManager
-@inject IJSRuntime JSRuntime
 
 @code {
     [Parameter]
@@ -49,11 +50,6 @@
     public string? RemoteIp { get; set; } = null!;
 
     private bool IsDisabledDueToRemote => RemoteIp is { } && Site.IsInternal;
-
-    private async Task NavigateToSite()
-    {
-        await JSRuntime.InvokeVoidAsync("open", Site.Url, "_blank");
-    }
 
     private async Task ShowUsageModal()
     {

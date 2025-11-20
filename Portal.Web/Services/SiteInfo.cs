@@ -29,6 +29,11 @@ public class SiteInfo
     public string Url { get; set; } = string.Empty;
 
     /// <summary>
+    /// App protocol URL for launching native application (e.g., ms-teams://, slack://)
+    /// </summary>
+    public string? AppUrl { get; set; }
+
+    /// <summary>
     /// Icon class (e.g., Bootstrap icons, Font Awesome)
     /// </summary>
     public string Icon { get; set; } = "bi bi-globe";

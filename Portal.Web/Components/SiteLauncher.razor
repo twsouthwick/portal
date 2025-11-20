@@ -1,0 +1,52 @@
+@implements IAsyncDisposable
+@inject IJSRuntime JSRuntime
+
+<FluentButton Disabled="@IsDisabled"
+              Appearance="@ButtonAppearance"
+              OnClick="@LaunchAsync"
+              IconStart="@ButtonIcon"
+              Title="@ButtonTitle" />
+
+@code {
+    private IJSObjectReference? _module;
+
+    [Parameter, EditorRequired]
+    public string Url { get; set; } = null!;
+
+    [Parameter]
+    public bool IsDisabled { get; set; }
+
+    private bool IsAppProtocol => Url.Contains("://") && !Url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) && !Url.StartsWith("https://", StringComparison.OrdinalIgnoreCase);
+
+    private Appearance ButtonAppearance => IsAppProtocol ? Appearance.Accent : Appearance.Outline;
+
+    private Icon ButtonIcon => IsAppProtocol ? new Icons.Regular.Size16.Desktop() : new Icons.Regular.Size16.Globe();
+
+    private string ButtonTitle => IsAppProtocol ? "Open App" : "Open Web";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _module = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./Components/SiteLauncher.razor.js");
+        }
+    }
+
+    private async Task LaunchAsync()
+    {
+        if (IsDisabled || _module is null)
+        {
+            return;
+        }
+
+        await _module.InvokeVoidAsync("openUrl", Url);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_module is not null)
+        {
+            await _module.DisposeAsync();
+        }
+    }
+}

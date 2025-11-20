@@ -3,8 +3,9 @@
   "name": "Site 1",
   "description": "Some interesting description.",
   "url": "https://site1.localhost",
+  "appUrl": "audiobookshelf://",
   "icon": "bi bi-globe",
   "requiredsPermission": true,
-  "roles": ["admin"],
+  "roles": [ "admin" ],
   "category": "general"
 }
