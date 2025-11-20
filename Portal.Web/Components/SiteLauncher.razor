@@ -1,5 +1,6 @@
 @implements IAsyncDisposable
 @inject IJSRuntime JSRuntime
+@inject IDialogService DialogService
 
 <FluentButton Disabled="@IsDisabled"
               Appearance="Appearance.Outline"
@@ -55,7 +56,36 @@
             return;
         }
 
-        await _module.InvokeVoidAsync("openUrl", Url);
+        // For HTTP/HTTPS URLs, open in new tab using JavaScript
+        if (!IsAppProtocol)
+        {
+            await _module.InvokeVoidAsync("openUrlInNewTab", Url);
+            return;
+        }
+
+        // For app protocol URLs, check if launch was successful
+        try
+        {
+            var result = await _module.InvokeAsync<bool>("launchAppUrl", Url);
+            if (!result)
+            {
+                await ShowAppNotInstalledDialog();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error launching app protocol: {ex.Message}");
+            await ShowAppNotInstalledDialog();
+        }
+    }
+
+    private async Task ShowAppNotInstalledDialog()
+    {
+        await DialogService.ShowWarningAsync(
+            "The application for this link is not installed on your device. " +
+            "Please install the required application and try again.",
+            "App Not Installed"
+        );
     }
 
     public async ValueTask DisposeAsync()
