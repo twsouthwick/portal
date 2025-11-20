@@ -3,7 +3,7 @@
   "defaultProvider": "cdnjs",
   "libraries": [
     {
-      "library": "bootstrap-icons@1.11.3",
+      "library": "bootstrap-icons@1.13.1",
       "destination": "wwwroot/lib/bootstrap-icons/",
       "files": [
         "font/fonts/bootstrap-icons.woff",
@@ -13,7 +13,7 @@
     },
     {
       "provider": "jsdelivr",
-      "library": "detectincognitojs@1.3.6",
+      "library": "detectincognitojs@1.6.2",
       "destination": "wwwroot/lib/detectincognito/",
       "files": [
         "dist/es5/detectIncognito.min.js"
