@@ -2,16 +2,20 @@
   "id": "site1",
   "name": "Site 1",
   "description": "Some interesting description.",
-  "links": [
+  "url": "https://site1.localhost",
+  "apps": [
     {
-      "url": "audiobookshelf://"
-    },
-    {
-      "url": "https://site1.localhost"
+      "name": "Audiobookshelf",
+      "scheme": "audiobookshelf://",
+      "store": [
+        {
+          "name": "google-play",
+          "id": "https://play.google.com/store/apps/details?id=com.audiobookshelf.app"
+        }
+      ]
     }
   ],
   "icon": "bi bi-globe",
-  "requiredsPermission": true,
   "roles": [ "admin" ],
-  "category": "general"
+  "categories": [ "general" ]
 }

@@ -2,13 +2,9 @@
   "id": "site2",
   "name": "Site 2",
   "description": "Some interesting description 2.",
-  "links": [
-    {
-      "url": "https://site2.localhost"
-    }
-  ],
+  "url": "https://site2.localhost",
   "icon": "bi bi-globe",
   "roles": ["admin"],
-  "category": "general",
+  "categories": ["general"],
   "isInternal": true
 }

@@ -5,8 +5,9 @@
 <FluentButton Disabled="@IsDisabled"
               Appearance="Appearance.Outline"
               OnClick="@LaunchAsync"
-              IconStart="@ButtonIcon"
-              Title="@ButtonTitle" />
+              Title="@ButtonTitle">
+    <SiteAppIcon Url="@Url" AppStores="@AppStores" />
+</FluentButton>
 
 @code {
     private IJSObjectReference? _module;
@@ -15,29 +16,17 @@
     public string Url { get; set; } = null!;
 
     [Parameter]
-    public string? Icon { get; set; }
+    public bool IsDisabled { get; set; }
 
     [Parameter]
-    public bool IsDisabled { get; set; }
+    public string? AppName { get; set; }
+
+    [Parameter]
+    public IReadOnlyCollection<AppStore>? AppStores { get; set; }
 
     private bool IsAppProtocol => Url.Contains("://") && !Url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) && !Url.StartsWith("https://", StringComparison.OrdinalIgnoreCase);
 
-    private Icon ButtonIcon
-    {
-        get
-        {
-            // If a custom icon is specified, try to use it
-            if (!string.IsNullOrEmpty(Icon))
-            {
-                // For now, we'll still use the default icons
-                // In the future, this could be enhanced to support custom icon strings
-            }
-
-            return IsAppProtocol ? new Icons.Regular.Size28.Desktop() : new Icons.Regular.Size28.Globe();
-        }
-    }
-
-    private string ButtonTitle => IsAppProtocol ? "Open App" : "Open Web";
+    private string ButtonTitle => IsAppProtocol ? $"Open {AppName ?? "App"}" : "Open Web";
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -81,12 +70,31 @@
 
     private async Task ShowAppNotInstalledDialog()
     {
-        await DialogService.ShowWarningAsync(
-            "The application for this link is not installed on your device. " +
-            "Please install the required application and try again.",
-            "App Not Installed"
-        );
+        var message = "The application for this link is not installed on your device.";
+        
+        if (AppStores is { Count: > 0 })
+        {
+            message += "\n\nYou can download it from:";
+            foreach (var store in AppStores)
+            {
+                message += $"\n• {GetStoreName(store.Name)}: {store.Id}";
+            }
+        }
+        else
+        {
+            message += " Please install the required application and try again.";
+        }
+
+        await DialogService.ShowWarningAsync(message, $"{AppName ?? "App"} Not Installed");
     }
+
+    private string GetStoreName(string storeName) => storeName switch
+    {
+        "google-play" => "Google Play",
+        "apple" => "Apple App Store",
+        "f-droid" => "F-Droid",
+        _ => storeName
+    };
 
     public async ValueTask DisposeAsync()
     {

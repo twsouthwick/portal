@@ -69,32 +69,50 @@ sites/
 
 ```json
 {
-  "id": "home-assistant",
-  "name": "Home Assistant",
-  "description": "Smart home automation and control",
-  "links": [
+  "id": "audiobooks",
+  "name": "Audiobookshelf",
+  "description": "Audiobook and podcast library management",
+  "icon": "bi bi-headphones",
+  "url": "https://audiobooks.swick.app",
+  "apps": [
     {
-      "url": "https://homeassistant.home.arpa"
+      "name": "Audiobookshelf",
+      "scheme": "audiobookshelf://",
+      "store": [
+        {
+          "name": "google-play",
+          "id": "https://play.google.com/store/apps/details?id=com.audiobookshelf.app"
+        }
+      ]
     },
     {
-      "url": "homeassistant://",
-      "icon": "bi bi-app"
+      "name": "plappa",
+      "scheme": "plappa://",
+      "store": [
+        {
+          "name": "apple",
+          "id": "https://apps.apple.com/us/app/plappa/id6475201956"
+        }
+      ]
     }
   ],
-  "icon": "bi bi-house-door",
-  "category": "smart-home",
-  "roles": ["admin", "family"]
+  "categories": ["entertainment"],
+  "roles": ["audiobookshelf"]
 }
 ```
 
 - `id` (required): Unique identifier matching directory name
 - `name` (required): Display name
 - `description`: Brief description
-- `links`: Array of links for the subsite
-  - `url`: URL to navigate to
-  - `icon` (optional): Custom icon override (if empty, determined by URL protocol)
+- `url`: Primary URL for the subsite (HTTP/HTTPS)
+- `apps`: Array of apps that can be launched for this subsite
+  - `name`: Display name of the app
+  - `scheme`: App protocol/scheme (e.g., "audiobookshelf://", "plappa://")
+  - `store`: Array of store links where the app can be downloaded
+    - `name`: Store identifier (e.g., "google-play", "apple", "f-droid")
+    - `id`: Store URL or app identifier
 - `icon`: Bootstrap icon class for the card (default: "bi bi-globe")
-- `category`: Grouping category
+- `categories`: Array of categories the subsite belongs to
 - `roles`: Required roles for access (empty = public)
 
 ### Usage Documentation
@@ -134,11 +152,7 @@ Control access by adding a `roles` array:
 {
   "id": "router-admin",
   "name": "Router Admin",
-  "links": [
-    {
-      "url": "https://router.home.arpa"
-    }
-  ],
+  "url": "https://router.home.arpa",
   "roles": ["admin"]
 }
 ```

@@ -3,20 +3,43 @@ using System.Text.Json.Serialization;
 
 namespace Portal.Web.Services;
 
+
+
 /// <summary>
-/// Represents a link for a subsite
+/// Represents a store link for an app
 /// </summary>
-public class SiteLink
+public class AppStore
 {
     /// <summary>
-    /// URL to navigate to
+    /// Store name (e.g., "google-play", "apple")
     /// </summary>
-    public string Url { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
 
     /// <summary>
-    /// Optional icon override. If empty, icon will be determined based on URL protocol.
+    /// Store URL or ID
     /// </summary>
-    public string? Icon { get; set; }
+    public string Id { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// Represents an app that can be launched from a site
+/// </summary>
+public class SiteApp
+{
+    /// <summary>
+    /// App name
+    /// </summary>
+    public string Name { get; set; } = string.Empty;
+
+    /// <summary>
+    /// App scheme/protocol (e.g., "audiobookshelf://", "plappa://")
+    /// </summary>
+    public string Scheme { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Store links for downloading the app
+    /// </summary>
+    public IReadOnlyCollection<AppStore> Store { get; set; } = [];
 }
 
 /// <summary>
@@ -40,9 +63,14 @@ public class SiteInfo
     public string Description { get; set; } = string.Empty;
 
     /// <summary>
-    /// Links associated with this subsite
+    /// Primary URL for the subsite
     /// </summary>
-    public IReadOnlyCollection<SiteLink> Links { get; set; } = [];
+    public string Url { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Apps that can be launched for this subsite
+    /// </summary>
+    public IReadOnlyCollection<SiteApp> Apps { get; set; } = [];
 
     /// <summary>
     /// Icon class (e.g., Bootstrap icons, Font Awesome)

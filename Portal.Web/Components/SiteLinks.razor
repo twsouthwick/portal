@@ -1,13 +1,20 @@
 <div style="display: flex; gap: 8px;">
-    @foreach (var link in Links)
+    @* Show web link button if URL exists *@
+    @if (!string.IsNullOrEmpty(Site.Url))
     {
-        <SiteLauncher Url="@link.Url" Icon="@link.Icon" IsDisabled="@IsDisabled" />
+        <SiteLauncher Url="@Site.Url" IsDisabled="@IsDisabled" />
+    }
+
+    @* Show app launcher buttons for each app *@
+    @foreach (var app in Site.Apps)
+    {
+        <SiteLauncher Url="@app.Scheme" IsDisabled="@IsDisabled" AppName="@app.Name" AppStores="@app.Store" />
     }
 </div>
 
 @code {
     [Parameter, EditorRequired]
-    public IReadOnlyCollection<SiteLink> Links { get; set; } = null!;
+    public SiteInfo Site { get; set; } = null!;
 
     [Parameter]
     public bool IsDisabled { get; set; }

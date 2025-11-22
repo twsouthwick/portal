@@ -32,7 +32,7 @@
                 </div>
                 
                 <div @onclick:stopPropagation="true">
-                    <SiteLinks Links="@Site.Links" IsDisabled="@IsDisabledDueToRemote" />
+                    <SiteLinks Site="@Site" IsDisabled="@IsDisabledDueToRemote" />
                 </div>
             </div>
         </FluentStack>
@@ -48,27 +48,18 @@
 
     private bool IsDisabledDueToRemote => RemoteIp is { } && Site.IsInternal;
 
-    private bool HasHttpLinks => Site.Links?.Any(l => 
-        l.Url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) || 
-        l.Url.StartsWith("https://", StringComparison.OrdinalIgnoreCase)) == true;
+    private bool HasHttpUrl => !string.IsNullOrEmpty(Site.Url);
 
-    private string CardStyle => HasHttpLinks && !IsDisabledDueToRemote ? "cursor: pointer;" : "";
+    private string CardStyle => !string.IsNullOrEmpty(Site.Url) && !IsDisabledDueToRemote ? "cursor: pointer;" : "";
 
     private async Task HandleCardClick()
     {
-        if (IsDisabledDueToRemote || !HasHttpLinks)
+        if (IsDisabledDueToRemote || !HasHttpUrl)
         {
             return;
         }
 
-        var firstHttpLink = Site.Links.FirstOrDefault(l => 
-            l.Url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) || 
-            l.Url.StartsWith("https://", StringComparison.OrdinalIgnoreCase));
-
-        if (firstHttpLink is not null)
-        {
-            await JSRuntime.InvokeVoidAsync("open", firstHttpLink.Url, "_blank");
-        }
+        await JSRuntime.InvokeVoidAsync("open", Site.Url, "_blank");
     }
 
     private async Task ShowUsageModal()
