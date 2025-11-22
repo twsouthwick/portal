@@ -43,11 +43,14 @@ internal sealed class FilePortalProvider(IFileProvider files) : IPortalProvider
 
             if (await JsonSerializer.DeserializeAsync<SiteInfo?>(stream, JsonSerializerOptions.Web) is { } details)
             {
-                details.Content = dir.GetSubdirectory("content");
+                var content = dir.GetSubdirectory("content");
+                var usageInstructions = await GetStringOrNull(dir.GetFileInfo("usage.md"));
 
-                details.UsageInstructions = await GetStringOrNull(dir.GetFileInfo("usage.md"));
-
-                return details;
+                return details with
+                {
+                    Content = content,
+                    UsageInstructions = usageInstructions
+                };
             }
         }
 
