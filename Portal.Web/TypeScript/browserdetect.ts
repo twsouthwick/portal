@@ -3,6 +3,7 @@
  */
 
 import { UAParser } from 'ua-parser-js';
+import { detectIncognito } from 'detectincognitojs';
 
 export interface BrowserInfo {
     /** Browser name (e.g., "Chrome", "Edge", "Firefox", "Safari") */
@@ -17,14 +18,30 @@ export interface BrowserInfo {
     isMobile: boolean;
     /** CPU architecture (e.g., "x86", "arm") */
     architecture: string;
+    /** Whether the browser is in private/incognito mode */
+    isPrivate: boolean;
+}
+
+/**
+ * Detects if the browser is in private/incognito mode
+ */
+async function getPrivateMode(): Promise<boolean> {
+    try {
+        const incognitoResult = await detectIncognito();
+        return incognitoResult.isPrivate;
+    } catch (error) {
+        console.error('Failed to detect private mode:', error);
+        return false;
+    }
 }
 
 /**
  * Gets browser and platform information using ua-parser-js
  */
-export function getBrowserInfo(): BrowserInfo {
+export async function getBrowserInfo(): Promise<BrowserInfo> {
     const parser = new UAParser();
     const result = parser.getResult();
+    const isPrivate = await getPrivateMode();
 
     return {
         browser: result.browser.name || 'Unknown',
@@ -32,6 +49,7 @@ export function getBrowserInfo(): BrowserInfo {
         platform: result.os.name || 'Unknown',
         platformVersion: result.os.version || '',
         isMobile: result.device.type === 'mobile' || result.device.type === 'tablet',
-        architecture: result.cpu.architecture || ''
+        architecture: result.cpu.architecture || '',
+        isPrivate: isPrivate
     };
 }

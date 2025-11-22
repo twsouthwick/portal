@@ -19,20 +19,6 @@ internal sealed class JsClientBrowserSession : IClientBrowserSession, IAsyncDisp
             _jsRuntime.InvokeAsync<IJSObjectReference>("import", "./dist/app.js").AsTask());
     }
 
-    public async Task<bool> IsPrivateModeAsync()
-    {
-        try
-        {
-            var module = await _moduleTask.Value;
-            return await module.InvokeAsync<bool>("isPrivateMode");
-        }
-        catch (JSException ex)
-        {
-            _logger.LogWarning(ex, "JavaScript error detecting private mode");
-            return false;
-        }
-    }
-
     public async Task OpenUrlInNewTabAsync(string url)
     {
         var module = await _moduleTask.Value;
@@ -71,7 +57,8 @@ internal sealed class JsClientBrowserSession : IClientBrowserSession, IAsyncDisp
                 Platform = "Unknown",
                 PlatformVersion = "",
                 IsMobile = false,
-                Architecture = ""
+                Architecture = "",
+                IsPrivate = false
             };
         }
     }

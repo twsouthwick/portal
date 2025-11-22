@@ -34,4 +34,9 @@ public sealed record BrowserInfo
     /// CPU architecture (e.g., "x86", "arm")
     /// </summary>
     public required string Architecture { get; init; }
+
+    /// <summary>
+    /// Whether the browser is in private/incognito mode
+    /// </summary>
+    public required bool IsPrivate { get; init; }
 }

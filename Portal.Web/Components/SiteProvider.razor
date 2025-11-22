@@ -3,16 +3,19 @@
 
 @if (_filtered is { })
 {
-    <CascadingValue TValue="PortalDetails" Value="_filtered">
-        @if (ChildContent is { })
-        {
-            @ChildContent(_filtered)
-        }
-    </CascadingValue>
+    @if (ChildContent is { } && _browserInfo is { })
+    {
+        <CascadingValue TValue="BrowserInfo" Value="_browserInfo">
+            <CascadingValue TValue="PortalDetails" Value="_filtered">
+                @ChildContent(_filtered)
+            </CascadingValue>
+        </CascadingValue>
+    }
 }
 
 @code {
     private PortalDetails? _filtered;
+    private BrowserInfo? _browserInfo;
 
     [Parameter]
     public RenderFragment<PortalDetails>? ChildContent { get; set; }
@@ -35,37 +38,58 @@
         {
             var portal = await PortalProvider.GetSiteDetailsAsync(default);
             var state = await AuthStateProvider.GetAuthenticationStateAsync();
-            var isPrivate = await CheckIsPrivateModeAsync();
-            _filtered = portal with { Sites = Filter(portal.Sites, state.User, isPrivate) };
+            _browserInfo = await BrowserSession.GetBrowserInfoAsync();
+            Logger.LogInformation("Private mode detection result: {IsPrivateMode}", _browserInfo);
+            _filtered = portal with { Sites = Filter(portal.Sites, state.User, _browserInfo) };
 
             StateHasChanged();
         }
     }
 
-    /// <summary>
-    /// Detects if the browser is currently in private/incognito mode
-    /// </summary>
-    /// <returns>True if in private mode, false otherwise</returns>
-    private async Task<bool> CheckIsPrivateModeAsync()
-    {
-        var result = await BrowserSession.IsPrivateModeAsync();
-        Logger.LogInformation("Private mode detection result: {IsPrivateMode}", result);
-        return result;
-    }
-
-    private IEnumerable<SiteInfo> Filter(IEnumerable<SiteInfo> other, ClaimsPrincipal user, bool isPrivate)
+    private IEnumerable<SiteInfo> Filter(IEnumerable<SiteInfo> other, ClaimsPrincipal user, BrowserInfo browserInfo)
     {
         foreach (var site in other)
         {
             if (site.IsAuthorized(user))
             {
-                if (site.IsPrivate && !isPrivate)
+                if (site.IsPrivate && !browserInfo.IsPrivate)
                 {
                     continue;
                 }
 
-                yield return site;
+                yield return site with
+                {
+                    Apps = [.. FilterSupportedApps(site.Apps, browserInfo)]
+                };
             }
+        }
+    }
+
+    private IEnumerable<SiteApp> FilterSupportedApps(IEnumerable<SiteApp> apps, BrowserInfo browserInfo)
+    {
+        foreach (var app in apps)
+        {
+            if (IsAppSupported(app, browserInfo))
+            {
+                yield return app;
+            }
+        }
+
+        static bool IsAppSupported(SiteApp app, BrowserInfo browserInfo)
+        {
+            foreach (var store in app.Store)
+            {
+                if (string.Equals("apple", store.Name, StringComparison.OrdinalIgnoreCase) && (browserInfo.Platform == "macOS" || browserInfo.Platform == "iOS"))
+                {
+                    return true;
+                }
+                else if (string.Equals("google-play", store.Name, StringComparison.OrdinalIgnoreCase) && (browserInfo.Platform == "Android"))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
     }
 }

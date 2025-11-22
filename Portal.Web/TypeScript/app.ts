@@ -7,5 +7,4 @@ import './app.css';
 
 // Export all helper functions
 export * from './applaunch';
-export * from './privatemode';
 export * from './browserdetect';

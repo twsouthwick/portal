@@ -6,12 +6,6 @@ namespace Portal.Web.Browser;
 public interface IClientBrowserSession
 {
     /// <summary>
-    /// Detects if the browser is currently in private/incognito mode
-    /// </summary>
-    /// <returns>True if in private mode, false otherwise</returns>
-    Task<bool> IsPrivateModeAsync();
-
-    /// <summary>
     /// Opens a URL in a new browser tab
     /// </summary>
     /// <param name="url">The URL to open</param>
@@ -27,6 +21,6 @@ public interface IClientBrowserSession
     /// <summary>
     /// Gets information about the client's browser and platform
     /// </summary>
-    /// <returns>Browser information including browser name, version, platform, and device type</returns>
+    /// <returns>Browser information including browser name, version, platform, device type, and private mode status</returns>
     Task<BrowserInfo> GetBrowserInfoAsync();
 }
