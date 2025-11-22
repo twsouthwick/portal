@@ -1,6 +1,5 @@
-@implements IAsyncDisposable
 @inject NavigationManager Navigation
-@inject IJSRuntime JSRuntime
+@inject IClientBrowserSession BrowserSession
 @inject IDialogService DialogService
 
 <div class="subsite-card-wrapper">
@@ -41,8 +40,6 @@
 </div>
 
 @code {
-    private IJSObjectReference? _module;
-
     [Parameter]
     public SiteInfo Site { get; set; } = null!;
 
@@ -57,16 +54,6 @@
 
     private string CardStyle => HasAppsOrUrl && !IsDisabledDueToRemote ? "cursor: pointer;" : "";
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender && (Site.Apps.Count > 0 || HasHttpUrl))
-        {
-            _module = await JSRuntime.InvokeAsync<IJSObjectReference>(
-                "import",
-                "./Components/SiteLauncher.razor.js");
-        }
-    }
-
     private async Task HandleCardClick()
     {
         if (IsDisabledDueToRemote || !HasAppsOrUrl)
@@ -74,34 +61,21 @@
             return;
         }
 
-        if (_module is null)
-        {
-            return;
-        }
-
         // Try to launch each app in order
         foreach (var app in Site.Apps)
         {
-            try
+            var launched = await BrowserSession.LaunchAppUrlAsync(app.Scheme);
+            if (launched)
             {
-                var result = await _module.InvokeAsync<bool>("launchAppUrl", app.Scheme);
-                if (result)
-                {
-                    // App launched successfully, we're done
-                    return;
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error launching app {app.Name}: {ex.Message}");
-                // Continue to the next app
+                // App launched successfully, we're done
+                return;
             }
         }
 
         // If all apps failed to launch (or there are no apps), open the website
         if (HasHttpUrl)
         {
-            await JSRuntime.InvokeVoidAsync("open", Site.Url, "_blank");
+            await BrowserSession.OpenUrlInNewTabAsync(Site.Url);
         }
     }
 
@@ -120,13 +94,5 @@
         });
 
         var result = await dialog.Result;
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        if (_module is not null)
-        {
-            await _module.DisposeAsync();
-        }
     }
 }

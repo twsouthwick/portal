@@ -1,6 +1,7 @@
 using Portal.Web.Components;
 using Portal.Web.Services;
 using Microsoft.FluentUI.AspNetCore.Components;
+using Portal.Web;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -25,6 +26,9 @@ builder.Services.AddAuthentication()
 builder.Services.AddOutputCache();
 
 builder.Services.AddSingleton<IMarkdownConverter, MarkdownConverter>();
+
+// Add client browser session service (JavaScript interop abstraction)
+builder.Services.AddClientBrowserSession();
 
 builder.AddPortalProvider();
 

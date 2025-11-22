@@ -1,6 +1,5 @@
-﻿@using Microsoft.AspNetCore.Components.Authorization
-@using System.Security.Claims
-@using Microsoft.JSInterop
+﻿@using System.Security.Claims
+@using Microsoft.AspNetCore.Components.Authorization
 
 @if (_filtered is { })
 {
@@ -25,7 +24,7 @@
     public AuthenticationStateProvider AuthStateProvider { get; set; } = null!;
 
     [Inject]
-    public IJSRuntime JSRuntime { get; set; } = null!;
+    public IClientBrowserSession BrowserSession { get; set; } = null!;
 
     [Inject]
     public ILogger<SiteProvider> Logger { get; set; } = null!;
@@ -47,25 +46,11 @@
     /// Detects if the browser is currently in private/incognito mode
     /// </summary>
     /// <returns>True if in private mode, false otherwise</returns>
-    public async Task<bool> CheckIsPrivateModeAsync()
+    private async Task<bool> CheckIsPrivateModeAsync()
     {
-        await using var module = await JSRuntime.InvokeAsync<IJSObjectReference>(
-            "import",
-            "./Components/SiteProvider.razor.js");
-        try
-        {
-            var result = await module.InvokeAsync<bool>("isPrivateMode");
-
-            Logger.LogInformation("Private mode detection result: {IsPrivateMode}", result);
-
-            return result;
-        }
-        catch (JSException ex)
-        {
-            // Log the specific JS error
-            Logger.LogInformation(ex, "JavaScript error in isPrivateMode");
-            return false;
-        }
+        var result = await BrowserSession.IsPrivateModeAsync();
+        Logger.LogInformation("Private mode detection result: {IsPrivateMode}", result);
+        return result;
     }
 
     private IEnumerable<SiteInfo> Filter(IEnumerable<SiteInfo> other, ClaimsPrincipal user, bool isPrivate)

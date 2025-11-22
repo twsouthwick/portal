@@ -1,28 +1,31 @@
-export function openUrlInNewTab(url) {
-    // Open HTTP/HTTPS URLs in a new tab
+/**
+ * Opens a URL in a new browser tab
+ */
+export function openUrlInNewTab(url: string): void {
     window.open(url, '_blank');
 }
 
-export function launchAppUrl(url) {
-    // Try to detect if app protocol launch failed
+/**
+ * Attempts to launch an app protocol URL and detects if it succeeded
+ */
+export function launchAppUrl(url: string): Promise<boolean> {
     return new Promise((resolve) => {
         let hasFocus = true;
         let hasBlurred = false;
 
         // Set up blur detection - if the window loses focus, the app likely launched
-        const onBlur = () => {
+        const onBlur = (): void => {
             hasBlurred = true;
             hasFocus = false;
         };
 
-        const onFocus = () => {
+        const onFocus = (): void => {
             hasFocus = true;
         };
 
         window.addEventListener('blur', onBlur);
         window.addEventListener('focus', onFocus);
 
-        // Try to launch the app
         try {
             window.location.href = url;
         } catch (e) {
@@ -40,7 +43,7 @@ export function launchAppUrl(url) {
             resolve(hasBlurred || !hasFocus);
         }, 1000);
 
-        function cleanup() {
+        function cleanup(): void {
             window.removeEventListener('blur', onBlur);
             window.removeEventListener('focus', onFocus);
         }

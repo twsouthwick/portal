@@ -15,7 +15,12 @@
     <Content Remove="sites/**/*" />
     <None Include="sites/**/*" />
   </ItemGroup>
-  
+
+  <Target Name="CompileTypeScript" BeforeTargets="Build">
+    <Exec Command="npm install" WorkingDirectory="$(ProjectDir)" Condition="!Exists('$(ProjectDir)node_modules')" />
+    <Exec Command="npm run build" WorkingDirectory="$(ProjectDir)" />
+  </Target>
+
   <ItemGroup>
     <ProjectReference Include="..\Portal.ServiceDefaults\Portal.ServiceDefaults.csproj" />
   </ItemGroup>
@@ -29,6 +34,10 @@
 
   <ItemGroup>
     <ContainerPort Include="8081" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="TypeScript\components\" />
   </ItemGroup>
 
 </Project>

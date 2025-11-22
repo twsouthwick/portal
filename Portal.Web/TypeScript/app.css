@@ -1,3 +1,7 @@
+/* Main application styles */
+@import 'bootstrap-icons/font/bootstrap-icons.css';
+
+/* Add any custom styles here */
 body {
     margin: 0;
     padding: 0;

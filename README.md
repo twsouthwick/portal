@@ -8,6 +8,8 @@ A Blazor-based intranet portal system built with .NET 10 and Aspire that allows 
 - **Trusted Header Authentication**: Integrate with reverse proxies for SSO
 - **Static Content Serving**: Each subsite can serve its own static files
 - **Markdown Documentation**: Include usage instructions in Markdown format
+- **App Protocol Launching**: Launch native apps with fallback to app stores
+- **Private Mode Detection**: Automatically hide private sites when not in incognito mode
 
 ## Quick Start
 
@@ -16,6 +18,94 @@ A Blazor-based intranet portal system built with .NET 10 and Aspire that allows 
 3. Optionally add `usage.md` and `content/` folders for documentation and static files
 4. Set `SITE_PATH` environment variable to your sites directory or ZIP file path
 5. Deploy using docker
+
+## Development
+
+### Prerequisites
+
+- .NET 10 SDK
+- Node.js (for Webpack/TypeScript compilation)
+
+### Building
+
+The project uses **Webpack** to bundle TypeScript, CSS, and static assets. All source files are in `Portal.Web/TypeScript/` and are compiled to `wwwroot/dist/`.
+
+**Build Commands:**
+
+```bash
+cd Portal.Web
+
+# Install dependencies (first time only)
+npm install
+
+# Production build (minified)
+npm run build
+
+# Development build (with source maps)
+npm run dev
+
+# Watch mode for development
+npm run watch
+
+# Clean generated files
+npm run clean
+```
+
+### Project Structure
+
+```
+Portal.Web/
+├── TypeScript/
+│   ├── app.ts                      # Main entry point - exports all helper functions
+│   ├── app.css                     # Main stylesheet (imports bootstrap-icons)
+│   └── components/
+│       ├── siteLauncher.ts         # URL launching helpers (openUrlInNewTab, launchAppUrl)
+│       └── siteProvider.ts         # Browser detection (isPrivateMode)
+├── Components/
+│   ├── App.razor                   # References ./dist/app.css
+│   ├── SiteLauncher.razor          # Imports ./dist/app.js (uses openUrlInNewTab, launchAppUrl)
+│   └── SiteProvider.razor          # Imports ./dist/app.js (uses isPrivateMode)
+├── wwwroot/
+│   └── dist/                       # Webpack output (generated, gitignored)
+│       ├── app.js                  # Bundled JavaScript module with exported functions
+│       ├── app.css                 # Bundled CSS (includes bootstrap-icons)
+│       └── fonts/                  # Bootstrap icon fonts
+├── node_modules/                   # npm packages (gitignored)
+├── webpack.config.js               # Webpack configuration
+├── tsconfig.json                   # TypeScript configuration
+└── package.json                    # npm dependencies & scripts
+```
+
+### TypeScript Helper Functions
+
+The compiled `app.js` module exports three helper functions for use in Blazor components:
+
+- **`isPrivateMode(): Promise<boolean>`** - Detects if the browser is in private/incognito mode
+- **`launchAppUrl(url: string): Promise<boolean>`** - Attempts to launch an app protocol URL and returns whether it succeeded
+- **`openUrlInNewTab(url: string): void`** - Opens a URL in a new browser tab
+
+**Usage in Blazor:**
+
+```csharp
+// Import the module
+var module = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./dist/app.js");
+
+// Call helper functions
+var isPrivate = await module.InvokeAsync<bool>("isPrivateMode");
+var launched = await module.InvokeAsync<bool>("launchAppUrl", "myapp://launch");
+await module.InvokeVoidAsync("openUrlInNewTab", "https://example.com");
+```
+
+### What Webpack Does
+
+- ✅ Compiles TypeScript to JavaScript
+- ✅ Bundles all JavaScript modules into `app.js` as an ES module
+- ✅ Processes and bundles CSS (including bootstrap-icons)
+- ✅ Copies font files to output directory
+- ✅ Generates source maps for debugging (dev mode)
+- ✅ Minifies output (production mode)
+
+**All dependencies are managed via npm** - LibMan has been removed.
 
 ## Authentication
 

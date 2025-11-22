@@ -1,0 +1,25 @@
+{
+  "name": "portal.web",
+  "version": "1.0.0",
+  "description": "TypeScript files for Portal.Web Blazor application",
+  "scripts": {
+    "build": "webpack --mode production",
+    "watch": "webpack --mode development --watch",
+    "dev": "webpack --mode development",
+    "clean": "rimraf wwwroot/dist"
+  },
+  "dependencies": {
+    "bootstrap-icons": "^1.11.3",
+    "detectincognitojs": "^1.6.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "css-loader": "^7.1.2",
+    "mini-css-extract-plugin": "^2.9.2",
+    "rimraf": "^6.0.1",
+    "ts-loader": "^9.5.1",
+    "typescript": "^5.7.2",
+    "webpack": "^5.97.1",
+    "webpack-cli": "^6.0.1"
+  }
+}
