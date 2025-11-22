@@ -23,4 +23,10 @@ public interface IClientBrowserSession
     /// <param name="url">The app protocol URL to launch</param>
     /// <returns>True if the app likely launched, false otherwise</returns>
     Task<bool> LaunchAppUrlAsync(string url);
+
+    /// <summary>
+    /// Gets information about the client's browser and platform
+    /// </summary>
+    /// <returns>Browser information including browser name, version, platform, and device type</returns>
+    Task<BrowserInfo> GetBrowserInfoAsync();
 }

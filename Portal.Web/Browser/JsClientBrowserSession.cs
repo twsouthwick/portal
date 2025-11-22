@@ -53,6 +53,29 @@ internal sealed class JsClientBrowserSession : IClientBrowserSession, IAsyncDisp
         }
     }
 
+    public async Task<BrowserInfo> GetBrowserInfoAsync()
+    {
+        try
+        {
+            var module = await _moduleTask.Value;
+            return await module.InvokeAsync<BrowserInfo>("getBrowserInfo");
+        }
+        catch (JSException ex)
+        {
+            _logger.LogWarning(ex, "JavaScript error getting browser info");
+            // Return a default/unknown browser info on error
+            return new BrowserInfo
+            {
+                Browser = "Unknown",
+                BrowserVersion = "",
+                Platform = "Unknown",
+                PlatformVersion = "",
+                IsMobile = false,
+                Architecture = ""
+            };
+        }
+    }
+
     public async ValueTask DisposeAsync()
     {
         if (_moduleTask.IsValueCreated)
