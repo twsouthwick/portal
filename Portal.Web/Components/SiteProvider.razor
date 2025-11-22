@@ -65,6 +65,14 @@
         }
     }
 
+    private static Dictionary<string, HashSet<string>> _supportedStore = new[]
+    {
+        ("apple", "macOS"),
+        ("apple", "iOS"),
+        ("google", "android"),
+        ("microsoft", "windows")
+    }.GroupBy(kv => kv.Item1, t => t.Item2).ToDictionary(k => k.Key, k => k.OfType<string>().ToHashSet(StringComparer.OrdinalIgnoreCase), StringComparer.OrdinalIgnoreCase);
+
     private IEnumerable<SiteApp> FilterSupportedApps(IEnumerable<SiteApp> apps, BrowserInfo browserInfo)
     {
         foreach (var app in apps)
@@ -79,11 +87,7 @@
         {
             foreach (var store in app.Store)
             {
-                if (string.Equals("apple", store.Name, StringComparison.OrdinalIgnoreCase) && (browserInfo.Platform == "macOS" || browserInfo.Platform == "iOS"))
-                {
-                    return true;
-                }
-                else if (string.Equals("google-play", store.Name, StringComparison.OrdinalIgnoreCase) && (browserInfo.Platform == "Android"))
+                if (_supportedStore.TryGetValue(store.Name, out var set) && set.Contains(browserInfo.Platform))
                 {
                     return true;
                 }
