@@ -1,5 +1,9 @@
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+@inject IDialogService DialogService
+
 <div class="subsite-card-wrapper">
-    <FluentCard Class="subsite-card">
+    <FluentCard Class="subsite-card" Style="@CardStyle" @onclick="HandleCardClick">
         <FluentStack Orientation="Orientation.Vertical" Width="100%" VerticalGap="12" Style="height: 100%;">
             @if (IsDisabledDueToRemote)
             {
@@ -18,7 +22,7 @@
             </FluentStack>
 
             <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-                <div>
+                <div @onclick:stopPropagation="true">
                     @if (!string.IsNullOrEmpty(Site.UsageInstructions))
                     {
                         <FluentButton Appearance="Appearance.Outline"
@@ -27,13 +31,13 @@
                     }
                 </div>
                 
-                <SiteLinks Links="@Site.Links" IsDisabled="@IsDisabledDueToRemote" />
+                <div @onclick:stopPropagation="true">
+                    <SiteLinks Links="@Site.Links" IsDisabled="@IsDisabledDueToRemote" />
+                </div>
             </div>
         </FluentStack>
     </FluentCard>
 </div>
-
-@inject IDialogService DialogService
 
 @code {
     [Parameter]
@@ -43,6 +47,29 @@
     public string? RemoteIp { get; set; } = null!;
 
     private bool IsDisabledDueToRemote => RemoteIp is { } && Site.IsInternal;
+
+    private bool HasHttpLinks => Site.Links?.Any(l => 
+        l.Url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) || 
+        l.Url.StartsWith("https://", StringComparison.OrdinalIgnoreCase)) == true;
+
+    private string CardStyle => HasHttpLinks && !IsDisabledDueToRemote ? "cursor: pointer;" : "";
+
+    private async Task HandleCardClick()
+    {
+        if (IsDisabledDueToRemote || !HasHttpLinks)
+        {
+            return;
+        }
+
+        var firstHttpLink = Site.Links.FirstOrDefault(l => 
+            l.Url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) || 
+            l.Url.StartsWith("https://", StringComparison.OrdinalIgnoreCase));
+
+        if (firstHttpLink is not null)
+        {
+            await JSRuntime.InvokeVoidAsync("open", firstHttpLink.Url, "_blank");
+        }
+    }
 
     private async Task ShowUsageModal()
     {
