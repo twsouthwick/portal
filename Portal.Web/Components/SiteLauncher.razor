@@ -1,5 +1,6 @@
 @inject IClientBrowserSession BrowserSession
 @inject IDialogService DialogService
+@inject ISiteClickTracker ClickTracker
 
 <FluentButton Disabled="@IsDisabled"
               Appearance="Appearance.Outline"
@@ -21,6 +22,9 @@
     [Parameter]
     public SiteApp? SiteApp { get; set; }
 
+    [Parameter]
+    public string? SiteId { get; set; }
+
     private bool IsAppProtocol => Url.Contains("://") && !Url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) && !Url.StartsWith("https://", StringComparison.OrdinalIgnoreCase);
 
     private string ButtonTitle => IsAppProtocol ? $"Open {AppName ?? "App"}" : "Open Web";
@@ -30,6 +34,12 @@
         if (IsDisabled)
         {
             return;
+        }
+
+        // Track the click if SiteId is provided
+        if (!string.IsNullOrWhiteSpace(SiteId))
+        {
+            await ClickTracker.RecordClickAsync(SiteId);
         }
 
         // For HTTP/HTTPS URLs, open in new tab

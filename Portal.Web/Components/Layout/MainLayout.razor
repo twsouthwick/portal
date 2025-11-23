@@ -2,25 +2,34 @@
 
 <ConnectionState>
     <SiteProvider>
-        <FluentLayout>
-            <FluentHeader>
-                <PageTitle>@context.Name</PageTitle>
+        <CascadingValue TValue="SiteViewMode" Value="viewMode" Name="CurrentViewMode">
+            <FluentLayout>
+                <FluentHeader>
+                    <PageTitle>@context.Name</PageTitle>
 
-                @if (string.IsNullOrEmpty(context.Description))
-                {
-                    <span>@context.Name</span>
-                }
-                else
-                {
-                    <span>@context.Name - @context.Description</span>
-                }
-            </FluentHeader>
-            <FluentBodyContent>
-                <div class="centered-container">
-                    @Body
-                </div>
-            </FluentBodyContent>
-        </FluentLayout>
+                    <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                        <div>
+                            @if (string.IsNullOrEmpty(context.Description))
+                            {
+                                <span>@context.Name</span>
+                            }
+                            else
+                            {
+                                <span>@context.Name - @context.Description</span>
+                            }
+                        </div>
+                        <div>
+                            <SiteViewModeSelector @bind-CurrentMode="viewMode" />
+                        </div>
+                    </div>
+                </FluentHeader>
+                <FluentBodyContent>
+                    <div class="centered-container">
+                        @Body
+                    </div>
+                </FluentBodyContent>
+            </FluentLayout>
+        </CascadingValue>
     </SiteProvider>
 </ConnectionState>
 
@@ -36,3 +45,7 @@
                       AllowDismiss="false">
     </FluentMessageBar>
 </div>
+
+@code {
+    private SiteViewMode viewMode = SiteViewMode.None;
+}

@@ -1,0 +1,43 @@
+@* Displays sites grouped by their categories *@
+
+@foreach (var category in GetCategorizedSites().Keys.OrderBy(k => k))
+{
+    <SiteGrid Category="@category" Sites="@GetCategorizedSites()[category]" />
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public IEnumerable<SiteInfo> Sites { get; set; } = [];
+
+    private Dictionary<string, List<SiteInfo>> GetCategorizedSites()
+    {
+        var categorizedSites = new Dictionary<string, List<SiteInfo>>();
+
+        foreach (var site in Sites)
+        {
+            // If site has no categories, add it to the empty/uncategorized group
+            if (site.Categories.Count == 0)
+            {
+                if (!categorizedSites.ContainsKey(string.Empty))
+                {
+                    categorizedSites[string.Empty] = new List<SiteInfo>();
+                }
+                categorizedSites[string.Empty].Add(site);
+            }
+            else
+            {
+                // Add the site to each of its categories
+                foreach (var category in site.Categories)
+                {
+                    if (!categorizedSites.ContainsKey(category))
+                    {
+                        categorizedSites[category] = new List<SiteInfo>();
+                    }
+                    categorizedSites[category].Add(site);
+                }
+            }
+        }
+
+        return categorizedSites;
+    }
+}

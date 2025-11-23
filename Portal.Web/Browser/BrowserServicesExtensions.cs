@@ -12,7 +12,9 @@ public static class ClientBrowserSessionExtensions
     /// </summary>
     public static IServiceCollection AddClientBrowserSession(this IServiceCollection services)
     {
-        services.AddScoped<IClientBrowserSession, JsClientBrowserSession>();
+        services.AddScoped<JsClientBrowserSession>();
+        services.AddScoped<IClientBrowserSession>(sp => sp.GetRequiredService<JsClientBrowserSession>());
+        services.AddScoped<ILocalStorageProvider>(sp => sp.GetRequiredService<JsClientBrowserSession>());
         
         return services;
     }

@@ -6,6 +6,16 @@
     padding-top: 2rem;
 }
 
+/* Header flexbox layout for title and view mode selector */
+::deep fluent-header {
+    display: flex;
+    align-items: center;
+}
+
+::deep fluent-header > div {
+    width: 100%;
+}
+
 #blazor-error-ui {
     position: fixed;
     bottom: 0;

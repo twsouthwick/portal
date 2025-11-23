@@ -31,6 +31,9 @@ builder.Services.AddSingleton<IMarkdownConverter, MarkdownConverter>();
 // Add client browser session service (JavaScript interop abstraction)
 builder.Services.AddClientBrowserSession();
 
+// Add site click tracking service (uses localStorage)
+builder.Services.AddScoped<ISiteClickTracker, LocalStorageSiteClickTracker>();
+
 builder.Services.AddDataProtection()
     .SetApplicationName("Swick.Portal.Web")
     .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(Path.GetTempPath(), "swick.portal.web", "keys")));

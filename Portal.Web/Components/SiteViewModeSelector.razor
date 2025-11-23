@@ -1,0 +1,55 @@
+@inject ISiteClickTracker ClickTracker
+@inject ILocalStorageProvider LocalStorage
+
+<FluentToolbar>
+    <FluentLabel Typo="Typography.Body">View by:</FluentLabel>
+    <FluentSelect Id="viewmode-selector"
+                  Class="outline"
+                  @bind-Value="@selectedValue"
+                  TOption="SiteViewMode"
+                  Width="200px">
+        <FluentOption Id="viewmode-categories" TOption="SiteViewMode" Value="@nameof(SiteViewMode.Categories)">
+            <FluentIcon Value="@(new Icons.Regular.Size20.GridDots())" Slot="start" />
+            Categories
+        </FluentOption>
+        <FluentOption Id="viewmode-frequency" TOption="SiteViewMode" Value="@nameof(SiteViewMode.Frequency)">
+            <FluentIcon Value="@(new Icons.Regular.Size20.ChartMultiple())" Slot="start" />
+            Most Used
+        </FluentOption>
+    </FluentSelect>
+</FluentToolbar>
+
+@code {
+    [Parameter]
+    public SiteViewMode CurrentMode
+    {
+        get;
+        set
+        {
+            if (field != value)
+            {
+                field = value;
+                LocalStorage.SetItemAsync<SiteViewMode>("sortBy", value);
+                CurrentModeChanged.InvokeAsync(value);
+            }
+        }
+    }
+
+    [Parameter]
+    public EventCallback<SiteViewMode> CurrentModeChanged { get; set; }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            var mode = await LocalStorage.GetItemAsync<SiteViewMode>("sortBy");
+            CurrentMode = mode is SiteViewMode.None ? SiteViewMode.Categories : mode;
+        }
+    }
+
+    private string selectedValue
+    {
+        get => CurrentMode.ToString();
+        set => CurrentMode = Enum.Parse<SiteViewMode>(value);
+    }
+}

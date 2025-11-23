@@ -5,7 +5,7 @@ namespace Portal.Web.Browser;
 /// <summary>
 /// JavaScript interop implementation of client browser session
 /// </summary>
-internal sealed class JsClientBrowserSession : IClientBrowserSession, IAsyncDisposable
+internal sealed class JsClientBrowserSession : IClientBrowserSession, ILocalStorageProvider, IAsyncDisposable
 {
     private readonly IJSRuntime _jsRuntime;
     private readonly ILogger<JsClientBrowserSession> _logger;
@@ -60,6 +60,88 @@ internal sealed class JsClientBrowserSession : IClientBrowserSession, IAsyncDisp
                 Architecture = "",
                 IsPrivate = false
             };
+        }
+    }
+
+    // ILocalStorageProvider implementation
+    public async Task<T?> GetItemAsync<T>(string key)
+    {
+        try
+        {
+            var module = await _moduleTask.Value;
+            return await module.InvokeAsync<T?>("getItem", key);
+        }
+        catch (JSException ex)
+        {
+            _logger.LogWarning(ex, "JavaScript error getting item from localStorage: {Key}", key);
+            return default;
+        }
+    }
+
+    public async Task SetItemAsync<T>(string key, T value)
+    {
+        try
+        {
+            var module = await _moduleTask.Value;
+            await module.InvokeVoidAsync("setItem", key, value);
+        }
+        catch (JSException ex)
+        {
+            _logger.LogWarning(ex, "JavaScript error setting item in localStorage: {Key}", key);
+        }
+    }
+
+    public async Task RemoveItemAsync(string key)
+    {
+        try
+        {
+            var module = await _moduleTask.Value;
+            await module.InvokeVoidAsync("removeItem", key);
+        }
+        catch (JSException ex)
+        {
+            _logger.LogWarning(ex, "JavaScript error removing item from localStorage: {Key}", key);
+        }
+    }
+
+    public async Task ClearAsync()
+    {
+        try
+        {
+            var module = await _moduleTask.Value;
+            await module.InvokeVoidAsync("clear");
+        }
+        catch (JSException ex)
+        {
+            _logger.LogWarning(ex, "JavaScript error clearing localStorage");
+        }
+    }
+
+    public async Task<string[]> GetKeysAsync()
+    {
+        try
+        {
+            var module = await _moduleTask.Value;
+            return await module.InvokeAsync<string[]>("getKeys");
+        }
+        catch (JSException ex)
+        {
+            _logger.LogWarning(ex, "JavaScript error getting keys from localStorage");
+            return [];
+        }
+    }
+
+    public async Task<bool> HasKeyAsync(string key)
+    {
+        try
+        {
+            var module = await _moduleTask.Value;
+            return await module.InvokeAsync<bool>("hasKey", key);
+        }
+        catch (JSException ex)
+        {
+            _logger.LogWarning(ex, "JavaScript error checking key in localStorage: {Key}", key);
+            return false;
         }
     }
 

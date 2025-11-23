@@ -1,6 +1,7 @@
 @inject NavigationManager Navigation
 @inject IClientBrowserSession BrowserSession
 @inject IDialogService DialogService
+@inject ISiteClickTracker ClickTracker
 
 <div class="subsite-card-wrapper">
     <FluentCard Class="subsite-card" Style="@CardStyle" @onclick="HandleCardClick">
@@ -60,6 +61,9 @@
         {
             return;
         }
+
+        // Track the click
+        await ClickTracker.RecordClickAsync(Site.Id);
 
         // Try to launch each app in order
         foreach (var app in Site.Apps)

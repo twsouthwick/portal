@@ -11,3 +11,4 @@ import './blazor-reconnect';
 // Export all helper functions
 export * from './applaunch';
 export * from './browserdetect';
+export * from './storage';

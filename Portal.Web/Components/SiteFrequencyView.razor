@@ -1,0 +1,29 @@
+@inject ISiteClickTracker ClickTracker
+
+@* Displays sites sorted by usage frequency (most clicked first) *@
+
+<SiteGrid Category="Most Used Sites" Sites="@sortedSites" />
+
+@code {
+    [Parameter, EditorRequired]
+    public IEnumerable<SiteInfo> Sites { get; set; } = [];
+
+    private List<SiteInfo> sortedSites = new();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await BuildFrequencySortedSitesAsync();
+    }
+
+    private async Task BuildFrequencySortedSitesAsync()
+    {
+        // Get all click counts
+        var clickCounts = await ClickTracker.GetAllClickCountsAsync();
+
+        // Sort by click count (descending), then by name
+        sortedSites = Sites
+            .OrderByDescending(s => clickCounts.GetValueOrDefault(s.Id, 0))
+            .ThenBy(s => s.Name)
+            .ToList();
+    }
+}

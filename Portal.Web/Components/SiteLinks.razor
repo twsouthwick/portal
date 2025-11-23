@@ -2,13 +2,13 @@
     @* Show web link button if URL exists *@
     @if (!string.IsNullOrEmpty(Site.Url))
     {
-        <SiteLauncher Url="@Site.Url" IsDisabled="@IsDisabled" />
+        <SiteLauncher Url="@Site.Url" IsDisabled="@IsDisabled" SiteId="@Site.Id" />
     }
 
     @* Show app launcher buttons for each app *@
     @foreach (var app in Site.Apps)
     {
-        <SiteLauncher Url="@app.Scheme" IsDisabled="@IsDisabled" AppName="@app.Name" SiteApp="@app" />
+        <SiteLauncher Url="@app.Scheme" IsDisabled="@IsDisabled" AppName="@app.Name" SiteApp="@app" SiteId="@Site.Id" />
     }
 </div>
 
