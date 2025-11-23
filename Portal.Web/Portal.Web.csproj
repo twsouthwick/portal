@@ -16,7 +16,7 @@
     <None Include="sites/**/*" />
   </ItemGroup>
 
-  <Target Name="CompileTypeScript" BeforeTargets="Build">
+  <Target Name="CompileTypeScript" BeforeTargets="CoreBuild">
     <Exec Command="npm install" WorkingDirectory="$(ProjectDir)" Condition="!Exists('$(ProjectDir)node_modules')" />
     <Exec Command="npm run build" WorkingDirectory="$(ProjectDir)" />
   </Target>
