@@ -82,7 +82,8 @@
         ("apple", "macOS"),
         ("apple", "iOS"),
         ("google", "android"),
-        ("microsoft", "windows")
+        ("microsoft", "windows"),
+        ("windows", "windows")
     }.GroupBy(kv => kv.Item1, t => t.Item2).ToDictionary(k => k.Key, k => k.OfType<string>().ToHashSet(StringComparer.OrdinalIgnoreCase), StringComparer.OrdinalIgnoreCase);
 
     private IEnumerable<SiteApp> FilterSupportedApps(IEnumerable<SiteApp> apps, BrowserInfo browserInfo)

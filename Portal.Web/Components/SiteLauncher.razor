@@ -5,7 +5,7 @@
               Appearance="Appearance.Outline"
               OnClick="@LaunchAsync"
               Title="@ButtonTitle">
-    <SiteAppIcon Url="@Url" AppStores="@AppStores" />
+    <SiteAppIcon Url="@Url" AppStore="@AppStore" />
 </FluentButton>
 
 @code {
@@ -19,7 +19,7 @@
     public string? AppName { get; set; }
 
     [Parameter]
-    public IReadOnlyCollection<AppStore>? AppStores { get; set; }
+    public AppStore? AppStore { get; set; }
 
     private bool IsAppProtocol => Url.Contains("://") && !Url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) && !Url.StartsWith("https://", StringComparison.OrdinalIgnoreCase);
 
@@ -40,38 +40,14 @@
         }
 
         // For app protocol URLs, check if launch was successful
-        var launched = await BrowserSession.LaunchAppUrlAsync(Url);
-        if (!launched)
+        if (await BrowserSession.LaunchAppUrlAsync(Url))
         {
-            await ShowAppNotInstalledDialog();
+            return;
+        }
+
+        if (AppStore is { Id: { } id })
+        {
+            await BrowserSession.OpenUrlInNewTabAsync(id);
         }
     }
-
-    private async Task ShowAppNotInstalledDialog()
-    {
-        var message = "The application for this link is not installed on your device.";
-        
-        if (AppStores is { Count: > 0 })
-        {
-            message += "\n\nYou can download it from:";
-            foreach (var store in AppStores)
-            {
-                message += $"\n• {GetStoreName(store.Name)}: {store.Id}";
-            }
-        }
-        else
-        {
-            message += " Please install the required application and try again.";
-        }
-
-        await DialogService.ShowWarningAsync(message, $"{AppName ?? "App"} Not Installed");
-    }
-
-    private string GetStoreName(string storeName) => storeName switch
-    {
-        "google-play" => "Google Play",
-        "apple" => "Apple App Store",
-        "f-droid" => "F-Droid",
-        _ => storeName
-    };
 }

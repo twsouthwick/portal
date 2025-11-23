@@ -9,7 +9,7 @@
       "scheme": "audiobookshelf://",
       "stores": [
         {
-          "name": "google-play",
+          "name": "windows",
           "id": "https://play.google.com/store/apps/details?id=com.audiobookshelf.app"
         }
       ]
