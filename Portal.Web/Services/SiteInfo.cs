@@ -7,6 +7,7 @@ public enum AppStore
 {
     None,
     Apple,
+    MacOS,
     Google,
     Microsoft,
     Windows,
