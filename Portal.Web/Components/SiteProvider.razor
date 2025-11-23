@@ -75,6 +75,28 @@
                 };
             }
         }
+
+        static IEnumerable<SiteApp> FilterSupportedApps(IEnumerable<SiteApp> apps, BrowserInfo browserInfo)
+        {
+            foreach (var app in apps)
+            {
+                yield return app with
+                {
+                    Stores = [.. FilterStores(app, browserInfo)]
+                };
+            }
+        }
+
+        static IEnumerable<AppStore> FilterStores(SiteApp app, BrowserInfo browserInfo)
+        {
+            foreach (var store in app.Stores)
+            {
+                if (_supportedStore.TryGetValue(store.Name, out var set) && set.Contains(browserInfo.Platform))
+                {
+                    yield return store;
+                }
+            }
+        }
     }
 
     private static Dictionary<string, HashSet<string>> _supportedStore = new[]
@@ -85,29 +107,4 @@
         ("microsoft", "windows"),
         ("windows", "windows")
     }.GroupBy(kv => kv.Item1, t => t.Item2).ToDictionary(k => k.Key, k => k.OfType<string>().ToHashSet(StringComparer.OrdinalIgnoreCase), StringComparer.OrdinalIgnoreCase);
-
-    private IEnumerable<SiteApp> FilterSupportedApps(IEnumerable<SiteApp> apps, BrowserInfo browserInfo)
-    {
-        foreach (var app in apps)
-        {
-            if (IsAppSupported(app, browserInfo))
-            {
-                yield return app;
-            }
-        }
-
-    }
-
-    private bool IsAppSupported(SiteApp app, BrowserInfo browserInfo)
-    {
-        foreach (var store in app.Stores)
-        {
-            if (_supportedStore.TryGetValue(store.Name, out var set) && set.Contains(browserInfo.Platform))
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
 }
