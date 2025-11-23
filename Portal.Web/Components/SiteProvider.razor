@@ -41,7 +41,7 @@
             _browserInfo = await BrowserSession.GetBrowserInfoAsync();
             
             Logger.LogInformation(
-                "Browser Info - Browser: {Browser} {BrowserVersion}, Platform: {Platform} {PlatformVersion}, Architecture: {Architecture}, IsMobile: {IsMobile}, IsPrivate: {IsPrivate}",
+                "Browser Info - Browser: {Browser} [{BrowserVersion}], Platform: {Platform}, Version: {PlatformVersion}, Architecture: {Architecture}, IsMobile: {IsMobile}, IsPrivate: {IsPrivate}",
                 _browserInfo.Browser,
                 _browserInfo.BrowserVersion,
                 _browserInfo.Platform,
