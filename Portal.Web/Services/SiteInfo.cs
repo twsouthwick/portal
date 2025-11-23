@@ -39,7 +39,7 @@ public record SiteApp
     /// <summary>
     /// Store links for downloading the app
     /// </summary>
-    public IReadOnlyCollection<AppStore> Store { get; init; } = [];
+    public IReadOnlyCollection<AppStore> Stores { get; init; } = [];
 }
 
 /// <summary>

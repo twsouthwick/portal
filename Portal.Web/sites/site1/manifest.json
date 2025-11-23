@@ -7,7 +7,7 @@
     {
       "name": "Audiobookshelf",
       "scheme": "audiobookshelf://",
-      "store": [
+      "stores": [
         {
           "name": "google-play",
           "id": "https://play.google.com/store/apps/details?id=com.audiobookshelf.app"

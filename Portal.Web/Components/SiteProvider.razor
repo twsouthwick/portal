@@ -39,7 +39,7 @@
             var portal = await PortalProvider.GetSiteDetailsAsync(default);
             var state = await AuthStateProvider.GetAuthenticationStateAsync();
             _browserInfo = await BrowserSession.GetBrowserInfoAsync();
-            
+
             Logger.LogInformation(
                 "Browser Info - Browser: {Browser} [{BrowserVersion}], Platform: {Platform}, Version: {PlatformVersion}, Architecture: {Architecture}, IsMobile: {IsMobile}, IsPrivate: {IsPrivate}",
                 _browserInfo.Browser,
@@ -49,8 +49,10 @@
                 _browserInfo.Architecture,
                 _browserInfo.IsMobile,
                 _browserInfo.IsPrivate);
-            
-            _filtered = portal with { Sites = Filter(portal.Sites, state.User, _browserInfo) };
+
+            var filteredSites = Filter(portal.Sites, state.User, _browserInfo);
+
+            _filtered = portal with { Sites = [.. filteredSites] };
 
             StateHasChanged();
         }
@@ -93,17 +95,18 @@
             }
         }
 
-        static bool IsAppSupported(SiteApp app, BrowserInfo browserInfo)
-        {
-            foreach (var store in app.Store)
-            {
-                if (_supportedStore.TryGetValue(store.Name, out var set) && set.Contains(browserInfo.Platform))
-                {
-                    return true;
-                }
-            }
+    }
 
-            return false;
+    private bool IsAppSupported(SiteApp app, BrowserInfo browserInfo)
+    {
+        foreach (var store in app.Stores)
+        {
+            if (_supportedStore.TryGetValue(store.Name, out var set) && set.Contains(browserInfo.Platform))
+            {
+                return true;
+            }
         }
+
+        return false;
     }
 }
