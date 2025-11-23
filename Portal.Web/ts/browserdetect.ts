@@ -43,7 +43,7 @@ export async function getBrowserInfo(): Promise<BrowserInfo> {
     const result = parser.getResult();
     const isPrivate = await getPrivateMode();
 
-    return {
+    const browserInfo: BrowserInfo = {
         browser: result.browser.name || 'Unknown',
         browserVersion: result.browser.version || '',
         platform: result.os.name || 'Unknown',
@@ -52,4 +52,16 @@ export async function getBrowserInfo(): Promise<BrowserInfo> {
         architecture: result.cpu.architecture || '',
         isPrivate: isPrivate
     };
+
+    console.log('Detected browser info:', {
+        browser: browserInfo.browser,
+        browserVersion: browserInfo.browserVersion,
+        platform: browserInfo.platform,
+        platformVersion: browserInfo.platformVersion,
+        isMobile: browserInfo.isMobile,
+        architecture: browserInfo.architecture,
+        isPrivate: browserInfo.isPrivate
+    });
+
+    return browserInfo;
 }

@@ -1,9 +1,10 @@
 using Microsoft.Extensions.FileProviders;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Portal.Web.Services;
 
-internal sealed class FilePortalProvider(IFileProvider files) : IPortalProvider
+internal sealed partial class FilePortalProvider(IFileProvider files) : IPortalProvider
 {
     private readonly Task<Services.PortalDetails> _task = CreateSite(files);
 
@@ -41,7 +42,7 @@ internal sealed class FilePortalProvider(IFileProvider files) : IPortalProvider
         {
             using var stream = manifest.CreateReadStream();
 
-            if (await JsonSerializer.DeserializeAsync<SiteInfo?>(stream, JsonSerializerOptions.Web) is { } details)
+            if (await JsonSerializer.DeserializeAsync(stream, PortalJsonContext.Default.SiteInfo) is { } details)
             {
                 var content = dir.GetSubdirectory("content");
                 var usageInstructions = await GetStringOrNull(dir.GetFileInfo("usage.md"));
@@ -90,7 +91,7 @@ internal sealed class FilePortalProvider(IFileProvider files) : IPortalProvider
             {
                 using var stream = file.CreateReadStream();
 
-                if (await JsonSerializer.DeserializeAsync<PortalDetails>(stream, JsonSerializerOptions.Web) is { } result)
+                if (await JsonSerializer.DeserializeAsync(stream, PortalJsonContext.Default.PortalDetails) is { } result)
                 {
                     return result;
                 }
@@ -98,5 +99,17 @@ internal sealed class FilePortalProvider(IFileProvider files) : IPortalProvider
 
             return new();
         }
+    }
+
+    [JsonSerializable(typeof(SiteInfo))]
+    [JsonSerializable(typeof(PortalDetails))]
+    [JsonSourceGenerationOptions(
+        PropertyNameCaseInsensitive = true,
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault,
+        RespectNullableAnnotations = true,
+        Converters = [typeof(JsonStringEnumConverter<AppStore>)]
+        )]
+    private sealed partial class PortalJsonContext : JsonSerializerContext
+    {
     }
 }

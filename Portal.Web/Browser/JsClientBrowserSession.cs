@@ -54,7 +54,7 @@ internal sealed class JsClientBrowserSession : IClientBrowserSession, IAsyncDisp
             {
                 Browser = "Unknown",
                 BrowserVersion = "",
-                Platform = "Unknown",
+                Platform = BrowserPlatform.Unknown,
                 PlatformVersion = "",
                 IsMobile = false,
                 Architecture = "",

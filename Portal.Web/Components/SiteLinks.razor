@@ -8,7 +8,7 @@
     @* Show app launcher buttons for each app *@
     @foreach (var app in Site.Apps)
     {
-        <SiteLauncher Url="@app.Scheme" IsDisabled="@IsDisabled" AppName="@app.Name" AppStore="@app.Stores.FirstOrDefault()" />
+        <SiteLauncher Url="@app.Scheme" IsDisabled="@IsDisabled" AppName="@app.Name" SiteApp="@app" />
     }
 </div>
 

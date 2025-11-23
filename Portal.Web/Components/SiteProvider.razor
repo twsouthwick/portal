@@ -80,31 +80,21 @@
         {
             foreach (var app in apps)
             {
-                yield return app with
+                var isApplicable = (app.Store, browserInfo.Platform) switch
                 {
-                    Stores = [.. FilterStores(app, browserInfo)]
+                    (AppStore.Apple, BrowserPlatform.MacOS) => true,
+                    (AppStore.Apple, BrowserPlatform.iOS) => true,
+                    (AppStore.Google, BrowserPlatform.Android) => true,
+                    (AppStore.Microsoft, BrowserPlatform.Windows) => true,
+                    (AppStore.Windows, BrowserPlatform.Windows) => true,
+                    _ => false
                 };
-            }
-        }
 
-        static IEnumerable<AppStore> FilterStores(SiteApp app, BrowserInfo browserInfo)
-        {
-            foreach (var store in app.Stores)
-            {
-                if (_supportedStore.TryGetValue(store.Name, out var set) && set.Contains(browserInfo.Platform))
+                if (isApplicable)
                 {
-                    yield return store;
+                    yield return app;
                 }
             }
         }
     }
-
-    private static Dictionary<string, HashSet<string>> _supportedStore = new[]
-    {
-        ("apple", "macOS"),
-        ("apple", "iOS"),
-        ("google", "android"),
-        ("microsoft", "windows"),
-        ("windows", "windows")
-    }.GroupBy(kv => kv.Item1, t => t.Item2).ToDictionary(k => k.Key, k => k.OfType<string>().ToHashSet(StringComparer.OrdinalIgnoreCase), StringComparer.OrdinalIgnoreCase);
 }

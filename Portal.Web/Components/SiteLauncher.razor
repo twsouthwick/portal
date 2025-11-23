@@ -5,7 +5,7 @@
               Appearance="Appearance.Outline"
               OnClick="@LaunchAsync"
               Title="@ButtonTitle">
-    <SiteAppIcon Url="@Url" AppStore="@AppStore" />
+    <SiteAppIcon Url="@Url" SiteApp="@SiteApp" />
 </FluentButton>
 
 @code {
@@ -19,7 +19,7 @@
     public string? AppName { get; set; }
 
     [Parameter]
-    public AppStore? AppStore { get; set; }
+    public SiteApp? SiteApp { get; set; }
 
     private bool IsAppProtocol => Url.Contains("://") && !Url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) && !Url.StartsWith("https://", StringComparison.OrdinalIgnoreCase);
 
@@ -45,7 +45,7 @@
             return;
         }
 
-        if (AppStore is { Id: { } id })
+        if (SiteApp is { StoreId: { } id } && !string.IsNullOrEmpty(id))
         {
             await BrowserSession.OpenUrlInNewTabAsync(id);
         }

@@ -18,7 +18,8 @@
 
   <Target Name="CompileTypeScript" BeforeTargets="CoreBuild">
     <Exec Command="npm install" WorkingDirectory="$(ProjectDir)" Condition="!Exists('$(ProjectDir)node_modules')" />
-    <Exec Command="npm run build" WorkingDirectory="$(ProjectDir)" />
+    <Exec Command="npm run dev" WorkingDirectory="$(ProjectDir)" Condition="'$(Configuration)' == 'Debug'" />
+    <Exec Command="npm run build" WorkingDirectory="$(ProjectDir)" Condition="'$(Configuration)' != 'Debug'" />
   </Target>
 
   <ItemGroup>

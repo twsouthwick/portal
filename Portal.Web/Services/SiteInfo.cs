@@ -3,22 +3,14 @@ using System.Text.Json.Serialization;
 
 namespace Portal.Web.Services;
 
-
-
-/// <summary>
-/// Represents a store link for an app
-/// </summary>
-public record AppStore
+public enum AppStore
 {
-    /// <summary>
-    /// Store name (e.g., "google-play", "apple")
-    /// </summary>
-    public string Name { get; init; } = string.Empty;
-
-    /// <summary>
-    /// Store URL or ID
-    /// </summary>
-    public string Id { get; init; } = string.Empty;
+    None,
+    Apple,
+    Google,
+    Microsoft,
+    Windows,
+    Linux,
 }
 
 /// <summary>
@@ -29,17 +21,22 @@ public record SiteApp
     /// <summary>
     /// App name
     /// </summary>
-    public string Name { get; init; } = string.Empty;
+    public required string Name { get; init; }
 
     /// <summary>
     /// App scheme/protocol (e.g., "audiobookshelf://", "plappa://")
     /// </summary>
-    public string Scheme { get; init; } = string.Empty;
+    public string Scheme { get; init; } = null!;
 
     /// <summary>
-    /// Store links for downloading the app
+    /// Store name (e.g., "google-play", "apple")
     /// </summary>
-    public IReadOnlyCollection<AppStore> Stores { get; init; } = [];
+    public AppStore Store { get; init; }
+
+    /// <summary>
+    /// Store URL or ID
+    /// </summary>
+    public required string StoreId { get; init; }
 }
 
 /// <summary>
@@ -70,7 +67,11 @@ public record SiteInfo
     /// <summary>
     /// Apps that can be launched for this subsite
     /// </summary>
-    public IReadOnlyCollection<SiteApp> Apps { get; init; } = [];
+    public IReadOnlyCollection<SiteApp> Apps
+    {
+        get => field ?? [];
+        init => field = value ?? [];
+    }
 
     /// <summary>
     /// Icon class (e.g., Bootstrap icons, Font Awesome)
@@ -80,7 +81,11 @@ public record SiteInfo
     /// <summary>
     /// Categories or departments the subsite belongs to
     /// </summary>
-    public IReadOnlyCollection<string> Categories { get; init; } = [];
+    public IReadOnlyCollection<string> Categories
+    {
+        get => field ?? [];
+        init => field = value ?? [];
+    }
 
     /// <summary>
     /// Detailed usage instructions
@@ -90,7 +95,11 @@ public record SiteInfo
     [JsonIgnore]
     public IFileProvider? Content { get; init; }
 
-    public IReadOnlyCollection<string> Roles { get; init; } = [];
+    public IReadOnlyCollection<string> Roles
+    {
+        get => field ?? [];
+        init => field = value ?? [];
+    }
 
     public bool IsPrivate { get; init; }
 

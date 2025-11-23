@@ -1,4 +1,16 @@
+using System.Text.Json.Serialization;
+
 namespace Portal.Web.Browser;
+
+public enum BrowserPlatform
+{
+    Unknown,
+    Windows,
+    MacOS,
+    Linux,
+    iOS,
+    Android,
+}
 
 /// <summary>
 /// Information about the client's browser and platform
@@ -18,7 +30,8 @@ public sealed record BrowserInfo
     /// <summary>
     /// Operating system (e.g., "Windows", "macOS", "Linux", "iOS", "Android")
     /// </summary>
-    public required string Platform { get; init; }
+    [JsonConverter(typeof(JsonStringEnumConverter<BrowserPlatform>))]
+    public BrowserPlatform Platform { get; init; }
 
     /// <summary>
     /// Platform version

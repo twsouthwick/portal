@@ -12,7 +12,7 @@ else
     public string Url { get; set; } = string.Empty;
 
     [Parameter]
-    public AppStore? AppStore { get; set; }
+    public SiteApp? SiteApp { get; set; }
 
     private bool IsAppProtocol => !string.IsNullOrEmpty(Url) &&
         Url.Contains("://") &&
@@ -25,20 +25,18 @@ else
     {
         get
         {
-            if (!IsAppProtocol || AppStore is null)
+            if (!IsAppProtocol || SiteApp is null)
             {
                 return null;
             }
 
-            return AppStore.Name.ToLowerInvariant() switch
+            return SiteApp.Store switch
             {
-                "google" => "bi bi-google-play",
-                "google-play" => "bi bi-google-play",
-                "ios" => "bi bi-apple",
-                "apple" => "bi bi-apple",
-                "macos" => "bi bi-apple",
-                "windows" => "bi bi-windows",
-                "microsoft" => "bi bi-windows",
+                AppStore.Google => "bi bi-google-play",
+                AppStore.Apple => "bi bi-apple",
+                AppStore.Windows => "bi bi-windows",
+                AppStore.Microsoft => "bi bi-windows",
+                AppStore.Linux => "bi bi-linux",
                 _ => null
             };
         }

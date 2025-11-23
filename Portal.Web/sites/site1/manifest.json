@@ -7,12 +7,8 @@
     {
       "name": "Audiobookshelf",
       "scheme": "audiobookshelf://",
-      "stores": [
-        {
-          "name": "windows",
-          "id": "https://play.google.com/store/apps/details?id=com.audiobookshelf.app"
-        }
-      ]
+      "store": "windows",
+      "storeId": "https://play.google.com/store/apps/details?id=com.audiobookshelf.app"
     }
   ],
   "icon": "bi bi-globe",
