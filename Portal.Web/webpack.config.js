@@ -7,7 +7,7 @@ module.exports = (env, argv) => {
     const isDevelopment = argv.mode === 'development';
 
     return {
-        entry: './TypeScript/app.ts',
+        entry: './ts/app.ts',
         
         output: {
             filename: 'app.js',

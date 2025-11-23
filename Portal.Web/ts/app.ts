@@ -3,7 +3,7 @@
  * This module exports utility functions for site launching and browser detection
  */
 
-import './app.css';
+import '../css/app.css';
 // Import blazor-reconnect for its side effects (MutationObserver setup)
 /* webpackMode: "eager" */
 import './blazor-reconnect';

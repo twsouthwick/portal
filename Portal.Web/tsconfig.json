@@ -16,7 +16,7 @@
     "allowSyntheticDefaultImports": true
   },
   "include": [
-    "TypeScript/**/*.ts"
+    "ts/**/*.ts"
   ],
   "exclude": [
     "node_modules",

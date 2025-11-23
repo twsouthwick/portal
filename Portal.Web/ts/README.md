@@ -82,12 +82,14 @@ npm run watch
 ## File Structure
 
 ```
-TypeScript/
-??? app.ts                      # Main entry point - imports CSS and exports all functions
-??? app.css                     # Main stylesheet (imports bootstrap-icons)
-??? components/
-    ??? siteLauncher.ts         # URL launching helpers
-    ??? siteProvider.ts         # Browser detection helpers
+ts/
+? app.ts                      # Main entry point - imports CSS and exports all functions
+? applaunch.ts                # URL launching helpers
+? browserdetect.ts            # Browser detection helpers
+? blazor-reconnect.ts         # Blazor reconnect modal customization
+
+css/
+? app.css                     # Main stylesheet (imports bootstrap-icons)
 ```
 
 ## Webpack Output

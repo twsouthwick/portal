@@ -4,7 +4,7 @@
   "description": "TypeScript files for Portal.Web Blazor application",
   "sideEffects": [
     "**/*.css",
-    "./TypeScript/blazor-reconnect.ts"
+    "./ts/blazor-reconnect.ts"
   ],
   "scripts": {
     "build": "webpack --mode production",
