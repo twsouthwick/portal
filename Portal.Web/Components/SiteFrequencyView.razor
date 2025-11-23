@@ -1,14 +1,21 @@
 @inject ISiteClickTracker ClickTracker
 
-@* Displays sites sorted by usage frequency (most clicked first) *@
+@if (sitesWithClicks.Any())
+{
+    <SiteGrid Category="Most Used Sites" Sites="@sitesWithClicks" />
+}
 
-<SiteGrid Category="Most Used Sites" Sites="@sortedSites" />
+@if (sitesWithoutClicks.Any())
+{
+    <SiteGrid Category="Other Sites" Sites="@sitesWithoutClicks" />
+}
 
 @code {
     [Parameter, EditorRequired]
     public IEnumerable<SiteInfo> Sites { get; set; } = [];
 
-    private List<SiteInfo> sortedSites = new();
+    private List<SiteInfo> sitesWithClicks = new();
+    private List<SiteInfo> sitesWithoutClicks = new();
 
     protected override async Task OnParametersSetAsync()
     {
@@ -20,10 +27,16 @@
         // Get all click counts
         var clickCounts = await ClickTracker.GetAllClickCountsAsync();
 
-        // Sort by click count (descending), then by name
-        sortedSites = Sites
+        // Split sites into those with clicks and those without
+        sitesWithClicks = Sites
+            .Where(s => clickCounts.GetValueOrDefault(s.Id, 0) > 0)
             .OrderByDescending(s => clickCounts.GetValueOrDefault(s.Id, 0))
             .ThenBy(s => s.Name)
+            .ToList();
+
+        sitesWithoutClicks = Sites
+            .Where(s => clickCounts.GetValueOrDefault(s.Id, 0) == 0)
+            .OrderBy(s => s.Name)
             .ToList();
     }
 }
