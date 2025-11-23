@@ -2,6 +2,10 @@
   "name": "portal.web",
   "version": "1.0.0",
   "description": "TypeScript files for Portal.Web Blazor application",
+  "sideEffects": [
+    "**/*.css",
+    "./TypeScript/blazor-reconnect.ts"
+  ],
   "scripts": {
     "build": "webpack --mode production",
     "watch": "webpack --mode development --watch",
@@ -17,8 +21,10 @@
     "@types/node": "^22.10.2",
     "@types/ua-parser-js": "^0.7.39",
     "css-loader": "^7.1.2",
+    "css-minimizer-webpack-plugin": "^7.0.0",
     "mini-css-extract-plugin": "^2.9.2",
     "rimraf": "^6.0.1",
+    "terser-webpack-plugin": "^5.3.11",
     "ts-loader": "^9.5.1",
     "typescript": "^5.7.2",
     "webpack": "^5.97.1",

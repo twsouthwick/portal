@@ -7,123 +7,15 @@
 }
 
 #blazor-error-ui {
-    background: var(--fill-color-warning);
-    bottom: 0;
-    box-shadow: var(--elevation-shadow-card-rest);
-    display: none;
-    left: 0;
-    padding: 0.6rem 1.25rem 0.7rem 1.25rem;
     position: fixed;
+    bottom: 0;
+    left: 0;
     width: 100%;
     z-index: 1000;
-    color: var(--neutral-foreground-rest);
-    border-top: 2px solid var(--accent-fill-rest);
-}
-
-    #blazor-error-ui .dismiss {
-        cursor: pointer;
-        position: absolute;
-        right: 0.75rem;
-        top: 0.5rem;
-        color: var(--neutral-foreground-rest);
-        font-weight: bold;
-    }
-
-        #blazor-error-ui .dismiss:hover {
-            color: var(--accent-foreground-rest);
-        }
-
-/* Blazor reconnection UI */
-#components-reconnect-modal {
     display: none;
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    z-index: 2000;
-    background: var(--neutral-layer-floating);
-    padding: 1.5rem 2rem;
-    border-radius: 8px;
-    box-shadow: var(--elevation-shadow-dialog);
-    border: 1px solid var(--neutral-stroke-layer-rest);
-    min-width: 300px;
-    max-width: 400px;
 }
 
-    #components-reconnect-modal.components-reconnect-show {
-        display: block;
-    }
-
-    #components-reconnect-modal.components-reconnect-hide {
-        display: none;
-    }
-
-    #components-reconnect-modal h5 {
-        margin: 0 0 1rem 0;
-        color: var(--neutral-foreground-rest);
-        font-size: 1.125rem;
-        font-weight: 600;
-    }
-
-    #components-reconnect-modal p {
-        margin: 0.5rem 0;
-        color: var(--neutral-foreground-rest);
-        font-size: 0.875rem;
-    }
-
-    /* Retrying state */
-    #components-reconnect-modal.components-reconnect-retrying {
-        border-left: 4px solid var(--accent-fill-rest);
-    }
-
-    /* Failed state */
-    #components-reconnect-modal.components-reconnect-failed {
-        border-left: 4px solid var(--fill-color-critical);
-        background: var(--neutral-layer-floating);
-    }
-
-        #components-reconnect-modal.components-reconnect-failed h5 {
-            color: var(--fill-color-critical);
-        }
-
-    /* Rejected state */
-    #components-reconnect-modal.components-reconnect-rejected {
-        border-left: 4px solid var(--fill-color-critical);
-        background: var(--neutral-layer-floating);
-    }
-
-        #components-reconnect-modal.components-reconnect-rejected h5 {
-            color: var(--fill-color-critical);
-        }
-
-    /* Spinner for retrying state */
-    #components-reconnect-modal .spinner {
-        display: inline-block;
-        width: 16px;
-        height: 16px;
-        border: 2px solid var(--accent-fill-rest);
-        border-top-color: transparent;
-        border-radius: 50%;
-        animation: spinner 0.8s linear infinite;
-        margin-right: 0.5rem;
-        vertical-align: middle;
-    }
-
-@keyframes spinner {
-    to {
-        transform: rotate(360deg);
-    }
-}
-
-/* Reconnection modal backdrop */
-#components-reconnect-modal::before {
-    content: '';
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: var(--neutral-fill-stealth-rest);
-    opacity: 0.7;
-    z-index: -1;
+#blazor-error-ui::deep fluent-message-bar {
+    border-radius: 0;
+    box-shadow: var(--elevation-shadow-card-rest);
 }

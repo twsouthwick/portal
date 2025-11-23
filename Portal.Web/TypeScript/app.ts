@@ -4,6 +4,9 @@
  */
 
 import './app.css';
+// Import blazor-reconnect for its side effects (MutationObserver setup)
+/* webpackMode: "eager" */
+import './blazor-reconnect';
 
 // Export all helper functions
 export * from './applaunch';

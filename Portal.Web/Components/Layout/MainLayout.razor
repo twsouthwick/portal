@@ -31,7 +31,12 @@
 <FluentDesignTheme StorageName="theme" />
 
 <div id="blazor-error-ui">
-    An unhandled error has occurred.
-    <a href="" class="reload">Reload</a>
-    <a class="dismiss">🗙</a>
+    <FluentMessageBar 
+        Title="An unhandled error has occurred"
+        Intent="MessageIntent.Error"
+        AllowDismiss="true">
+        <FluentButton class="reload">
+            Reload
+        </FluentButton>
+    </FluentMessageBar>
 </div>
