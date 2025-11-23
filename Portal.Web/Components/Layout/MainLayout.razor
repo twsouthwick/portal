@@ -4,11 +4,11 @@
     <SiteProvider>
         <CascadingValue TValue="SiteViewMode" Value="viewMode" Name="CurrentViewMode">
             <FluentLayout>
-                <FluentHeader>
+                <FluentHeader Height="default">
                     <PageTitle>@context.Name</PageTitle>
 
-                    <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-                        <div>
+                    <div class="header-content">
+                        <div class="header-title">
                             @if (string.IsNullOrEmpty(context.Description))
                             {
                                 <span>@context.Name</span>
@@ -18,7 +18,7 @@
                                 <span>@context.Name - @context.Description</span>
                             }
                         </div>
-                        <div>
+                        <div class="header-selector">
                             <SiteViewModeSelector @bind-CurrentMode="viewMode" />
                         </div>
                     </div>

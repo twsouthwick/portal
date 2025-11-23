@@ -10,10 +10,71 @@
 ::deep fluent-header {
     display: flex;
     align-items: center;
+    padding: 0.5rem 1rem;
+    overflow: hidden;
+    --header-height: auto;
 }
 
-::deep fluent-header > div {
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     width: 100%;
+    gap: 1rem;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+.header-title {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.header-selector {
+    flex-shrink: 0;
+}
+
+.header-selector ::deep fluent-toolbar {
+    padding: 0;
+}
+
+/* Mobile responsive header */
+@media (max-width: 768px) {
+    ::deep fluent-header {
+        padding: 0.5rem;
+        --header-height: auto;
+    }
+
+    .header-content {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.75rem;
+    }
+
+    .header-title {
+        font-size: 0.95rem;
+        word-break: break-word;
+        overflow: visible;
+        text-overflow: unset;
+    }
+
+    .header-selector {
+        width: 100%;
+    }
+
+    .header-selector ::deep fluent-toolbar {
+        width: 100%;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .header-selector ::deep fluent-select {
+        width: 100% !important;
+        max-width: 100%;
+        flex: 1;
+    }
 }
 
 #blazor-error-ui {
