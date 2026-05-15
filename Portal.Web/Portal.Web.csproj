@@ -7,6 +7,7 @@
     <EnableSdkContainerDebugging>True</EnableSdkContainerDebugging>
     <ContainerBaseImage>mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled-extra</ContainerBaseImage>
     <ContainerRepository>tasou/portal</ContainerRepository>
+    <MinVerTagPrefix>v</MinVerTagPrefix>
     <UserSecretsId>24692884-3f6a-4a3a-b173-aa05231f66df</UserSecretsId>
   </PropertyGroup>
 
@@ -31,6 +32,7 @@
     <PackageReference Include="Microsoft.FluentUI.AspNetCore.Components" Version="4.13.1" />
     <PackageReference Include="Microsoft.FluentUI.AspNetCore.Components.Emoji" Version="4.13.1" />
     <PackageReference Include="Microsoft.FluentUI.AspNetCore.Components.Icons" Version="4.13.1" />
+    <PackageReference Include="MinVer" Version="6.0.0" PrivateAssets="All" />
   </ItemGroup>
 
   <ItemGroup>
