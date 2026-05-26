@@ -1,6 +1,12 @@
 <Solution>
   <Folder Name="/Solution Items/">
+    <File Path=".gitattributes" />
+    <File Path=".gitignore" />
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Build.targets" />
+    <File Path="global.json" />
     <File Path="README.md" />
+    <File Path="renovate.json" />
   </Folder>
   <Project Path="Portal.AppHost/Portal.AppHost.csproj" />
   <Project Path="Portal.ServiceDefaults/Portal.ServiceDefaults.csproj" />
