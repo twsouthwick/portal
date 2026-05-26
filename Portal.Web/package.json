@@ -13,21 +13,21 @@
     "clean": "rimraf wwwroot/dist"
   },
   "dependencies": {
-    "bootstrap-icons": "^1.11.3",
+    "bootstrap-icons": "^1.13.1",
     "detectincognitojs": "^1.6.2",
-    "ua-parser-js": "^2.0.6"
+    "ua-parser-js": "^2.0.10"
   },
   "devDependencies": {
-    "@types/node": "^22.10.2",
+    "@types/node": "^22.19.19",
     "@types/ua-parser-js": "^0.7.39",
-    "css-loader": "^7.1.2",
+    "css-loader": "^7.1.4",
     "css-minimizer-webpack-plugin": "^8.0.0",
-    "mini-css-extract-plugin": "^2.9.2",
-    "rimraf": "^6.0.1",
-    "terser-webpack-plugin": "^5.3.11",
-    "ts-loader": "^9.5.1",
-    "typescript": "^5.7.2",
-    "webpack": "^5.97.1",
+    "mini-css-extract-plugin": "^2.10.2",
+    "rimraf": "^6.1.3",
+    "terser-webpack-plugin": "^5.6.0",
+    "ts-loader": "^9.5.7",
+    "typescript": "^5.9.3",
+    "webpack": "^5.107.2",
     "webpack-cli": "^6.0.1"
   }
 }
