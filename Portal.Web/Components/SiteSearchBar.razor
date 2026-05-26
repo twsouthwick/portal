@@ -1,0 +1,49 @@
+@using Portal.Web.Services
+
+<div style="margin-bottom: 1.5rem;">
+    <FluentSearch @bind-Value="searchQuery"
+                  Placeholder="@Placeholder"
+                  Immediate="true"
+                  @bind-Value:after="OnSearchChanged"
+                  style="width: 100%;" />
+</div>
+
+@ChildContent?.Invoke(FilteredSites)
+
+@code {
+    private string searchQuery = string.Empty;
+
+    [Parameter]
+    public IEnumerable<SiteInfo> Sites { get; set; } = [];
+
+    [Parameter, EditorRequired]
+    public RenderFragment<IEnumerable<SiteInfo>> ChildContent { get; set; }
+
+    [Parameter]
+    public string Placeholder { get; set; } = "Search sites by name, description, or category...";
+
+    private IEnumerable<SiteInfo> FilteredSites
+    {
+        get
+        {
+            if (!Sites.Any())
+                return [];
+
+            if (string.IsNullOrWhiteSpace(searchQuery))
+                return Sites;
+
+            var query = searchQuery.Trim().ToLowerInvariant();
+
+            return Sites.Where(site =>
+                site.Name.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+                site.Description.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+                site.Categories.Any(c => c.Contains(query, StringComparison.OrdinalIgnoreCase))
+            );
+        }
+    }
+
+    private void OnSearchChanged()
+    {
+        StateHasChanged();
+    }
+}

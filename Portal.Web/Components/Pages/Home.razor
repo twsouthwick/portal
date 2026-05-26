@@ -2,20 +2,22 @@
 
 @if (SiteDetails is { Sites: { } sites } && sites.Any())
 {
-    @if (viewMode == SiteViewMode.Categories)
-    {
-        <SiteCategoryView Sites="@sites" />
-    }
-    else if (viewMode == SiteViewMode.Frequency)
-    {
-        <SiteFrequencyView Sites="@sites" />
-    }
-    else
-    {
-        <div style="display: flex; justify-content: center; align-items: center; height: 100%;">
-            <FluentProgressRing IsActive="true" />
-        </div>
-    }
+    <SiteSearchBar Sites="@SiteDetails.Sites">        
+        @if (ViewMode == SiteViewMode.Categories)
+        {
+            <SiteCategoryView Sites="@context" />
+        }
+        else if (ViewMode == SiteViewMode.Frequency)
+        {
+            <SiteFrequencyView Sites="@context" />
+        }
+        else
+        {
+            <div style="display: flex; justify-content: center; align-items: center; height: 100%;">
+                <FluentProgressRing IsActive="true" />
+            </div>
+        }
+    </SiteSearchBar>
 }
 else
 {
@@ -27,5 +29,5 @@ else
     public PortalDetails? SiteDetails { get; set; } = null!;
 
     [CascadingParameter(Name = "CurrentViewMode")]
-    public SiteViewMode viewMode { get; set; }
+    public SiteViewMode ViewMode { get; set; }
 }
