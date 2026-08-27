@@ -1,0 +1,33 @@
+{
+  "name": "Portal (.NET Aspire)",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".."
+  },
+  "containerEnv": {
+    "SSL_CERT_DIR": "/home/vscode/.aspnet/dev-certs/trust:/usr/lib/ssl/certs"
+  },
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:4": {
+      "moby": false
+    },
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "22"
+    }
+  },
+  "mounts": [
+    "source=portal-docker-data,target=/var/lib/docker,type=volume",
+    "source=portal-nuget-cache,target=/home/vscode/.nuget/packages,type=volume"
+  ],
+  "postCreateCommand": "sudo chown -R vscode:vscode /home/vscode/.nuget && aspire certs trust",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "microsoft-aspire.aspire-vscode",
+        "ms-azuretools.vscode-docker",
+        "ms-kubernetes-tools.vscode-kubernetes-tools",
+        "ms-dotnettools.csdevkit"
+      ]
+    }
+  }
+}

@@ -26,6 +26,16 @@ A Blazor-based intranet portal system built with .NET 10 and Aspire that allows 
 - .NET 10 SDK
 - Node.js (for Webpack/TypeScript compilation)
 
+### Devcontainer (Aspire)
+
+This repository includes a VS Code devcontainer for local Aspire development. Reopen the folder in the devcontainer and then run:
+
+```bash
+aspire run
+```
+
+The container installs the pinned .NET 10 SDK from `global.json`, the matching Aspire CLI, Node.js 22, and Docker-in-Docker support so the AppHost can launch the `media` and `admin` portal instances.
+
 ### Building
 
 The project uses **Webpack** to bundle TypeScript, CSS, and static assets. All source files are in `Portal.Web/TypeScript/` and are compiled to `wwwroot/dist/`.
