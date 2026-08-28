@@ -65,6 +65,8 @@ The service abstracts the JavaScript interop and provides a clean, testable inte
 
 ## Building
 
+TypeScript 7 performs type checking, while webpack and esbuild transpile and bundle the browser assets.
+
 ```bash
 # Install dependencies (first time)
 npm install

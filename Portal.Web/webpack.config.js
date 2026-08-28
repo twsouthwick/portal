@@ -32,7 +32,13 @@ module.exports = (env, argv) => {
             rules: [
                 {
                     test: /\.ts$/,
-                    use: 'ts-loader',
+                    use: {
+                        loader: 'esbuild-loader',
+                        options: {
+                            loader: 'ts',
+                            target: 'es2020',
+                        },
+                    },
                     exclude: /node_modules/,
                     sideEffects: true,
                 },
