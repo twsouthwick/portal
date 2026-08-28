@@ -10,8 +10,17 @@ public static class SiteDetailsExtensions
     public static void AddPortalProvider(this IHostApplicationBuilder host)
     {
         var files = host.GetFileProvider();
+        var providerMode = host.Configuration["PORTAL_PROVIDER"];
 
-        host.Services.AddSingleton<IPortalProvider>(new FilePortalProvider(files));
+        if (providerMode is { Length: > 0 } && providerMode.Equals("file", StringComparison.OrdinalIgnoreCase))
+        {
+            host.Services.AddSingleton<IPortalProvider>(new FilePortalProvider(files));
+            return;
+        }
+
+        host.Services.AddSingleton<IPortalProvider>(new CompositePortalProvider(
+            new KubernetesPortalProvider(),
+            new FilePortalProvider(files)));
     }
 
     private static IFileProvider GetFileProvider(this IHostApplicationBuilder host)

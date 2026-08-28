@@ -1,0 +1,14 @@
+image:
+  repository: tasou/portal
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 8081
+
+exampleResources:
+  enabled: false
+
+rbac:
+  create: true

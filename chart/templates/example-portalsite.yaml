@@ -1,0 +1,23 @@
+{{- if .Values.exampleResources.enabled }}
+apiVersion: portal.swick.app/v1alpha1
+kind: PortalSite
+metadata:
+  name: {{ .Release.Name }}-sample
+spec:
+  id: sample-site
+  name: Sample Site
+  description: Sample site from the Helm chart
+  url: https://example.com
+  icon: bi bi-globe
+  categories:
+    - sample
+  roles: []
+  usageInstructions: |
+    This is a sample PortalSite resource.
+  apps: []
+  isPrivate: false
+  isInternal: true
+  contentRef:
+    name: {{ .Release.Name }}-sample-content
+    key: index.html
+{{- end }}

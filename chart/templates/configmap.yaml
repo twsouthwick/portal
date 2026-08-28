@@ -1,0 +1,10 @@
+{{- if .Values.exampleResources.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-sample-content
+data:
+  index.html: |
+    <h1>Sample portal content</h1>
+    <p>This content was installed from the Helm chart.</p>
+{{- end }}

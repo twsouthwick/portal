@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-portal
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-portal
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-portal
+    spec:
+      serviceAccountName: {{ .Release.Name }}-portal
+      containers:
+        - name: portal
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: PORTAL_PROVIDER
+              value: kubernetes
+            - name: PORTAL_KUBERNETES_NAMESPACE
+              value: {{ .Release.Namespace }}
+          ports:
+            - containerPort: 8081

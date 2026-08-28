@@ -1,0 +1,73 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: portalsites.portal.swick.app
+spec:
+  group: portal.swick.app
+  names:
+    kind: PortalSite
+    plural: portalsites
+    singular: portalsite
+    shortNames:
+      - ps
+  scope: Namespaced
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              properties:
+                id:
+                  type: string
+                name:
+                  type: string
+                description:
+                  type: string
+                url:
+                  type: string
+                icon:
+                  type: string
+                categories:
+                  type: array
+                  items:
+                    type: string
+                roles:
+                  type: array
+                  items:
+                    type: string
+                usageInstructions:
+                  type: string
+                apps:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                      scheme:
+                        type: string
+                      store:
+                        type: string
+                      storeId:
+                        type: string
+                    required:
+                      - name
+                      - storeId
+                isPrivate:
+                  type: boolean
+                isInternal:
+                  type: boolean
+                contentRef:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    key:
+                      type: string
+                  required:
+                    - name

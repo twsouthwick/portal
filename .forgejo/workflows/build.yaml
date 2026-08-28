@@ -59,3 +59,10 @@ jobs:
             /p:ContainerImageTags='"${{ steps.version.outputs.VERSION }};latest"' \
             /p:Version=${{ steps.version.outputs.VERSION }} \
             /p:ContainerImageFormat=OCI
+
+      - name: Package and push Helm chart
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
+        run: |
+          helm registry login ${{ env.REGISTRY }} --username "${{ secrets.REGISTRY_USERNAME }}" --password "${{ secrets.REGISTRY_PASSWORD }}"
+          helm package ./chart --version "${{ steps.version.outputs.VERSION }}" --app-version "${{ steps.version.outputs.VERSION }}"
+          helm push "portal-${{ steps.version.outputs.VERSION }}.tgz" "oci://${{ env.REGISTRY }}/charts"
