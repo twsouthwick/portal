@@ -1,11 +1,14 @@
 @using Portal.Web.Services
 
 <div style="margin-bottom: 1.5rem;">
-    <FluentSearch @bind-Value="searchQuery"
-                  Placeholder="@Placeholder"
-                  Immediate="true"
-                  @bind-Value:after="OnSearchChanged"
-                  style="width: 100%;" />
+    <FluentTextInput @bind-Value="searchQuery"
+                     Placeholder="@Placeholder"
+                     @bind-Value:after="OnSearchChanged"
+                     style="width: 100%;">
+        <StartTemplate>
+            <FluentIcon Value="@(new Icons.Regular.Size20.Search())" />
+        </StartTemplate>
+    </FluentTextInput>
 </div>
 
 @ChildContent?.Invoke(FilteredSites)

@@ -3,14 +3,14 @@ var builder = DistributedApplication.CreateBuilder(args);
 var keycloak = builder.AddKeycloak("keycloak", 8080)
     .WithRealmImport("./Realms");
 
-builder.AddProject<Projects.Portal_Web>("media", launchProfileName: "media")
+builder.AddDotnetProject("media", "../Portal.Web/Portal.Web.csproj", options => options.LaunchProfileName = "media")
     .WithExternalHttpEndpoints()
     .AddPortalDefaults()
     .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Development")
     .WithHttpHealthCheck("/health")
     .WaitFor(keycloak);
 
-builder.AddProject<Projects.Portal_Web>("admin", launchProfileName: "admin")
+builder.AddDotnetProject("admin", "../Portal.Web/Portal.Web.csproj", options => options.LaunchProfileName = "admin")
     .WithExternalHttpEndpoints()
     .AddPortalDefaults()
     .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Development")

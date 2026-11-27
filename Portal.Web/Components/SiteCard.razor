@@ -8,7 +8,7 @@
         <FluentStack Orientation="Orientation.Vertical" Width="100%" VerticalGap="12" Style="height: 100%;">
             @if (IsDisabledDueToRemote)
             {
-                <FluentMessageBar Title="Remote Connection Required" Intent="@MessageIntent.Warning" AllowDismiss="false" />
+                <FluentMessageBar Title="Remote Connection Required" Intent="@MessageBarIntent.Warning" AllowDismiss="false" />
             }
 
             <div class="subsite-icon" style="font-size: 2rem;">
@@ -26,7 +26,7 @@
                 <div @onclick:stopPropagation="true">
                     @if (!string.IsNullOrEmpty(Site.UsageInstructions))
                     {
-                        <FluentButton Appearance="Appearance.Outline"
+                        <FluentButton Appearance="ButtonAppearance.Outline"
                                       OnClick="@ShowUsageModal"
                                       IconStart="@(new Icons.Regular.Size28.QuestionCircle())" />
                     }
@@ -85,18 +85,15 @@
 
     private async Task ShowUsageModal()
     {
-        var dialog = await DialogService.ShowDialogAsync<UsageModal>(Site, new DialogParameters()
+        var result = await DialogService.ShowDialogAsync<UsageModal>(options =>
         {
-            Title = $"{Site.Name} - Usage Guide",
-            PrimaryAction = "Close",
-            SecondaryAction = null,
-            Width = "800px",
-            Height = "auto",
-            Modal = true,
-            PreventDismissOnOverlayClick = false,
-            ShowDismiss = true
+            options.Parameters.Add(nameof(UsageModal.Content), Site);
+            options.Header.Title = $"{Site.Name} - Usage Guide";
+            options.Header.CloseAction.Visible = true;
+            options.Footer.PrimaryAction.Label = "Close";
+            options.Width = "800px";
+            options.Height = "auto";
+            options.Modal = true;
         });
-
-        var result = await dialog.Result;
     }
 }

@@ -7,7 +7,7 @@
 }
 
 /* Header flexbox layout for title and view mode selector */
-::deep fluent-header {
+::deep .portal-header {
     display: flex;
     align-items: center;
     padding: 0.5rem 1rem;
@@ -36,7 +36,7 @@
     flex-shrink: 0;
 }
 
-.header-selector ::deep fluent-toolbar {
+.header-selector ::deep fluent-stack {
     padding: 0;
 }
 
@@ -71,7 +71,7 @@
 
 /* Mobile responsive header */
 @media (max-width: 768px) {
-    ::deep fluent-header {
+    ::deep .portal-header {
         padding: 0.5rem;
         --header-height: auto;
     }
@@ -93,7 +93,7 @@
         width: 100%;
     }
 
-    .header-selector ::deep fluent-toolbar {
+    .header-selector ::deep fluent-stack {
         width: 100%;
         flex-wrap: wrap;
         gap: 0.5rem;
