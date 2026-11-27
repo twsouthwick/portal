@@ -58,7 +58,7 @@ try {
     "Started $executable (PID $($process.Id))" | Add-Content -LiteralPath $diagnostics
     $timer = [System.Diagnostics.Stopwatch]::StartNew()
     $visibleSince = $null
-    while ($timer.Elapsed.TotalSeconds -lt 60) {
+    while ($timer.Elapsed.TotalSeconds -lt 60 -or $null -ne $visibleSince) {
         $process.Refresh()
         if ($process.HasExited) {
             throw "Portal exited before the smoke test completed (exit code $($process.ExitCode))."
