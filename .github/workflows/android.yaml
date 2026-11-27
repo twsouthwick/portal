@@ -56,7 +56,7 @@ jobs:
         uses: actions/upload-artifact@v4.6.2
         with:
           name: portal-client-android-x86_64-debug-apk
-          path: Portal.Client/src-tauri/gen/android/app/build/outputs/apk/debug/*.apk
+          path: Portal.Client/src-tauri/gen/android/app/build/outputs/apk/**/*.apk
           if-no-files-found: error
 
       - name: Enable KVM
