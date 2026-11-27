@@ -3,7 +3,7 @@
 These brownfield EARS specifications record behavior observed in the current
 chart and provider integration. `[x]` means configured behavior exists; it
 does not mean a test currently cites the ID. No `@spec` annotations were
-found in the repository.
+found for this segment.
 
 - [x] **K8S-001** When the Helm chart is installed, it shall create a portal Deployment and Service using the configured image and service type. Evidence: `chart/templates/deployment.yaml:1-35`, `chart/templates/service.yaml:1-11`, `chart/values.yaml:1-21`.
 - [x] **K8S-002** When the chart deploys the web container, it shall configure OIDC values, the Kubernetes namespace, and container port 8081. Evidence: `chart/templates/deployment.yaml:20-35`.

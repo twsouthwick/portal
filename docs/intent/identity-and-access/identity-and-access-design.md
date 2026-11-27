@@ -20,10 +20,12 @@ to the role claim type. The fallback authorization policy requires an
 authenticated user. The application stores its local session in an HTTP-only
 cookie.
 
-The development Keycloak realm is imported by `Portal.AppHost` and configures
-the development client, groups, claims, and test users. These credentials are
-for local development only; their production isolation is an open operational
-question.
+The development Authelia resource configures a confidential web client with
+code flow, PKCE, and `groups` and `name` in the ID token. Its local-only users
+represent media-only and admin-plus-media access. The local HTTPS issuer,
+certificate, secrets, redirects, and operational prerequisites are described
+in `developer.md`. This client is separate from the unresolved native-client
+authentication design. Production isolation remains an operational question.
 
 ## Authorization Boundaries
 
@@ -49,7 +51,7 @@ session is not explicitly ended by the application.
 | Decision | Current approach | Alternatives considered | Rationale |
 |---|---|---|---|
 | Identity protocol | OIDC authorization code + PKCE, with local cookie session. **[inferred]** | Anonymous access or another identity protocol. | Directly configured in `Portal.Web/Program.cs:30-65`. |
-| Role source | Map the OIDC `groups` claim to application roles. **[inferred]** | Different claim, external policy service, or application roles. | The development realm emits groups and the application consumes them (`Portal.AppHost/Realms/portal-realm.json:64-75`). |
+| Role source | Map the OIDC `groups` claim to application roles. **[inferred]** | Different claim, external policy service, or application roles. | Local Authelia emits groups in the ID token and the application consumes them (`Portal.AppHost/Authelia/configuration.yml`, `Portal.Web/Program.cs`). |
 | Content authorization | Re-check the site's roles at the HTTP endpoint. **[inferred]** | Trust UI filtering alone or apply additional site flags. | The endpoint independently evaluates roles (`Portal.Web/Services/SiteDetailsExtensions.cs:70-101`). |
 
 ## Open Questions & Future Decisions
@@ -58,7 +60,7 @@ session is not explicitly ended by the application.
 
 1. Should `IsPrivate` and `IsInternal` be enforced on direct content requests?
 2. Should sign-out terminate the identity-provider session?
-3. Are development users and the committed realm client secret isolated from
+3. Are development users and the local-only client secret isolated from
    all non-development deployments?
 4. Which authorization cases require direct component or end-to-end tests?
 
@@ -69,6 +71,7 @@ session is not explicitly ended by the application.
 - Application auth: `Portal.Web/Program.cs`
 - Authorization and content route: `Portal.Web/Services/SiteDetailsExtensions.cs`
 - UI role filtering: `Portal.Web/Components/SiteProvider.razor`
-- Local identity configuration: `Portal.AppHost/Realms/portal-realm.json`
+- Local identity configuration: `Portal.AppHost/Authelia/`,
+  `Portal.AppHost/AutheliaResource.cs`, `developer.md`
 - Tests: `Portal.Web.Tests/AuthenticationTests.cs`,
   `Portal.Web.Tests/SiteContentTests.cs`

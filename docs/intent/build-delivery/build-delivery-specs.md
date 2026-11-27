@@ -2,8 +2,8 @@
 
 These brownfield EARS specifications record behavior observed in the current
 repository configuration. `[x]` means configured behavior exists; it does not
-mean a test currently cites the ID. No `@spec` annotations were found in the
-repository.
+mean a test currently cites the ID. No `@spec` annotations were found for
+this segment.
 
 - [x] **DELIVERY-001** When the web project is built, it shall type-check and bundle the frontend through its npm build integration. Evidence: `Portal.Web/Portal.Web.csproj:22-24`, `Portal.Web/package.json:1-15`.
 - [x] **DELIVERY-002** When a pull request or configured branch/tag push runs the main workflow, CI shall build and test the .NET solution, validate container packaging, and lint the Helm chart. Evidence: `.github/workflows/build.yaml:1-11,164-224`.
