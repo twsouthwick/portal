@@ -7,7 +7,7 @@ Portal uses **Full LID**: the whole repository is in scope, including the .NET a
 The project instructions follow [Linked-Intent Development](https://github.com/jszmajda/lid) v1.4.7. The upstream project is MIT-licensed; Portal does not vendor plugin code or add runtime/build dependencies. `workflow.md` is a concise project adaptation, not a copy of the full generated upstream workflow document.
 
 - GitHub Copilot and other agents that support `AGENTS.md` read the root `AGENTS.md`.
-- Copilot instruction surfaces that do not read `AGENTS.md` also receive `.github/copilot-instructions.md`.
+- For Copilot instruction surfaces that do not read `AGENTS.md`, provide the root `AGENTS.md` guidance explicitly.
 - Copilot Agent Skills are available as project skills in `.github/skills/`. Ask Copilot to use `linked-intent-dev` for a code change or `arrow-maintenance` to orient/audit the maps. The skills are local adapters to the workflow here, not the upstream plugin package.
 - `CLAUDE.md` imports the same `AGENTS.md`, avoiding duplicate instructions.
 - In Claude Code, install both upstream plugins and invoke the setup skill:
