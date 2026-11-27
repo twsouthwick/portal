@@ -1,33 +1,33 @@
 var builder = DistributedApplication.CreateBuilder(args);
 
-var keycloak = builder.AddKeycloak("keycloak", 8080)
-    .WithRealmImport("./Realms");
+var clientSecret = builder.AddParameter("portal-client-secret", secret: true);
+var authelia = builder.AddAuthelia("authelia");
 
 builder.AddDotnetProject("media", "../Portal.Web/Portal.Web.csproj", options => options.LaunchProfileName = "media")
     .WithExternalHttpEndpoints()
-    .AddPortalDefaults()
+    .AddPortalDefaults(clientSecret)
     .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Development")
     .WithHttpHealthCheck("/health")
-    .WaitFor(keycloak);
+    .WaitFor(authelia);
 
 builder.AddDotnetProject("admin", "../Portal.Web/Portal.Web.csproj", options => options.LaunchProfileName = "admin")
     .WithExternalHttpEndpoints()
-    .AddPortalDefaults()
+    .AddPortalDefaults(clientSecret)
     .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Development")
     .WithHttpHealthCheck("/health")
-    .WaitFor(keycloak);
+    .WaitFor(authelia);
 
 
 builder.Build().Run();
 
 static class PortalAppExtensions
 {
-    public static IResourceBuilder<T> AddPortalDefaults<T>(this IResourceBuilder<T> builder)
+    public static IResourceBuilder<T> AddPortalDefaults<T>(this IResourceBuilder<T> builder, IResourceBuilder<ParameterResource> clientSecret)
         where T : IResource, IResourceWithEndpoints, IResourceWithEnvironment
     {
         return builder
-            .WithEnvironment("Oidc__Authority", "https://localhost:8080/realms/portal")
+            .WithEnvironment("Oidc__Authority", AutheliaResource.Issuer)
             .WithEnvironment("Oidc__ClientId", "portal-web")
-            .WithEnvironment("Oidc__ClientSecret", "portal-development-secret");
+            .WithEnvironment("Oidc__ClientSecret", clientSecret);
     }
 }
