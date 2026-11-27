@@ -32,6 +32,8 @@ jobs:
           java-version: '17'
 
       - uses: android-actions/setup-android@v3.2.2
+        with:
+          packages: platform-tools
 
       - name: Install Android SDK and Rust target
         run: |
