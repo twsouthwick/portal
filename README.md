@@ -61,6 +61,12 @@ npm run watch
 npm run clean
 ```
 
+### GitHub Actions
+
+Pull requests to `main` and pushes to `main` or `v*` tags build and test the solution and lint the Helm chart. Successful pushes also publish the portal image to `ghcr.io/twsouthwick/portal` and the Helm chart to `oci://ghcr.io/twsouthwick/charts/portal`. The image receives the MinVer version and `latest` tags; the chart uses the same MinVer version. Both branch and tag pushes update `latest`.
+
+Publishing uses the workflow's `GITHUB_TOKEN` with package-write permission. Existing GHCR packages must grant this repository's Actions workflow access. New packages are private by default; pulling them requires registry credentials unless their visibility is changed.
+
 ### Project Structure
 
 ```
@@ -281,7 +287,7 @@ Control access by adding a `roles` array:
 ```yaml
 services:
   portal:
-    build: .
+    image: ghcr.io/twsouthwick/portal:latest
     ports:
       - "8080:8080"
     environment:
@@ -290,6 +296,8 @@ services:
       - ./my-sites:/sites:ro
     restart: unless-stopped
 ```
+
+Authenticate Docker to GHCR before starting a private image. Configure the OIDC settings described above for the deployed portal.
 
 ## Dynamic Site Management
 

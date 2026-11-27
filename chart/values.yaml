@@ -1,5 +1,5 @@
 image:
-  repository: tasou/portal
+  repository: ghcr.io/twsouthwick/portal
   tag: latest
   pullPolicy: IfNotPresent
 

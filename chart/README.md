@@ -35,6 +35,16 @@ To install the example resources as well:
 
 ## OCI packaging
 
+GitHub Actions publishes the chart at `oci://ghcr.io/twsouthwick/charts/portal` on pushes to `main` and `v*` tags. It uses the same MinVer version as the image at `ghcr.io/twsouthwick/portal`. Authenticate Helm to GHCR to install a private chart:
+
+```bash
+helm install portal oci://ghcr.io/twsouthwick/charts/portal --version <version> -n default -f values.production.yaml
+```
+
+The chart defaults to the `latest` GHCR image. For a private image, configure registry pull credentials for the Kubernetes service account or namespace before installing. Override `image.repository` and `image.tag` when using a fork or a specific image version.
+
+To package and publish a chart manually:
+
 ```bash
 helm package ./chart
 helm push portal-0.1.0.tgz oci://<registry>/charts
