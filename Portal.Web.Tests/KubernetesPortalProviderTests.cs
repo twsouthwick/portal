@@ -1,3 +1,6 @@
+using System.Net;
+using System.Text;
+using k8s;
 using Portal.Web.Services;
 using Xunit;
 
@@ -47,5 +50,77 @@ public class KubernetesPortalProviderTests
         Assert.Equal("ha://", app.Scheme);
         Assert.Equal(AppStore.Google, app.Store);
         Assert.Equal("com.homeassistant", app.StoreId);
+    }
+
+    [Fact]
+    public async Task GetSiteDetails_ReadsCamelCaseResourcesAndConfigMapContent()
+    {
+        var handler = new KubernetesHandler
+        {
+            Sites = """
+                {"items":[{"metadata":{"name":"home"},"spec":{"id":"home","name":"Home","roles":["ops"],
+                "isPrivate":true,"usageInstructions":"Hello","apps":[{"name":"App","store":"google","storeId":"app"}],
+                "contentRef":{"name":"home-content","key":"logo.png"}}}]}
+                """,
+            ConfigMap = """{"metadata":{"name":"home-content"},"data":{"other.txt":"hidden"},"binaryData":{"logo.png":"AQID"}}"""
+        };
+        using var client = CreateClient(handler);
+        var provider = new KubernetesPortalProvider(client, "test-ns");
+
+        var site = Assert.Single((await provider.GetSiteDetailsAsync()).Sites);
+
+        Assert.Equal("home", site.Id);
+        Assert.Equal("Home", site.Name);
+        Assert.Equal(["ops"], site.Roles);
+        Assert.True(site.IsPrivate);
+        Assert.Equal("Hello", site.UsageInstructions);
+        Assert.Equal(AppStore.Google, Assert.Single(site.Apps).Store);
+        Assert.NotNull(site.Content);
+        using var stream = site.Content.GetFileInfo("logo.png").CreateReadStream();
+        using var bytes = new MemoryStream();
+        await stream.CopyToAsync(bytes);
+        Assert.Equal(new byte[] { 1, 2, 3 }, bytes.ToArray());
+        Assert.False(site.Content.GetFileInfo("other.txt").Exists);
+        Assert.Contains("/apis/portal.swick.app/v1alpha1/namespaces/test-ns/portalsites", handler.Paths);
+        Assert.Contains("/api/v1/namespaces/test-ns/configmaps/home-content", handler.Paths);
+    }
+
+    [Fact]
+    public async Task GetSiteDetails_ReflectsChangesAndPropagatesFailures()
+    {
+        var handler = new KubernetesHandler { Sites = """{"items":[]}""" };
+        using var client = CreateClient(handler);
+        var provider = new KubernetesPortalProvider(client, "test-ns");
+        Assert.Empty((await provider.GetSiteDetailsAsync()).Sites);
+
+        handler.Sites = """{"items":[{"spec":{"id":"new","name":"New","roles":["admin"]}}]}""";
+        Assert.Equal(["admin"], Assert.Single((await provider.GetSiteDetailsAsync()).Sites).Roles);
+
+        handler.Sites = """{"items":[{"spec":{"id":"new","name":"New"}},{"spec":{"id":"new","name":"Duplicate"}}]}""";
+        await Assert.ThrowsAsync<InvalidDataException>(async () => await provider.GetSiteDetailsAsync());
+        handler.Status = HttpStatusCode.Forbidden;
+        await Assert.ThrowsAnyAsync<Exception>(async () => await provider.GetSiteDetailsAsync());
+    }
+
+    private static Kubernetes CreateClient(KubernetesHandler handler) =>
+        new(new KubernetesClientConfiguration { Host = "http://localhost" }, handler);
+
+    private sealed class KubernetesHandler : DelegatingHandler
+    {
+        public string Sites { get; set; } = """{"items":[]}""";
+        public string ConfigMap { get; set; } = "{}";
+        public HttpStatusCode Status { get; set; } = HttpStatusCode.OK;
+        public List<string> Paths { get; } = [];
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            var path = request.RequestUri!.AbsolutePath;
+            Paths.Add(path);
+            return Task.FromResult(new HttpResponseMessage(Status)
+            {
+                RequestMessage = request,
+                Content = new StringContent(path.Contains("/configmaps/") ? ConfigMap : Sites, Encoding.UTF8, "application/json")
+            });
+        }
     }
 }

@@ -16,9 +16,9 @@ Create a values file:
 
 ```yaml
 oidc:
-	authority: https://identity.example.com/realms/portal
-	clientId: portal-web
-	existingSecret: portal-oidc
+  authority: https://identity.example.com/realms/portal
+  clientId: portal-web
+  existingSecret: portal-oidc
 ```
 
 Then install the chart:
@@ -27,11 +27,49 @@ Then install the chart:
 helm install portal ./chart -n default -f values.production.yaml
 ```
 
-To install the example resources as well:
+After the CRD has been installed and registered, enable the example resources:
 
 ```bash
---set exampleResources.enabled=true
+helm upgrade portal ./chart -n default -f values.production.yaml --set exampleResources.enabled=true
 ```
+
+## PortalSite resources
+
+The portal reads resources in its release namespace. Each resource has a
+unique `spec.id` (lowercase letters, digits and hyphens, at most 63 characters)
+and a nonempty `spec.name`. Other fields match the site manifest: `description`,
+`url`, `icon`, `categories`, `roles`, `usageInstructions`, `isPrivate`,
+`isInternal`, and `apps`. Each app has `name`, `scheme`, `store` (one of
+`none`, `apple`, `macos`, `google`, `microsoft`, `windows`, or `linux`), and
+`storeId`. An empty roles list allows any authenticated user.
+
+```yaml
+apiVersion: portal.swick.app/v1alpha1
+kind: PortalSite
+metadata:
+  name: home
+spec:
+  id: home
+  name: Home
+  url: https://home.example.com
+  roles: [admin]
+  usageInstructions: |
+    Open the home dashboard.
+  contentRef:
+    name: home-content
+    key: logo.png
+```
+
+`contentRef` is optional and refers to a ConfigMap in the same namespace. Its
+`data` and `binaryData` keys are served at `/<id>/content/<key>` under the
+site's role policy. `key` restricts access to one key; omit it to expose all
+keys. ConfigMap keys are filenames, not nested paths. Resource and content
+changes are reflected on subsequent requests; API and configuration errors
+are surfaced rather than silently ignored. If `SITE_PATH` is also configured,
+its entries are combined with these resources and win on duplicate site IDs.
+
+The CRD is managed by this Helm release. Uninstalling the release removes the
+CRD and its PortalSite resources.
 
 ## OCI packaging
 

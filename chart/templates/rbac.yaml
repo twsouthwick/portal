@@ -6,10 +6,10 @@ metadata:
 rules:
   - apiGroups: ["portal.swick.app"]
     resources: ["portalsites"]
-    verbs: ["get", "list", "watch"]
+    verbs: ["list"]
   - apiGroups: [""]
     resources: ["configmaps"]
-    verbs: ["get", "list", "watch"]
+    verbs: ["get"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding

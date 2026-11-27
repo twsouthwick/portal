@@ -157,6 +157,28 @@ The local credentials and client secret are development-only.
 
 ## Configuration
 
+### Site provider
+
+The portal automatically composes site sources. When `SITE_PATH` is set, it
+reads that directory or ZIP file. When running in Kubernetes or when a
+kubeconfig is present, it also reads `PortalSite` resources from
+`PORTAL_KUBERNETES_NAMESPACE` (default `default`). If both sources contain the
+same site ID, the file entry wins. Portal name and description come from the
+file source when present. If neither source is configured, the bundled `sites`
+directory is used.
+
+Kubernetes uses the in-cluster service account or the default kubeconfig. The
+service account needs permission to list PortalSites and get ConfigMaps in that
+namespace. Once configured, Kubernetes errors are surfaced rather than silently
+ignored. File manifests are loaded at startup.
+
+Providers are registered in `Program.cs` with
+`AddPortalProvider(portal => portal.AddFile().AddKubernetes())`; registration
+order determines precedence.
+
+The [Helm chart](chart/README.md) installs the CRD and configures these
+permissions. Changes to resources are picked up on subsequent portal loads.
+
 ### Portal Configuration
 
 Create a `manifest.json` in your sites directory root:

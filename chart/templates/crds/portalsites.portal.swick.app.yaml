@@ -18,14 +18,23 @@ spec:
       schema:
         openAPIV3Schema:
           type: object
+          required:
+            - spec
           properties:
             spec:
               type: object
+              required:
+                - id
+                - name
               properties:
                 id:
                   type: string
+                  minLength: 1
+                  maxLength: 63
+                  pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
                 name:
                   type: string
+                  minLength: 1
                 description:
                   type: string
                 url:
@@ -67,7 +76,9 @@ spec:
                   properties:
                     name:
                       type: string
+                      minLength: 1
                     key:
                       type: string
+                      minLength: 1
                   required:
                     - name

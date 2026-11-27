@@ -1,49 +1,34 @@
 using Microsoft.AspNetCore.StaticFiles;
-using Microsoft.Extensions.FileProviders;
 using System.Security.Claims;
-using System.Threading.Tasks;
 
 namespace Portal.Web.Services;
 
 public static class SiteDetailsExtensions
 {
-    public static void AddPortalProvider(this IHostApplicationBuilder host)
+    public static void AddPortalProvider(this IHostApplicationBuilder host, Action<PortalProviderBuilder> configure)
     {
-        var files = host.GetFileProvider();
-        var providerMode = host.Configuration["PORTAL_PROVIDER"];
+        ArgumentNullException.ThrowIfNull(configure);
+        var portal = new PortalProviderBuilder(host);
+        configure(portal);
 
-        if (providerMode is { Length: > 0 } && providerMode.Equals("file", StringComparison.OrdinalIgnoreCase))
+        host.Services.AddSingleton<IPortalProvider>(services =>
         {
-            host.Services.AddSingleton<IPortalProvider>(new FilePortalProvider(files));
-            return;
-        }
+            var providers = new List<IPortalProvider>();
+            foreach (var factory in portal.ProviderFactories)
+            {
+                if (factory(services) is { } provider)
+                {
+                    providers.Add(provider);
+                }
+            }
 
-        host.Services.AddSingleton<IPortalProvider>(new CompositePortalProvider(
-            new KubernetesPortalProvider(),
-            new FilePortalProvider(files)));
-    }
+            if (providers.Count == 0 && portal.FallbackProviderFactory is { } fallbackFactory)
+            {
+                providers.Add(fallbackFactory(services));
+            }
 
-    private static IFileProvider GetFileProvider(this IHostApplicationBuilder host)
-    {
-        if (host.Configuration["SITE_PATH"] is { } path)
-        {
-            if (File.Exists(path) && Path.GetExtension(path).Equals(".zip", StringComparison.OrdinalIgnoreCase))
-            {
-                return new ZipFileProvider(path);
-            }
-            else if (Directory.Exists(path))
-            {
-                return new PhysicalFileProvider(path);
-            }
-            else
-            {
-                throw new FileNotFoundException($"SITE_PATH '{path}' does not exist or is not a valid ZIP file or directory.");
-            }
-        }
-        else
-        {
-            return host.Environment.ContentRootFileProvider.GetSubdirectory("sites");
-        }
+            return new CompositePortalProvider([.. providers]);
+        });
     }
 
     public static bool IsAuthorized(this SiteInfo info, IReadOnlyCollection<string> roles)
@@ -84,44 +69,36 @@ public static class SiteDetailsExtensions
 
     public static void MapSiteContentEndpoints(this IEndpointRouteBuilder endpoints)
     {
-        var portal = endpoints.ServiceProvider.GetRequiredService<IPortalProvider>();
-        var siteDetails =  portal.GetSiteDetailsAsync(default).GetAwaiter().GetResult();
-
-        foreach (var site in siteDetails.Sites)
+        endpoints.MapGet("/{siteId}/content/{**path}", async (
+            string siteId, string? path, HttpContext context, IPortalProvider portal, CancellationToken cancellationToken) =>
         {
-            var group = endpoints.MapGroup($"/{site.Id}/content");
-
-            // Apply authorization if roles are specified
-            if (site.Roles.Count > 0)
+            var details = await portal.GetSiteDetailsAsync(cancellationToken);
+            var site = details.Sites.FirstOrDefault(site => string.Equals(site.Id, siteId, StringComparison.OrdinalIgnoreCase));
+            if (site is null)
             {
-                group.RequireAuthorization(policy =>
-                {
-                    policy.RequireAssertion(context =>
-                        site.IsAuthorized(context.User));
-                });
+                return Results.NotFound();
             }
 
-            // Map the file serving endpoint using Results.File
-            group.MapGet("/{**path}", (string path) =>
+            if (!site.IsAuthorized(context.User))
             {
-                if (site.Content?.GetFileInfo(path) is not { Exists: true, IsDirectory: false } fileInfo)
-                {
-                    return Results.NotFound();
-                }
+                return Results.Forbid();
+            }
 
-                var contentType = GetContentType(fileInfo.Name);
+            if (string.IsNullOrEmpty(path) || path.Split('/', '\\').Any(segment => segment is "." or "..") ||
+                site.Content?.GetFileInfo(path) is not { Exists: true, IsDirectory: false } fileInfo)
+            {
+                return Results.NotFound();
+            }
 
-                return Results.File(
-                    fileInfo.CreateReadStream(),
-                    contentType,
-                    fileInfo.Name,
-                    fileInfo.LastModified,
-                    enableRangeProcessing: true);
-            })
-            .WithName($"SiteContent_{site.Id}")
-            .WithDisplayName($"{site.Name} Content")
-            .DisableAntiforgery();
-        }
+            return Results.File(
+                fileInfo.CreateReadStream(),
+                GetContentType(fileInfo.Name),
+                fileInfo.Name,
+                fileInfo.LastModified,
+                enableRangeProcessing: true);
+        })
+        .RequireAuthorization()
+        .DisableAntiforgery();
     }
 
     private static string GetContentType(string fileName)

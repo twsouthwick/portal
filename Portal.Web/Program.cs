@@ -86,7 +86,7 @@ builder.Services.AddDataProtection()
     .SetApplicationName("Swick.Portal.Web")
     .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(Path.GetTempPath(), "swick.portal.web", "keys")));
 
-builder.AddPortalProvider();
+builder.AddPortalProvider(portal => portal.AddFile().AddKubernetes());
 
 var app = builder.Build();
 
