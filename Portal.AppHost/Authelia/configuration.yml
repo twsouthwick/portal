@@ -1,0 +1,49 @@
+server:
+  address: 'tcp://0.0.0.0:9091/'
+  tls:
+    certificate: '/secrets/cert.pem'
+    key: '/secrets/cert.key'
+log:
+  level: 'info'
+totp:
+  issuer: 'auth.dev.localhost'
+authentication_backend:
+  password_reset:
+    disable: true
+  file:
+    path: '/config/users.yml'
+access_control:
+  default_policy: 'one_factor'
+session:
+  cookies:
+    - domain: 'auth.dev.localhost'
+      authelia_url: 'https://auth.dev.localhost:8080'
+storage:
+  local:
+    path: '/data/db.sqlite3'
+notifier:
+  filesystem:
+    filename: '/data/notification.txt'
+identity_providers:
+  oidc:
+    jwks:
+      - key: {{ secret "/secrets/oidc.pem" | mindent 10 "|" | msquote }}
+    enforce_pkce: 'always'
+    # @spec AUTH-007
+    claims_policies:
+      portal:
+        id_token: ['groups', 'name']
+    clients:
+      - client_id: 'portal-web'
+        client_name: 'Portal Web (local development only)'
+        client_secret: '$argon2id$v=19$m=65536,t=3,p=4$+Q+nqIidQXW/tDCDr1CQZQ$u9NkKW3DZb4ORslzAe053L9fu9f4kW/zqP80Q+oRvxE'
+        public: false
+        claims_policy: 'portal'
+        authorization_policy: 'one_factor'
+        redirect_uris:
+          - 'https://localhost:6100/signin-oidc'
+          - 'https://localhost:6110/signin-oidc'
+        scopes: ['openid', 'profile', 'email', 'groups']
+        response_types: ['code']
+        grant_types: ['authorization_code']
+        token_endpoint_auth_method: 'client_secret_post'

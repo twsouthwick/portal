@@ -11,22 +11,90 @@ The repository pins the .NET SDK in [`global.json`](global.json) (currently
 24. Install the Aspire CLI 17.0.0 to run the local application topology.
 
 The VS Code devcontainer installs the pinned SDK, Aspire CLI, Node.js 24, and
-Docker-in-Docker. Reopen the repository in the devcontainer, then run:
+Docker-in-Docker. The local identity provider also needs Docker, OpenSSL, and a
+trusted .NET development HTTPS certificate. The following setup is for a local,
+single-user development machine, not a shared or production deployment.
+
+Run these commands in the same environment as the AppHost and Docker daemon:
+
+```bash
+dotnet dev-certs https --trust
+dotnet dev-certs https --check --trust
+mkdir -p "$HOME/.aspnet/portal-authelia"
+chmod 700 "$HOME/.aspnet/portal-authelia"
+dotnet dev-certs https --format PEM --no-password -ep "$HOME/.aspnet/portal-authelia/cert.pem"
+openssl genrsa -out "$HOME/.aspnet/portal-authelia/oidc.pem" 2048
+chmod 600 "$HOME/.aspnet/portal-authelia/cert.key" "$HOME/.aspnet/portal-authelia/oidc.pem"
+dotnet user-secrets set Parameters:portal-client-secret portal-development-secret --project Portal.AppHost
+for name in authelia-session-secret authelia-storage-key authelia-oidc-hmac-secret; do
+  dotnet user-secrets set "Parameters:$name" "$(openssl rand -base64 48)" --project Portal.AppHost
+done
+```
+
+The export contains an **unencrypted private key**. Keep the directory private,
+never commit or share it, and do not expose this development identity provider
+to an untrusted network. The sample accounts, one-factor policy, and client
+secret are deliberately insecure and local-only. User secrets are stored
+unencrypted on the development machine. The client secret must match the
+development-only hash in `Portal.AppHost/Authelia/configuration.yml`.
+
+The .NET 11 development certificate includes `localhost` and
+`*.dev.localhost`; an older certificate may not. Check with
+`openssl x509 -in "$HOME/.aspnet/portal-authelia/cert.pem" -noout -ext subjectAltName`.
+If necessary, run `dotnet dev-certs https --clean`, trust a newly generated
+certificate, and repeat the export. On Linux, .NET/OpenSSL may require
+`SSL_CERT_DIR="$HOME/.aspnet/dev-certs/trust:/usr/lib/ssl/certs"` in the
+AppHost environment. Follow the [dev-certs documentation](https://learn.microsoft.com/en-us/dotnet/core/tools/dotnet-dev-certs)
+for platform/browser trust; `--check --trust` must succeed and the browser
+must trust the same certificate. Ensure `auth.dev.localhost` resolves to the
+development host (normally loopback) and is excluded from any HTTP proxy.
+
+In a devcontainer, the Docker daemon must be able to access the exported files
+at the same absolute path. Port-forward 8080, 6100 and 6110 to the browser host,
+and trust the *public* development certificate in that browser's trust store;
+trust inside the devcontainer alone does not establish host browser trust. Do
+not copy the private key to the browser host. The Portal profiles run as
+processes alongside the AppHost, not as containers: both their backchannel and
+the browser use `https://auth.dev.localhost:8080` as the issuer. A separately
+containerized Portal requires explicit DNS/routing to the host and the public
+certificate in its trust store; `localhost` inside it is not the host. This
+topology does not configure that separate container deployment.
+
+Then run:
 
 ```bash
 aspire run
 ```
 
-The AppHost starts Keycloak at `http://localhost:8080`, imports the development
-realm, and launches the `media` and `admin` web profiles. Use either development
-account:
+The AppHost starts Authelia at `https://auth.dev.localhost:8080` and launches
+the `media` (`https://localhost:6110`) and `admin`
+(`https://localhost:6100`) web profiles. Use either development account:
 
 | Username | Password | Groups |
 | --- | --- | --- |
 | `admin` | `admin` | `admin`, `media` |
 | `media` | `media` | `media` |
 
-These credentials and the local OIDC client secret are development-only.
+Authelia stores its local database in the Docker volume `portal-authelia-data`.
+To reset its sessions and consent, stop Aspire and remove that volume with
+`docker volume rm portal-authelia-data`. Changing the storage encryption key
+also requires resetting the volume. Re-export the HTTPS certificate after
+regenerating it, and restart Aspire; regenerate `oidc.pem` only when prepared to
+invalidate existing OIDC signing keys. To remove local secrets, use
+`dotnet user-secrets clear --project Portal.AppHost` and remove the private
+directory. Portal logout clears its own cookie, not the Authelia session.
+
+The `portal-web` client is confidential and uses authorization code with PKCE
+and the `groups` scope. The Authelia client claims policy includes `groups` and
+`name` in the ID token for Portal, which currently does not fetch userinfo.
+This is not a native public client; native authentication and callback
+compatibility are tracked separately in issue #11.
+
+To check the bundled site roles, sign in as `admin` and verify Site 1 and
+`/site1/content/icon.png` are accessible. In a separate browser session, sign
+in as `media`: the admin-only sites should be hidden and that content URL
+should be denied. For media-only sites, supply your own `SITE_PATH` manifest
+with a `media` role as described in the user guide.
 
 ## Build and test
 

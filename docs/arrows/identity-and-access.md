@@ -6,7 +6,7 @@ content.
 ## Status
 
 **MAPPED** — first reconstructed 2026-11-27. Current behavior is represented
-by six inferred EARS requirements; owner review and coherence audit remain.
+by seven EARS requirements; owner review and coherence audit remain.
 
 ## References
 
@@ -17,7 +17,7 @@ by six inferred EARS requirements; owner review and coherence audit remain.
 - `docs/intent/identity-and-access/identity-and-access-design.md`
 
 ### EARS
-- `docs/intent/identity-and-access/identity-and-access-specs.md` — 6 specs
+- `docs/intent/identity-and-access/identity-and-access-specs.md` — 7 specs
 
 ### Tests
 - `Portal.Web.Tests/AuthenticationTests.cs`
@@ -27,7 +27,9 @@ by six inferred EARS requirements; owner review and coherence audit remain.
 - `Portal.Web/Program.cs`
 - `Portal.Web/Services/SiteDetailsExtensions.cs`
 - `Portal.Web/Components/SiteProvider.razor`
-- `Portal.AppHost/Realms/portal-realm.json`
+- `Portal.AppHost/Authelia/configuration.yml`
+- `Portal.AppHost/Authelia/users.yml`
+- `Portal.AppHost/AutheliaResource.cs`
 
 ## Architecture
 
@@ -36,18 +38,20 @@ and protected content requests.
 
 **Key components:** OIDC/cookie setup in `Program.cs`; role policy and content
 endpoint in `SiteDetailsExtensions.cs`; role-aware UI filtering in
-`SiteProvider.razor`; development identity configuration in the Keycloak realm.
+`SiteProvider.razor`; development identity configuration in Authelia.
 
 ## Spec Coverage
 
 | Category | Spec IDs | Implemented | Deferred | Gaps |
 |---|---|---:|---:|---:|
 | Authentication, role policy, logout, content access | AUTH-001, AUTH-002, AUTH-003, AUTH-004, AUTH-005, AUTH-006 | 6 | 0 | 0 known implementation gaps |
+| Local identity token claims | AUTH-007 | 1 | 0 | Provider configuration and issuance lack automated integration coverage |
 
-**Traceability:** Relevant tests exist for role-claim mapping and role-based
-content requests, but neither tests nor implementation currently carry
-`@spec` annotations. Private/internal flag enforcement at the content endpoint
-is unresolved and is not counted as a passing requirement.
+**Traceability:** Tests cite AUTH-001 and AUTH-002; Authelia configuration
+cites AUTH-007. The other existing behavior lacks citations. Provider issuance
+and role-based browser access were verified manually, not by an automated
+Authelia integration test. Private/internal flag enforcement at the content
+endpoint is unresolved and is not counted as a passing requirement.
 
 ## Key Findings
 
@@ -65,7 +69,7 @@ is unresolved and is not counted as a passing requirement.
 
 ### Should Fix
 1. Resolve the open authorization policy for `IsPrivate` and `IsInternal`.
-2. Add and verify `@spec` citations when these behaviors are next changed.
+2. Complete and verify `@spec` citations when the remaining behaviors change.
 
 ### Nice to Have
 1. Add direct tests for antiforgery, path traversal, range requests, and

@@ -1,0 +1,11 @@
+users:
+  admin:
+    displayname: 'Portal Admin'
+    password: '$argon2id$v=19$m=65536,t=3,p=4$nvApSaqVH9ArHYgNfO1Rog$xNT3yFIz+dznRsRT1Df3HyCMDSodXrK+x1tsN9Swt+Q'
+    email: 'admin@portal.test'
+    groups: ['admin', 'media']
+  media:
+    displayname: 'Portal Media'
+    password: '$argon2id$v=19$m=65536,t=3,p=4$uB4L3mWxTUqG41HkeHPMLg$cqe38uqgaQc3Swn6ch/ouDhhjBukIiKj13e7jD+G4ak'
+    email: 'media@portal.test'
+    groups: ['media']

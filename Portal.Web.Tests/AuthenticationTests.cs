@@ -1,11 +1,16 @@
 using System.Net;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Protocols;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
+using Microsoft.IdentityModel.Tokens;
 using Portal.Web.Services;
 using Xunit;
 
@@ -20,6 +25,7 @@ public sealed class AuthenticationTests : IClassFixture<PortalWebApplicationFact
         _factory = factory;
     }
 
+    // @spec AUTH-001 AUTH-002
     [Fact]
     public async Task Home_ChallengesWithOidc()
     {
@@ -32,6 +38,13 @@ public sealed class AuthenticationTests : IClassFixture<PortalWebApplicationFact
 
         Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
         Assert.StartsWith("https://identity.test/authorize", response.Headers.Location?.AbsoluteUri);
+        var query = QueryHelpers.ParseQuery(response.Headers.Location!.Query);
+        Assert.Equal("portal-web", query["client_id"]);
+        Assert.Equal("code", query["response_type"]);
+        Assert.Equal("S256", query["code_challenge_method"]);
+        Assert.False(string.IsNullOrEmpty(query["code_challenge"]));
+        Assert.Contains("groups", query["scope"].ToString().Split(' '));
+        Assert.Equal("http://localhost/signin-oidc", query["redirect_uri"]);
     }
 
     [Fact]
@@ -58,6 +71,40 @@ public sealed class AuthenticationTests : IClassFixture<PortalWebApplicationFact
             roleType: "groups");
 
         Assert.True(new ClaimsPrincipal(identity).IsInRole("media"));
+    }
+
+    // @spec AUTH-002
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task IdToken_GroupsArrayIsUsedForRoles(bool isAdmin)
+    {
+        var options = _factory.Services.GetRequiredService<IOptionsMonitor<OpenIdConnectOptions>>()
+            .Get(OpenIdConnectDefaults.AuthenticationScheme);
+        var key = new SymmetricSecurityKey(RandomNumberGenerator.GetBytes(32));
+        var handler = new JsonWebTokenHandler { MapInboundClaims = options.MapInboundClaims };
+        var token = handler.CreateToken(new SecurityTokenDescriptor
+        {
+            Claims = new Dictionary<string, object>
+            {
+                ["sub"] = "user",
+                ["name"] = "Portal User",
+                ["groups"] = isAdmin ? new[] { "admin", "media" } : new[] { "media" }
+            },
+            SigningCredentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256)
+        });
+        var validation = options.TokenValidationParameters.Clone();
+        validation.IssuerSigningKey = key;
+        validation.ValidateIssuer = false;
+        validation.ValidateAudience = false;
+
+        var result = await handler.ValidateTokenAsync(token, validation);
+
+        Assert.True(result.IsValid, result.Exception?.ToString());
+        var principal = new ClaimsPrincipal(result.ClaimsIdentity);
+        Assert.True(principal.IsInRole("media"));
+        Assert.Equal(isAdmin, principal.IsInRole("admin"));
+        Assert.Equal("Portal User", principal.Identity?.Name);
     }
 }
 

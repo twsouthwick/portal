@@ -2,7 +2,7 @@
 
 These brownfield EARS specifications record behavior observed in the current
 implementation. `[x]` means the behavior exists; it does not mean a test
-currently cites the ID. No `@spec` annotations were found in the repository.
+currently cites the ID. No `@spec` annotations were found for this segment.
 
 - [x] **SITE-001** When `SITE_PATH` identifies a directory or ZIP archive, the file provider shall load portal and child-site manifests from that source. Evidence: `Portal.Web/Services/FilePortalProviderExtensions.cs:5-24`, `Portal.Web/Services/FilePortalProvider.cs:7-58`, `Portal.Web/Services/ZipFileProvider.cs:1-212`.
 - [x] **SITE-002** When `SITE_PATH` is not configured, the file provider shall use the bundled `Portal.Web/sites` directory. Evidence: `Portal.Web/Services/FilePortalProviderExtensions.cs:5-24`.

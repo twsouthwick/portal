@@ -1,7 +1,7 @@
 # Build and Delivery Specifications
 
-These EARS specifications distinguish observed configuration (`[x]`) from
-prerelease behavior awaiting hosted-run verification (`[ ]`). A checked
+These brownfield EARS specifications distinguish observed configuration (`[x]`)
+from prerelease behavior awaiting hosted-run verification (`[ ]`). A checked
 requirement does not by itself imply test or code citation coverage.
 
 - [x] **DELIVERY-001** When the web project is built, it shall type-check and bundle the frontend through its npm build integration. Evidence: `Portal.Web/Portal.Web.csproj:22-24`, `Portal.Web/package.json:1-15`.

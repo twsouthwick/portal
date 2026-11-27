@@ -24,7 +24,7 @@ arrows:
     blockedBy: []
     detail: identity-and-access.md
     next: Confirm authorization policy for private and internal site content.
-    drift: No @spec annotations currently connect implementation and tests to these inferred requirements.
+    drift: Partial @spec citations; local Authelia issuance lacks automated integration coverage.
   site-catalog:
     status: MAPPED
     parent: null
@@ -68,7 +68,7 @@ arrows:
     blockedBy: []
     detail: runtime-services.md
     next: Confirm production expectations for data-protection key persistence and health endpoints.
-    drift: No @spec annotations currently connect implementation and tests to these inferred requirements.
+    drift: AppHost entry points cite runtime requirements; topology lacks automated coverage and other requirements lack citations.
   kubernetes-deployment:
     status: MAPPED
     parent: null
