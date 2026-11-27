@@ -104,7 +104,9 @@ sudo apt-get install build-essential pkg-config libwebkit2gtk-4.1-dev \
 To reproduce the Windows checks on an interactive Windows desktop, install
 Node.js 24, Visual Studio C++ Build Tools with Windows SDK, rustup, WebView2
 Evergreen Runtime, and the matching Edge WebDriver as `msedgedriver.exe` on
-`PATH`. Run from the repository root in PowerShell 7 (replace
+`PATH`. Run the tests in a non-elevated PowerShell 7 session: WebView2 150+
+ignores WebDriver's debugging arguments in elevated applications. CI runs the
+shared tests at medium integrity using gsudo. Run from the repository root (replace
 `x86_64-pc-windows-msvc` with `aarch64-pc-windows-msvc` on ARM64):
 
 ```powershell

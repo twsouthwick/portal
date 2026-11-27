@@ -20,10 +20,12 @@ jobs:
             arch: x86_64
             rust: x86_64-pc-windows-msvc
             driver: win64
+            gsudo: x64
           - runner: windows-11-arm
             arch: arm64
             rust: aarch64-pc-windows-msvc
             driver: arm64
+            gsudo: arm64
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 45
     steps:
@@ -65,11 +67,27 @@ jobs:
       - name: Install matching Edge WebDriver
         run: ./Portal.Client/setup-webdriver-windows.ps1 -Architecture ${{ matrix.driver }}
 
+      - name: Prepare non-elevated UI tests
+        run: |
+          $archive = Join-Path $env:RUNNER_TEMP 'gsudo-2.6.1.zip'
+          $directory = Join-Path $env:RUNNER_TEMP 'gsudo-2.6.1'
+          Invoke-WebRequest -Uri 'https://github.com/gerardog/gsudo/releases/download/v2.6.1/gsudo.portable.zip' -OutFile $archive
+          if ((Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash -ne '21130bf178d7b9891207f00bff56f05b6b363ce9cec7b2d084e45fb12ee51f44') {
+            throw 'gsudo archive checksum mismatch.'
+          }
+          Expand-Archive -LiteralPath $archive -DestinationPath $directory
+          Join-Path $directory '${{ matrix.gsudo }}' | Add-Content -LiteralPath $env:GITHUB_PATH
+          $sid = [System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value
+          & icacls $env:GITHUB_WORKSPACE /grant "*${sid}:(OI)(CI)M"
+          if ($LASTEXITCODE -ne 0) { throw 'Failed to grant the runner user access to the workspace.' }
+
       - name: Test client webview
         working-directory: Portal.Client
         env:
           PORTAL_CLIENT_TEST_ADAPTER: ./adapters/windows-tauri.js
-        run: npm run test:e2e
+        run: |
+          gsudo --integrity Medium pwsh -NoProfile -Command "npm run test:e2e"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Upload UI smoke-test evidence
         if: always()
