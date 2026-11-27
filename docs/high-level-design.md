@@ -26,6 +26,10 @@ server and native-client artifacts.
 The Tauri client is currently a placeholder shell. Its integration with the
 portal, authentication, and catalog is not implemented.
 
+**[planned]** The client manifest contract and schema metadata belong to
+issue #6. Issue #7 will expose the manifest and use ASP.NET Core's built-in
+OpenAPI support in development only, without adding a Swagger or Scalar UI.
+
 ## Target Users
 
 - **Portal users** need to find and open the sites available to their identity,
@@ -139,6 +143,9 @@ satisfaction.
 
 - Should `IsPrivate` and `IsInternal` affect direct content endpoint access, or
   are they intentionally presentation-only flags?
+  For the client manifest, the owner decided (2026-11-27) that they
+  are client metadata and the server filters by roles only; see the
+  identity-and-access LLD.
 - Is file-over-Kubernetes precedence a product invariant?
 - Are the development-only Authelia credentials and client secret isolated
   from all non-development deployments?

@@ -2,7 +2,8 @@
 
 These brownfield EARS specifications record behavior observed in the current
 implementation. `[x]` means the behavior exists; it does not mean a test
-currently cites the ID. No `@spec` annotations were found for this segment.
+currently cites the ID. Existing provider and content requirements SITE-001 to
+SITE-009 still lack `@spec` citations; the client-manifest behavior is cited.
 
 - [x] **SITE-001** When `SITE_PATH` identifies a directory or ZIP archive, the file provider shall load portal and child-site manifests from that source. Evidence: `Portal.Web/Services/FilePortalProviderExtensions.cs:5-24`, `Portal.Web/Services/FilePortalProvider.cs:7-58`, `Portal.Web/Services/ZipFileProvider.cs:1-212`.
 - [x] **SITE-002** When `SITE_PATH` is not configured, the file provider shall use the bundled `Portal.Web/sites` directory. Evidence: `Portal.Web/Services/FilePortalProviderExtensions.cs:5-24`.
@@ -17,7 +18,7 @@ currently cites the ID. No `@spec` annotations were found for this segment.
 ## Client Manifest
 
 These requirements specify the client manifest contract approved for issue #6.
-`[ ]` marks behavior that is specified but not yet implemented; the manifest endpoint is a separate change.
+The endpoint and OpenAPI behavior are implemented in issue #7.
 
 - [x] **SITE-010** When a client manifest is created, the projection shall derive it from the `PortalDetails` returned by `IPortalProvider.GetSiteDetailsAsync`, including the portal name, description, and sites in provider order. Evidence: `Portal.Web/Services/ClientManifest.cs`; test: `Portal.Web.Tests/ClientManifestTests.cs`.
 - [x] **SITE-011** When a client manifest is created, it shall carry an integer `schemaVersion` of `1`. Evidence: `Portal.Web/Services/ClientManifest.cs`; test: `Portal.Web.Tests/ClientManifestTests.cs`.
@@ -26,6 +27,6 @@ These requirements specify the client manifest contract approved for issue #6.
 - [x] **SITE-014** When a client manifest is created for a principal, the projection shall include only sites that the principal is authorized to see under AUTH-003, and shall return an empty site list when none are authorized. Evidence: `Portal.Web/Services/ClientManifest.cs`; test: `Portal.Web.Tests/ClientManifestTests.cs`.
 - [x] **SITE-015** When a site's URL is not an absolute `http` or `https` URI, the projection shall omit that URL and keep the site. Evidence: `Portal.Web/Services/ClientManifest.cs`; test: `Portal.Web.Tests/ClientManifestTests.cs`.
 - [x] **SITE-016** When an app's scheme is not an absolute URI, or uses the `javascript`, `data`, `file`, or `vbscript` scheme, the projection shall omit that app. Evidence: `Portal.Web/Services/ClientManifest.cs`; test: `Portal.Web.Tests/ClientManifestTests.cs`.
-- [ ] **SITE-017** When the client manifest is served to an unauthenticated request, or when the provider fails, the endpoint shall return RFC 9457 problem details with status 401 or 503 respectively, and shall not return a partial manifest. Owner: manifest endpoint (issue #7).
+- [x] **SITE-017** When the client manifest is served to an unauthenticated request, or when the provider fails, the endpoint shall return RFC 9457 problem details with status 401 or 503 respectively, and shall not return a partial manifest. Evidence: `Portal.Web/Services/ClientManifestEndpointExtensions.cs`; test: `Portal.Web.Tests/ClientManifestEndpointTests.cs`.
 - [x] **SITE-018** When the client manifest schema is generated, the manifest, site, and app types shall describe every field, and `store` shall be a string enumeration of `none`, `apple`, `macos`, `google`, `microsoft`, `windows`, and `linux`. Evidence: `Portal.Web/Services/ClientManifest.cs`; test: `Portal.Web.Tests/ClientManifestTests.cs`.
-- [ ] **SITE-019** Where the portal runs in the Development environment, it shall publish an OpenAPI document describing the client manifest response and its 401 and 503 problem-details responses; outside Development it shall not serve that document, and it shall not serve a Swagger or Scalar UI. Owner: manifest endpoint (issue #7).
+- [x] **SITE-019** Where the portal runs in the Development environment, it shall publish an OpenAPI document requiring an authenticated session and describing the client manifest response and its 401 and 503 problem-details responses; outside Development it shall not serve that document, and it shall not serve a Swagger or Scalar UI. Evidence: `Portal.Web/Program.cs`; test: `Portal.Web.Tests/ClientManifestEndpointTests.cs`.

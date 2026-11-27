@@ -28,20 +28,25 @@ proposal, not approved intent or evidence of working integration.
 
 ## Proposed Native Authentication
 
-**[inferred; owner review required]** A separate public OIDC client using the
-system browser and authorization-code flow with PKCE S256 is preferred over a
-Portal-mediated session. A native application cannot protect the confidential
+**[owner-selected 2026-11-27; not yet validated]** A separate public OIDC
+client using the system browser and authorization-code flow with PKCE S256 is
+selected over a Portal-mediated session. The first Portal API to use it is the
+client manifest endpoint (`GET /api/manifest`, issue #7), designed in the
+identity-and-access LLD. The endpoint accepts signed JWT access tokens with
+the configured `Oidc:ApiAudience` (default `portal-api`) and maps trusted
+`groups` claims to roles. A native application cannot protect the confidential
 `portal-web` client secret. Portal.Web uses its own `/signin-oidc` callback
-and `portal.session` cookie, saves no OIDC tokens, and has no native
-bearer-token API authentication. The system browser, Tauri WebView, and other
-apps cannot be assumed to share cookies. The native client would not collect
-passwords or store credentials in plaintext.
+and `portal.session` cookie and saves no OIDC tokens. The manifest API has a
+separate bearer-token policy; the native client's sign-in and API integration
+are not implemented. The system browser, Tauri WebView, and other apps cannot
+be assumed to share cookies. The native client would not collect passwords or
+store credentials in plaintext.
 
 This choice depends on proving that the actual Authelia deployment supports a
 separate public client, the platform redirects, and suitable access-token
-audience and group claims. A future Portal API would need to validate issuer,
-signature, expiry, audience, and token type, obtain trusted groups, and apply
-the relevant role authorization. An ID token is not an API access token.
+audience and group claims. Portal.Web validates the issuer, signature,
+expiry, and API audience, and applies the relevant role authorization. An ID
+token is not an API access token and has a different audience.
 Requests would use a configured trusted HTTPS issuer and API endpoint, not
 destinations supplied by a callback. If these prerequisites cannot be met,
 reconsider a Portal-mediated session/API flow with the owner rather than
@@ -109,16 +114,27 @@ platform compatibility.
 |---|---|---|---|
 | Native framework | Tauri v2 with a Vite frontend and minimal Rust bootstrap. **[inferred]** | Browser-only application or another native shell. | These are the checked-in crate and configuration. |
 | Current client scope | Placeholder shell only. **[inferred from developer guide]** | Portal-connected client. | The developer guide documents the current non-integration. |
-| Native authentication | Separate public OIDC client with system-browser code flow and PKCE S256. **[inferred; proposed, not approved or validated]** | Portal-mediated session/API flow. | Avoids embedding the confidential web secret or assuming shared browser cookies; requires provider and API compatibility. |
+| Native authentication | Separate public OIDC client with system-browser code flow and PKCE S256. **[owner-selected 2026-11-27; not validated]** | Portal-mediated session/API flow. | Avoids embedding the confidential web secret or assuming shared browser cookies; requires provider and API compatibility. |
 | UI verification | Shared Node E2E assertions use platform adapters. **[inferred]** | Separate assertions for each platform. | `Portal.Client/tests/client.test.js` shares assertions and adapters. |
 
 ## Open Questions & Future Decisions
 
+### Planned
+
+1. Client presentation of manifest flags (planned): show `IsPrivate` sites
+   behind a user toggle, and use home-network detection for `IsInternal`
+   sites. The issue #6 DTO has no home-network CIDR field;
+   [issue #53](https://github.com/twsouthwick/portal/issues/53) tracks it
+   separately from the initial manifest and endpoint. For a missing field, #53
+   specifies `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, and `fc00::/7`
+   as defaults, excluding loopback and link-local ranges. A CIDR match alone
+   does not establish a home network or grant access.
+
 ### Deferred
 
 1. What user need should the native client solve beyond displaying a shell?
-2. Is the proposed public-client model acceptable, including its API and
-   provider prerequisites, or should a Portal-mediated session be designed?
+2. Resolved 2026-11-27: the owner selected the public-client model. Its
+   Authelia and platform prerequisites remain unvalidated.
 3. Which desktop and mobile targets are release requirements?
 4. Release installers, signing, production packaging, and portal integration are
    not verified by the current scaffold checks.

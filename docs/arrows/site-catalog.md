@@ -7,8 +7,9 @@ Kubernetes sources.
 
 **MAPPED** — first reconstructed 2026-11-27. Nine EARS requirements describe
 observed behavior; precedence and refresh policy remain owner decisions. The
-owner-approved client manifest contract (SITE-010–SITE-019) was added for
-issue #6; its endpoint behavior (SITE-017, SITE-019) is pending.
+owner-approved client manifest contract and issue #7 endpoint behavior
+(SITE-010–SITE-019) are implemented; provider precedence and runtime refresh
+remain owner decisions.
 
 ## References
 
@@ -23,6 +24,7 @@ issue #6; its endpoint behavior (SITE-017, SITE-019) is pending.
 
 ### Tests
 - `Portal.Web.Tests/ClientManifestTests.cs`
+- `Portal.Web.Tests/ClientManifestEndpointTests.cs`
 - `Portal.Web.Tests/CompositePortalProviderTests.cs`
 - `Portal.Web.Tests/KubernetesPortalProviderTests.cs`
 - `Portal.Web.Tests/PortalProviderRegistrationTests.cs`
@@ -48,12 +50,12 @@ authenticated static-content endpoint; versioned client manifest projection.
 | Category | Spec IDs | Implemented | Deferred | Gaps |
 |---|---|---:|---:|---:|
 | File/ZIP loading, composition, Kubernetes mapping, content | SITE-001, SITE-002, SITE-003, SITE-004, SITE-005, SITE-006, SITE-007, SITE-008, SITE-009 | 9 | 0 | 0 known implementation gaps |
-| Client manifest contract | SITE-010, SITE-011, SITE-012, SITE-013, SITE-014, SITE-015, SITE-016, SITE-017, SITE-018, SITE-019 | 8 | 0 | 2 (SITE-017 endpoint errors, SITE-019 OpenAPI document; issue #7) |
+| Client manifest contract | SITE-010, SITE-011, SITE-012, SITE-013, SITE-014, SITE-015, SITE-016, SITE-017, SITE-018, SITE-019 | 10 | 0 | 0 known implementation gaps |
 
 **Traceability:** Provider and content tests cover portions of SITE-001–009,
 which carry no `@spec` annotations. Client manifest code and tests cite
-SITE-010–016 and SITE-018 with `@spec`. The counts reflect source
-reconstruction, not mechanically checked test coverage.
+SITE-010–019 with `@spec`. The counts reflect source reconstruction, not
+mechanically checked test coverage.
 
 ## Key Findings
 

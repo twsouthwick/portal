@@ -25,7 +25,7 @@ public sealed class AuthenticationTests : IClassFixture<PortalWebApplicationFact
         _factory = factory;
     }
 
-    // @spec AUTH-001 AUTH-002
+    // @spec AUTH-001 AUTH-002 AUTH-016
     [Fact]
     public async Task Home_ChallengesWithOidc()
     {

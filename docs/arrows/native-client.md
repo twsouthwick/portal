@@ -5,8 +5,9 @@ Tauri desktop/mobile shell and its platform-adapted smoke and UI verification.
 ## Status
 
 **MAPPED** — first reconstructed 2026-11-27. The current shell is a tested
-placeholder; portal integration is not implemented. A proposed authentication
-design awaits owner review and real-provider/platform validation.
+placeholder; portal integration is not implemented. The owner selected the
+public-client authentication design on 2026-11-27; real-provider and platform
+validation remain.
 
 ## References
 
@@ -68,8 +69,9 @@ authentication are explicitly outside the present implementation.
 1. No placeholder-shell defect is asserted by this mapping.
 
 ### Should Fix
-1. Review the proposed native authentication design and its cross-segment API
-   boundary before specifying or implementing integration.
+1. Validate the selected public-client design against Authelia and the
+   target platforms; the manifest API is implemented in identity-and-access
+   (AUTH-008 to AUTH-016), but provider interoperability remains unvalidated.
 
 ### Nice to Have
 1. Define release packaging and signing verification once supported release

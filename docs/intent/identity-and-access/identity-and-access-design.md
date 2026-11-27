@@ -40,6 +40,73 @@ content endpoint's role check does not evaluate these flags. Whether those
 flags must restrict direct content access is unresolved. The UI is not a
 security boundary.
 
+## Client Manifest Endpoint (issue #7)
+
+The native client uses a Portal.Web endpoint that returns the sites the
+authenticated user may see. The endpoint reuses the existing provider
+pipeline and authorization rule rather than introducing a parallel catalog
+or policy:
+
+1. `GET /api/manifest` injects `IPortalProvider` and calls
+   `GetSiteDetailsAsync` once per request.
+2. Project the result through the client manifest contract from issue #6,
+   retaining only sites for which `SiteInfo.IsAuthorized(ClaimsPrincipal)` is
+   true (AUTH-003). This is the same role rule used by the UI and the content
+   endpoint; no new rule is added.
+3. Use issue #6's owner-approved contract and schema metadata without changing
+   the DTO's wire format or semantics.
+
+**Authentication.** The owner selected the native-client public OIDC client
+model (`docs/intent/native-client/native-client-design.md`). The manifest
+endpoint accepts only an OIDC access token as a JWT bearer token through an
+endpoint-specific policy; the Portal cookie is not accepted. The scheme
+validates issuer, signature, expiry, and the configured API audience
+(`Oidc:ApiAudience`, default `portal-api`), and maps trusted `groups` to roles
+exactly as the cookie scheme does. The native client must request an access
+token for that audience; an ID token is rejected because it has a different
+audience. An unauthenticated or invalid-token request receives `401` with RFC
+9457 problem details and a bearer challenge, not the OIDC redirect used by
+the Blazor routes (SITE-017). The existing cookie/OIDC defaults, Blazor
+authorization, and `/{siteId}/content/{**path}` behavior remain unchanged.
+Local Authelia access-token issuance and native redirect interoperability
+remain separate integration validation; they do not change the API's
+issuer/audience validation contract.
+
+**Private and internal sites.** The server filters the manifest by roles
+only. `IsPrivate` and `IsInternal` are delivered as site metadata. The planned
+client presentation uses a private-site toggle and home-network detection for
+internal sites. Optional portal-level home-network CIDRs and their client-side
+use are tracked separately in [issue #53](https://github.com/twsouthwick/portal/issues/53),
+not in the current issue #6 DTO or issue #7 implementation. When the
+field is absent, issue #53 specifies defaults of `10.0.0.0/8`,
+`172.16.0.0/12`, `192.168.0.0/16`, and `fc00::/7`; loopback and link-local
+ranges are excluded from the default. Matching a CIDR does not prove a device
+is on the home network or grant access; server role authorization remains
+authoritative. This decision covers the manifest only and does not resolve
+the content-endpoint question below.
+
+**Conditional requests.** The endpoint computes a strong ETag from the exact
+serialized bytes of the requesting user's filtered representation (for
+example SHA-256, encoded as a quoted string). Authentication, filtering, and
+serialization happen before `If-None-Match` is evaluated, so the comparison
+only ever concerns that user's representation. A matching `If-None-Match`
+value (including a list or `*`) yields `304 Not Modified` with the ETag and no
+body; otherwise the endpoint returns `200` with the body and its ETag.
+Successful and not-modified responses use `Cache-Control: private, no-cache`
+and vary on `Authorization` and `Cookie`. The endpoint is excluded from the
+shared output cache and keeps no server-side representation cache, because
+Kubernetes-backed sites are read live. A provider failure returns `503` with
+RFC 9457 problem details, never a partial or unfiltered manifest (SITE-017).
+
+**OpenAPI.** Issue #6 owns the manifest contract and its schema metadata.
+Issue #7 uses ASP.NET Core's built-in OpenAPI support to generate a document
+from that contract and the manifest endpoint's actual behavior, including its
+response status codes and the JWT bearer access-token security scheme. The
+document endpoint is mapped only in the Development environment and requires
+the application's normal authenticated session. No Swagger or Scalar UI is
+added. Documentation does not change the DTO's JSON representation or weaken
+manifest authorization.
+
 ## Sign-out
 
 The authenticated POST `/auth/logout` endpoint validates antiforgery, clears
@@ -53,6 +120,10 @@ session is not explicitly ended by the application.
 | Identity protocol | OIDC authorization code + PKCE, with local cookie session. **[inferred]** | Anonymous access or another identity protocol. | Directly configured in `Portal.Web/Program.cs:30-65`. |
 | Role source | Map the OIDC `groups` claim to application roles. **[inferred]** | Different claim, external policy service, or application roles. | Local Authelia emits groups in the ID token and the application consumes them (`Portal.AppHost/Authelia/configuration.yml`, `Portal.Web/Program.cs`). |
 | Content authorization | Re-check the site's roles at the HTTP endpoint. **[inferred]** | Trust UI filtering alone or apply additional site flags. | The endpoint independently evaluates roles (`Portal.Web/Services/SiteDetailsExtensions.cs:70-101`). |
+| Manifest authentication | JWT bearer access token from the native public OIDC client, selected by an endpoint policy; API audience is configured by `Oidc:ApiAudience` (default `portal-api`); bearer-only and `401` instead of redirect. **[owner-selected 2026-11-27]** | Portal-mediated session/token; cookie-only manifest. | Native apps cannot hold the web client secret or rely on a shared WebView cookie; `SaveTokens` is false. |
+| Manifest site flags | Filter by roles only; `IsPrivate` and `IsInternal` are client metadata (private toggle, future home-network detection). **[owner-selected 2026-11-27]** | Exclude private/internal sites server-side. | Owner direction for issue #7; optional CIDRs are separate follow-up issue #53. |
+| Manifest caching | Strong per-user ETag over the filtered serialized bytes; `private, no-cache`; no shared output cache. **[implemented]** | Version counter or provider timestamp; server-side cache. | Providers expose no change token, and Kubernetes reads are live. |
+| API documentation | Built-in OpenAPI document in Development only, protected by the normal authenticated session; no Swagger or Scalar UI. **[owner-selected]** | Production document or interactive API UI. | The document uses #6's contract and schema metadata; #7 owns serving it. |
 
 ## Open Questions & Future Decisions
 
@@ -63,6 +134,19 @@ session is not explicitly ended by the application.
 3. Are development users and the local-only client secret isolated from
    all non-development deployments?
 4. Which authorization cases require direct component or end-to-end tests?
+5. Which access-token audience and claims will the Authelia public client
+   issue, and does it support the native redirect URIs? Server-side audience
+   validation is implemented; provider/client interoperability remains
+   unvalidated.
+6. How should issue #53 handle an explicitly empty CIDR list or invalid
+   entries?
+
+### Integration validation gap
+
+No server implementation blockers remain. Local Authelia access-token
+issuance and native redirect interoperability need integration validation
+before native-client integration. Issue #53 is a separate follow-up, not a
+prerequisite for #7.
 
 ## References
 
