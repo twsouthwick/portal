@@ -8,6 +8,7 @@ The project instructions follow [Linked-Intent Development](https://github.com/j
 
 - GitHub Copilot and other agents that support `AGENTS.md` read the root `AGENTS.md`.
 - Copilot instruction surfaces that do not read `AGENTS.md` also receive `.github/copilot-instructions.md`.
+- Copilot Agent Skills are available as project skills in `.github/skills/`. Ask Copilot to use `linked-intent-dev` for a code change or `arrow-maintenance` to orient/audit the maps. The skills are local adapters to the workflow here, not the upstream plugin package.
 - `CLAUDE.md` imports the same `AGENTS.md`, avoiding duplicate instructions.
 - In Claude Code, install both upstream plugins and invoke the setup skill:
 
