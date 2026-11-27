@@ -57,7 +57,7 @@ arrows:
     blockedBy: []
     detail: native-client.md
     next: Validate the owner-selected public-client authentication against Authelia and target platforms before integration.
-    drift: Current implementation is a placeholder shell; native authentication and Authelia compatibility are unverified.
+    drift: Manual Portal URL onboarding is implemented without authentication; its UI lacks E2E coverage, and native authentication and Authelia compatibility are unverified.
   runtime-services:
     status: MAPPED
     parent: null

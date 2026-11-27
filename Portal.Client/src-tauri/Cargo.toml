@@ -1,3 +1,6 @@
+[workspace]
+members = [".", "onboarding"]
+
 [package]
 name = "portalclient"
 version = "0.1.0"
@@ -16,8 +19,14 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
+[features]
+# Development only: lets debug builds accept http for loopback Portal URLs.
+dev-http-loopback = []
+
 [dependencies]
 tauri = { version = "2", features = [] }
+portal-onboarding = { path = "onboarding" }
+serde = { version = "1", features = ["derive"] }
 
 # Read the optimization guideline for more details: https://tauri.app/concept/size/#cargo-configuration
 [profile.release]

@@ -7,7 +7,8 @@ Tauri desktop/mobile shell and its platform-adapted smoke and UI verification.
 **MAPPED** — first reconstructed 2026-11-27. The current shell is a tested
 placeholder; portal integration is not implemented. Approved MinVer versioning
 and signed multi-ABI Android packaging are implemented; hosted-run verification
-remains pending. The owner selected the public-client authentication design on
+remains pending. Manual Portal URL onboarding (issue #15) checks and saves an
+untrusted origin without authenticating. The owner selected the public-client authentication design on
 2026-11-27; real-provider and platform validation remain.
 
 ## References
@@ -19,7 +20,7 @@ remains pending. The owner selected the public-client authentication design on
 - `docs/intent/native-client/native-client-design.md`
 
 ### EARS
-- `docs/intent/native-client/native-client-specs.md` — 7 specs
+- `docs/intent/native-client/native-client-specs.md` — 13 specs
 
 ### Tests
 - `Portal.Client/tests/client.test.js`
@@ -29,9 +30,12 @@ remains pending. The owner selected the public-client authentication design on
 - `Portal.Client/smoke-windows.ps1`
 - `.github/scripts/native-release.test.mjs`
 - `.github/scripts/android-signing.test.mjs`
+- `Portal.Client/src-tauri/onboarding/src/` — unit tests (`cargo test -p portal-onboarding`)
 
 ### Code
 - `Portal.Client/index.html`
+- `Portal.Client/src/main.js`
+- `Portal.Client/src-tauri/onboarding/`
 - `Portal.Client/vite.config.ts`
 - `Portal.Client/src-tauri/`
 - `Portal.Client/tests/adapters/`
@@ -55,17 +59,19 @@ smoke scripts.
 |---|---|---:|---:|---:|
 | Shell and configured verification | CLIENT-001, CLIENT-002, CLIENT-003, CLIENT-004, CLIENT-005 | 5 | 0 | 0 known shell gaps |
 | Approved release packaging | CLIENT-006, CLIENT-007 | 2 | 0 | Hosted signing and platform builds remain unverified |
+| Manual Portal URL onboarding | CLIENT-008 to CLIENT-013 | 6 | 0 | UI flow lacks E2E coverage; Android private-CA trust unsupported |
 
 **Traceability:** Android signing, ABI, versioning, and release workflow tests
 cite the approved EARS IDs. Portal connectivity and authentication are
-explicitly outside the present implementation.
+explicitly outside the present implementation. Onboarding unit tests cite
+CLIENT-008 to CLIENT-013; the Tauri commands and UI cite them at entry points.
 
 ## Key Findings
 
-1. The Rust host only runs the default Tauri builder
-   (`Portal.Client/src-tauri/src/lib.rs:1-6`).
-2. The checked-in page contains only the `Portal` heading and shell placeholder
-   (`Portal.Client/index.html:8-12`).
+1. The Rust host registers only the Portal URL check, save, and load commands
+   (`Portal.Client/src-tauri/src/lib.rs`).
+2. The page shows the `Portal` heading, shell placeholder, and manual Portal
+   URL check (`Portal.Client/index.html`, `Portal.Client/src/main.js`).
 3. The developer guide states that integration and authentication are not
    implemented (`developer.md`, Native client).
 

@@ -135,6 +135,10 @@ jobs:
       - name: Install client dependencies
         run: npm ci --prefix Portal.Client
 
+      - name: Test Portal URL onboarding
+        working-directory: Portal.Client/src-tauri
+        run: cargo test --locked -p portal-onboarding
+
       - name: Build debug client and AppImage
         working-directory: Portal.Client
         run: npm run tauri -- build --debug --bundles appimage
