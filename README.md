@@ -67,6 +67,26 @@ Pull requests to `main` and pushes to `main` or `v*` tags build and test the sol
 
 Publishing uses the workflow's `GITHUB_TOKEN` with package-write permission. Existing GHCR packages must grant this repository's Actions workflow access. New packages are private by default; pulling them requires registry credentials unless their visibility is changed.
 
+The independent `Native client release builds` workflow also runs on these
+events and on manual dispatch. It is configured to build release AppImages on
+native Linux x86_64 and ARM64 runners, an x86_64 Windows MSVC executable, and
+an x86_64 Android APK. Each job checks the output architecture and launches
+the app before uploading a workflow artifact named with the checked-out commit
+SHA. The Android job tests a temporary, locally signed copy on an API 35
+x86_64 emulator; the uploaded release APK is unsigned and must be signed
+separately before installation or distribution. Windows binaries are also
+unsigned. No distribution signing keys are used by this workflow.
+
+The workflow pins Node and Rust versions, uses `npm ci` and Cargo's locked
+dependencies, and sets `SOURCE_DATE_EPOCH` from the commit. Artifacts include
+SHA-256 checksums and commit/toolchain provenance. Hosted runner images,
+system packages, Android/Gradle dependencies and packaging tools can change, so
+bit-for-bit identical rebuilds are not guaranteed. Workflow artifacts are
+retained according to repository settings, not published as permanent GitHub
+releases. The new release targets should not be considered verified until
+their respective jobs succeed on actual runners. Android ARM devices, Windows
+installers, code signing, and portal functionality are not covered.
+
 ### Native client scaffold
 
 `Portal.Client` is a standalone Tauri v2 shell. It displays a placeholder and
