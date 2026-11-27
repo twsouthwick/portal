@@ -13,3 +13,17 @@ currently cites the ID. No `@spec` annotations were found for this segment.
 - [x] **SITE-007** When a Kubernetes site references ConfigMap content, the provider shall expose the referenced content and, when a key is specified, restrict the exposed content to that key. Evidence: `Portal.Web/Services/KubernetesPortalProvider.cs:121-151`; test: `Portal.Web.Tests/KubernetesPortalProviderTests.cs:56-112`.
 - [x] **SITE-008** When a site content path is empty, traversal-like, missing, or a directory, the content endpoint shall not serve it as a file. Evidence: `Portal.Web/Services/SiteDetailsExtensions.cs:72-101`.
 - [x] **SITE-009** When a valid content file is requested, the endpoint shall return it using file metadata for MIME type and range processing. Evidence: `Portal.Web/Services/SiteDetailsExtensions.cs:72-109`; test: `Portal.Web.Tests/SiteContentTests.cs:21-63`.
+
+## Client Manifest
+
+These requirements specify the client manifest contract approved for issue #6.
+`[ ]` marks behavior that is specified but not yet implemented; the manifest endpoint is a separate change.
+
+- [x] **SITE-010** When a client manifest is created, the projection shall derive it from the `PortalDetails` returned by `IPortalProvider.GetSiteDetailsAsync`, including the portal name, description, and sites in provider order. Evidence: `Portal.Web/Services/ClientManifest.cs`; test: `Portal.Web.Tests/ClientManifestTests.cs`.
+- [x] **SITE-011** When a client manifest is created, it shall carry an integer `schemaVersion` of `1`. Evidence: `Portal.Web/Services/ClientManifest.cs`; test: `Portal.Web.Tests/ClientManifestTests.cs`.
+- [x] **SITE-012** When a site is projected into a client manifest, the projection shall include only its ID, name, description, URL, icon, categories, raw usage instructions, internal and private flags, and apps with name, scheme, lowercase store, and store ID. Evidence: `Portal.Web/Services/ClientManifest.cs`; test: `Portal.Web.Tests/ClientManifestTests.cs`.
+- [D] **SITE-013** The client manifest shall not serialize `SiteInfo.Content`, `SiteInfo.Roles`, provider objects, or Kubernetes `PortalSite` resources. Evidence: `Portal.Web/Services/ClientManifest.cs`; test: `Portal.Web.Tests/ClientManifestTests.cs`.
+- [x] **SITE-014** When a client manifest is created for a principal, the projection shall include only sites that the principal is authorized to see under AUTH-003, and shall return an empty site list when none are authorized. Evidence: `Portal.Web/Services/ClientManifest.cs`; test: `Portal.Web.Tests/ClientManifestTests.cs`.
+- [x] **SITE-015** When a site's URL is not an absolute `http` or `https` URI, the projection shall omit that URL and keep the site. Evidence: `Portal.Web/Services/ClientManifest.cs`; test: `Portal.Web.Tests/ClientManifestTests.cs`.
+- [x] **SITE-016** When an app's scheme is not an absolute URI, or uses the `javascript`, `data`, `file`, or `vbscript` scheme, the projection shall omit that app. Evidence: `Portal.Web/Services/ClientManifest.cs`; test: `Portal.Web.Tests/ClientManifestTests.cs`.
+- [ ] **SITE-017** When the client manifest is served to an unauthenticated request, or when the provider fails, the endpoint shall return RFC 9457 problem details with status 401 or 503 respectively, and shall not return a partial manifest. Owner: manifest endpoint (issue #7).

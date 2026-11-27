@@ -6,7 +6,9 @@ Kubernetes sources.
 ## Status
 
 **MAPPED** — first reconstructed 2026-11-27. Nine EARS requirements describe
-observed behavior; precedence and refresh policy remain owner decisions.
+observed behavior; precedence and refresh policy remain owner decisions. The
+owner-approved client manifest contract (SITE-010–SITE-017) was added for
+issue #6; its endpoint (SITE-017) is pending.
 
 ## References
 
@@ -17,9 +19,10 @@ observed behavior; precedence and refresh policy remain owner decisions.
 - `docs/intent/site-catalog/site-catalog-design.md`
 
 ### EARS
-- `docs/intent/site-catalog/site-catalog-specs.md` — 9 specs
+- `docs/intent/site-catalog/site-catalog-specs.md` — 17 specs
 
 ### Tests
+- `Portal.Web.Tests/ClientManifestTests.cs`
 - `Portal.Web.Tests/CompositePortalProviderTests.cs`
 - `Portal.Web.Tests/KubernetesPortalProviderTests.cs`
 - `Portal.Web.Tests/PortalProviderRegistrationTests.cs`
@@ -38,16 +41,18 @@ model and supply resources to the UI and content endpoint.
 
 **Key components:** File and ZIP providers; Kubernetes `PortalSite` and
 ConfigMap provider; `CompositePortalProvider`; common `SiteInfo` model;
-authenticated static-content endpoint.
+authenticated static-content endpoint; versioned client manifest projection.
 
 ## Spec Coverage
 
 | Category | Spec IDs | Implemented | Deferred | Gaps |
 |---|---|---:|---:|---:|
 | File/ZIP loading, composition, Kubernetes mapping, content | SITE-001, SITE-002, SITE-003, SITE-004, SITE-005, SITE-006, SITE-007, SITE-008, SITE-009 | 9 | 0 | 0 known implementation gaps |
+| Client manifest contract | SITE-010, SITE-011, SITE-012, SITE-013, SITE-014, SITE-015, SITE-016, SITE-017 | 7 | 0 | 1 (SITE-017 endpoint errors, issue #7) |
 
-**Traceability:** Provider and content tests cover portions of these behaviors,
-but no tests or code carry `@spec` annotations. The counts reflect source
+**Traceability:** Provider and content tests cover portions of SITE-001–009,
+which carry no `@spec` annotations. Client manifest code and tests cite
+SITE-010–016 with `@spec`. The counts reflect source
 reconstruction, not mechanically checked test coverage.
 
 ## Key Findings

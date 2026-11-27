@@ -38,6 +38,68 @@ The catalog maps a site's `IFileProvider` to
 paths, requires a file, and supports range processing and MIME-type inference.
 Authentication and role policy are defined by the Identity and Access segment.
 
+## Client Manifest
+
+The client manifest is a versioned, client-safe contract that native clients
+consume. It is projected from the result of
+`IPortalProvider.GetSiteDetailsAsync`, so file-, ZIP-, and Kubernetes-backed
+sites reach clients through the same composite catalog as the Blazor UI.
+Kubernetes `PortalSite` remains an input that `KubernetesPortalProvider` maps
+into `SiteInfo`; it is not the client model. Clients never query providers or
+Kubernetes directly.
+
+### Shape
+
+| Level | Field | Source |
+|---|---|---|
+| Manifest | `schemaVersion` | Constant; currently `1`. |
+| Manifest | `name`, `description` | `PortalDetails.Name`, `Description` |
+| Manifest | `sites` | Authorized `PortalDetails.Sites`, in provider order |
+| Site | `id`, `name`, `description`, `icon`, `categories` | Same-named `SiteInfo` fields |
+| Site | `url` | `SiteInfo.Url` after validation; omitted (null) when invalid or empty |
+| Site | `usageInstructions` | `SiteInfo.UsageInstructions` as raw Markdown |
+| Site | `isInternal`, `isPrivate` | Same-named `SiteInfo` flags |
+| Site | `apps` | Valid `SiteInfo.Apps` entries |
+| App | `name`, `scheme`, `storeId` | Same-named `SiteApp` fields |
+| App | `store` | `SiteApp.Store` as a lowercase string, e.g. `google` |
+
+`SiteInfo.Content`, `SiteInfo.Roles`, and provider or Kubernetes objects are
+never part of the manifest. Roles remain server-side authorization input.
+
+### Versioning
+
+`schemaVersion` is an integer in the manifest body. Additive, optional fields
+do not change it; clients ignore unknown fields. Removing or renaming a field,
+or changing a field's type or meaning, increments it.
+
+### Filtering
+
+Only sites for which `SiteInfo.IsAuthorized(ClaimsPrincipal)` succeeds are
+included, reusing the Identity and Access role rule (AUTH-003). The manifest
+does not apply the web UI's private-browsing or remote-IP behavior (UX-003,
+UX-004); it carries `isPrivate` and `isInternal` so the client can decide. It
+also returns every valid app rather than filtering by device platform; the
+client selects apps for its own OS. This keeps one representation per user,
+which suits conditional requests. If no site is authorized, `sites` is empty.
+
+### URL and protocol validation
+
+A site `url` is kept only when it is an absolute `http` or `https` URI;
+otherwise it is omitted and the site is still returned. An app is kept only
+when its `scheme` is an absolute URI whose scheme is not `javascript`, `data`,
+`file`, or `vbscript`; otherwise that app is omitted. `storeId` is passed
+through unchanged because it may be a URL or a bare store ID (UX-008). The
+allowlist of supported launch schemes and plugin handoffs is a later decision
+for the service plugin contract.
+
+### Error responses
+
+The manifest endpoint itself is not part of this contract's implementation.
+When served, failures use RFC 9457 problem details: an unauthenticated request
+receives 401, and a provider failure receives 503 rather than a partial
+manifest. An authenticated user with no authorized sites receives a successful
+manifest with an empty `sites` list.
+
 ## Decisions & Alternatives
 
 | Decision | Current approach | Alternatives considered | Rationale |
@@ -46,6 +108,12 @@ Authentication and role policy are defined by the Identity and Access segment.
 | Duplicate resolution | Registration order, first match wins. **[inferred]** | Merge or reject duplicate IDs. | Implemented by `CompositePortalProvider`; files are registered first (`Portal.Web/Program.cs:89`). Desired precedence is unconfirmed. |
 | File refresh | File manifest parsing is cached by the provider instance. **[inferred]** | Reload each request or watch for changes. | Current implementation caches its load task; README also directs operators to restart after file changes. |
 | Kubernetes reads | Query resources through the Kubernetes API and fetch referenced content. **[inferred]** | Watch/cache or a separate synchronization process. | This is the current provider contract; latency, caching, and refresh expectations are not specified. |
+| Client manifest source | Project from `IPortalProvider.GetSiteDetailsAsync`. | Expose `PortalSite` or a separate client catalog. | Owner-approved (issue #6): one catalog for UI and clients. |
+| Client manifest versioning | Integer `schemaVersion` body field. | URL-path versioning; both. | Owner-approved (issue #6). |
+| Private/internal sites in the manifest | Include with `isPrivate`/`isInternal` flags. | Exclude, or include without flags. | Owner-approved (issue #6): the client applies context-dependent behavior. |
+| App platform filtering in the manifest | Return all valid apps. | Server filters by a client-supplied OS. | Owner-approved (issue #6): one cacheable representation per user. |
+| Invalid URLs and schemes | Omit the invalid site URL or app; keep the site. | Reject the whole site; HTTPS-only. | Owner-approved (issue #6); the scheme allowlist is deferred to the plugin contract. |
+| Manifest errors | RFC 9457 problem details; 401, 503, empty list. | Bare status codes. | Owner-approved (issue #6). |
 
 ## Open Questions & Future Decisions
 
@@ -76,6 +144,8 @@ Authentication and role policy are defined by the Identity and Access segment.
   `Portal.Web/Services/KubernetesPortalProviderExtensions.cs`
 - Composition and content: `Portal.Web/Services/CompositePortalProvider.cs`,
   `Portal.Web/Services/SiteDetailsExtensions.cs`
+- Client manifest: `Portal.Web/Services/ClientManifest.cs`,
+  `Portal.Web.Tests/ClientManifestTests.cs`
 - Examples and tests: `Portal.Web/sites/`,
   `Portal.Web.Tests/CompositePortalProviderTests.cs`,
   `Portal.Web.Tests/KubernetesPortalProviderTests.cs`,
