@@ -2,6 +2,7 @@
 
 <div style="margin-bottom: 1.5rem;">
     <FluentTextInput @bind-Value="searchQuery"
+                     Immediate="true"
                      Placeholder="@Placeholder"
                      @bind-Value:after="OnSearchChanged"
                      style="width: 100%;">
