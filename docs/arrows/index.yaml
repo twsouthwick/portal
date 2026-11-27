@@ -34,8 +34,8 @@ arrows:
     blocks: []
     blockedBy: []
     detail: site-catalog.md
-    next: Confirm provider precedence and runtime refresh expectations.
-    drift: No @spec annotations currently connect implementation and tests to these inferred requirements.
+    next: Serve the client manifest endpoint and Development-only OpenAPI document (SITE-017, SITE-019, issue #7); confirm provider precedence and runtime refresh expectations.
+    drift: Client manifest specs carry @spec citations; SITE-001–009 implementation and tests have none.
   portal-experience:
     status: MAPPED
     parent: null
