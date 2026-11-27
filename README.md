@@ -63,7 +63,7 @@ npm run clean
 
 ### GitHub Actions
 
-Pull requests to `main` and pushes to `main` or `v*` tags build and test the solution, lint the Helm chart, and build and test the Linux native client on x86_64 and ARM64. The Linux jobs also upload debug AppImages as workflow artifacts. Successful pushes also publish the portal image to `ghcr.io/twsouthwick/portal` and the Helm chart to `oci://ghcr.io/twsouthwick/charts/portal`. The image receives the MinVer version and `latest` tags; the chart uses the same MinVer version. Both branch and tag pushes update `latest`.
+Pull requests to `main` and pushes to `main` or `v*` tags build and test the solution, lint the Helm chart, and build and test the Linux native client on x86_64 and ARM64. The Linux jobs also upload debug AppImages as workflow artifacts. A separate Android workflow builds and smoke-tests an x86_64 debug APK and uploads it as a workflow artifact. Successful pushes also publish the portal image to `ghcr.io/twsouthwick/portal` and the Helm chart to `oci://ghcr.io/twsouthwick/charts/portal`. The image receives the MinVer version and `latest` tags; the chart uses the same MinVer version. Both branch and tag pushes update `latest`.
 
 Publishing uses the workflow's `GITHUB_TOKEN` with package-write permission. Existing GHCR packages must grant this repository's Actions workflow access. New packages are private by default; pulling them requires registry credentials unless their visibility is changed.
 
@@ -140,8 +140,9 @@ Ubuntu 24.04 with JDK 17, SDK platform 37.0, build-tools 37.0.0, NDK
 on an API 35 Google APIs x86_64 emulator, launches
 `app.swick.portal.client/.MainActivity`, and checks that the same process stays
 in the foreground for 10 seconds without a recorded crash. Failures include
-activity state and logcat output in the job log. This is not a functional UI,
-portal connectivity, release artifact, or signing test.
+activity state and logcat output in the job log. The uploaded debug APK is for
+inspection only; this is not a functional UI, portal connectivity, release
+artifact, or signing test.
 
 To reproduce on Linux from the repository root, install Node.js and Rust as
 above, JDK 17, and the Android SDK command-line tools. Set `JAVA_HOME` and

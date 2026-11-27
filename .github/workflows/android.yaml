@@ -41,12 +41,21 @@ jobs:
           rustup default stable
           rustup target add x86_64-linux-android
 
+      - name: Install client dependencies
+        run: npm ci --prefix Portal.Client
+
       - name: Build x86_64 debug APK
         working-directory: Portal.Client
         run: |
-          npm ci
           npm run tauri -- android init --ci --skip-targets-install
           npm run tauri -- android build --ci --debug --apk --target x86_64
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4.6.2
+        with:
+          name: portal-client-android-x86_64-debug-apk
+          path: Portal.Client/src-tauri/gen/android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
 
       - name: Enable KVM
         run: |
