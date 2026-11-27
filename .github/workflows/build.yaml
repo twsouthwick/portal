@@ -86,6 +86,10 @@ jobs:
         env:
           PORTAL_CLIENT_TEST_ADAPTER: ./adapters/windows-tauri.js
         run: |
+          $groups = & gsudo --integrity Medium whoami.exe /groups
+          if ($LASTEXITCODE -ne 0 -or -not ($groups -match 'S-1-16-8192')) {
+            throw 'Could not start the UI tests at medium integrity.'
+          }
           gsudo --integrity Medium pwsh -NoProfile -Command "npm run test:e2e"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
