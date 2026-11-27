@@ -5,7 +5,8 @@ Tauri desktop/mobile shell and its platform-adapted smoke and UI verification.
 ## Status
 
 **MAPPED** — first reconstructed 2026-11-27. The current shell is a tested
-placeholder; portal integration is not implemented.
+placeholder; portal integration is not implemented. A proposed authentication
+design awaits owner review and real-provider/platform validation.
 
 ## References
 
@@ -58,8 +59,8 @@ authentication are explicitly outside the present implementation.
    (`Portal.Client/src-tauri/src/lib.rs:1-6`).
 2. The checked-in page contains only the `Portal` heading and shell placeholder
    (`Portal.Client/index.html:8-12`).
-3. README explicitly states that integration and authentication are not
-   implemented (`README.md:72-76`).
+3. The developer guide states that integration and authentication are not
+   implemented (`developer.md`, Native client).
 
 ## Work Required
 
@@ -67,8 +68,8 @@ authentication are explicitly outside the present implementation.
 1. No placeholder-shell defect is asserted by this mapping.
 
 ### Should Fix
-1. Design and approve the native client's product, portal, and authentication
-   intent before implementing integration.
+1. Review the proposed native authentication design and its cross-segment API
+   boundary before specifying or implementing integration.
 
 ### Nice to Have
 1. Define release packaging and signing verification once supported release
