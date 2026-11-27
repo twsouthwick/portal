@@ -81,10 +81,10 @@ jobs:
           cp "$image" "$RUNNER_TEMP/native-artifact/"
           cd "$RUNNER_TEMP/native-artifact"
           sha256sum ./*.AppImage > SHA256SUMS
-          printf 'commit=%s\nrunner=%s\nrust=%s\nnode=%s\n' "$GITHUB_SHA" "$RUNNER_OS-${{ matrix.arch }}" "$(rustc --version)" "$(node --version)" > provenance.txt
+          printf 'commit=%s\nrun=%s\nattempt=%s\nrunner=%s\nrust=%s\nnode=%s\n' "$GITHUB_SHA" "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" "$RUNNER_OS-${{ matrix.arch }}" "$(rustc --version)" "$(node --version)" > provenance.txt
       - uses: actions/upload-artifact@v4.6.2
         with:
-          name: portal-client-linux-${{ matrix.arch }}-${{ github.sha }}
+          name: portal-client-linux-${{ matrix.arch }}-${{ github.sha }}-attempt-${{ github.run_attempt }}
           path: ${{ runner.temp }}/native-artifact/
           if-no-files-found: error
 
@@ -161,10 +161,10 @@ jobs:
           Copy-Item $exe $out
           $hash = (Get-FileHash $exe -Algorithm SHA256).Hash.ToLowerInvariant()
           "$hash  portalclient.exe" | Set-Content -Encoding ascii "$out/SHA256SUMS"
-          "commit=$env:GITHUB_SHA`nrunner=Windows-${{ matrix.arch }}`nrust=$(rustc --version)`nnode=$(node --version)" | Set-Content -Encoding ascii "$out/provenance.txt"
+          "commit=$env:GITHUB_SHA`nrun=$env:GITHUB_RUN_ID`nattempt=$env:GITHUB_RUN_ATTEMPT`nrunner=Windows-${{ matrix.arch }}`nrust=$(rustc --version)`nnode=$(node --version)" | Set-Content -Encoding ascii "$out/provenance.txt"
       - uses: actions/upload-artifact@v4.6.2
         with:
-          name: portal-client-windows-${{ matrix.arch }}-${{ github.sha }}
+          name: portal-client-windows-${{ matrix.arch }}-${{ github.sha }}-attempt-${{ github.run_attempt }}
           path: ${{ runner.temp }}/native-artifact/
           if-no-files-found: error
 
@@ -235,6 +235,6 @@ jobs:
             bash Portal.Client/scripts/android-smoke.sh smoke
       - uses: actions/upload-artifact@v4.6.2
         with:
-          name: portal-client-android-x86_64-${{ github.sha }}
+          name: portal-client-android-x86_64-${{ github.sha }}-attempt-${{ github.run_attempt }}
           path: ${{ runner.temp }}/native-artifact/
           if-no-files-found: error

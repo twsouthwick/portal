@@ -200,6 +200,9 @@ jobs:
       - name: Test
         run: dotnet test Portal.slnx --no-build --configuration Release
 
+      - name: Test prerelease policy
+        run: node --test .github/scripts/prerelease.test.mjs
+
       - name: Validate container packaging
         run: |
           version="$(dotnet msbuild Portal.Web/Portal.Web.csproj -target:MinVer -getProperty:MinVerVersion)"
