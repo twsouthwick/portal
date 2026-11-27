@@ -1,0 +1,93 @@
+schema_version: 2
+last_updated: 2026-11-27
+
+taxonomy:
+  portal:
+    - identity-and-access
+    - site-catalog
+    - portal-experience
+  client:
+    - native-client
+  operations:
+    - runtime-services
+    - kubernetes-deployment
+    - build-delivery
+
+arrows:
+  identity-and-access:
+    status: MAPPED
+    parent: null
+    sampled: 2026-11-27
+    audited: null
+    audited_sha: null
+    blocks: []
+    blockedBy: []
+    detail: identity-and-access.md
+    next: Confirm authorization policy for private and internal site content.
+    drift: No @spec annotations currently connect implementation and tests to these inferred requirements.
+  site-catalog:
+    status: MAPPED
+    parent: null
+    sampled: 2026-11-27
+    audited: null
+    audited_sha: null
+    blocks: []
+    blockedBy: []
+    detail: site-catalog.md
+    next: Confirm provider precedence and runtime refresh expectations.
+    drift: No @spec annotations currently connect implementation and tests to these inferred requirements.
+  portal-experience:
+    status: MAPPED
+    parent: null
+    sampled: 2026-11-27
+    audited: null
+    audited_sha: null
+    blocks: []
+    blockedBy: []
+    detail: portal-experience.md
+    next: Confirm intended filtering and launch behavior for private and internal sites.
+    drift: No @spec annotations currently connect implementation and tests to these inferred requirements.
+  native-client:
+    status: MAPPED
+    parent: null
+    sampled: 2026-11-27
+    audited: null
+    audited_sha: null
+    blocks: []
+    blockedBy: []
+    detail: native-client.md
+    next: Define portal integration and authentication intent before implementation.
+    drift: Current implementation is a placeholder shell; no portal integration is present.
+  runtime-services:
+    status: MAPPED
+    parent: null
+    sampled: 2026-11-27
+    audited: null
+    audited_sha: null
+    blocks: []
+    blockedBy: []
+    detail: runtime-services.md
+    next: Confirm production expectations for data-protection key persistence and health endpoints.
+    drift: No @spec annotations currently connect implementation and tests to these inferred requirements.
+  kubernetes-deployment:
+    status: MAPPED
+    parent: null
+    sampled: 2026-11-27
+    audited: null
+    audited_sha: null
+    blocks: []
+    blockedBy: []
+    detail: kubernetes-deployment.md
+    next: Confirm production scaling, probes, resource limits, and image-pull configuration.
+    drift: No @spec annotations currently connect implementation and tests to these inferred requirements.
+  build-delivery:
+    status: MAPPED
+    parent: null
+    sampled: 2026-11-27
+    audited: null
+    audited_sha: null
+    blocks: []
+    blockedBy: []
+    detail: build-delivery.md
+    next: Add spec citations to build/test entry points and reconcile documented build prerequisites.
+    drift: No @spec annotations currently connect implementation and tests to these inferred requirements.
