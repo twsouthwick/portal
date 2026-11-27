@@ -1,0 +1,9 @@
+.signed-out-layout {
+    display: grid;
+    min-height: 100vh;
+    place-items: center;
+    padding: 2rem;
+    background:
+        linear-gradient(135deg, color-mix(in srgb, var(--accent-fill-rest) 12%, transparent), transparent 45%),
+        var(--neutral-layer-1);
+}

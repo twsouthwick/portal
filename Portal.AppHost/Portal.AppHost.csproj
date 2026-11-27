@@ -9,6 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Aspire.Hosting.Keycloak" Version="13.5.3-preview.1.26425.3" />
     <ProjectReference Include="..\Portal.Web\Portal.Web.csproj" />
   </ItemGroup>
 

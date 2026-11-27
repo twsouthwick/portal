@@ -1,0 +1,16 @@
+@page "/auth/signed-out"
+@layout Layout.SignedOutLayout
+@using Microsoft.AspNetCore.Authorization
+@attribute [AllowAnonymous]
+
+<PageTitle>Signed out</PageTitle>
+
+<section class="signed-out-content">
+    <i class="bi bi-check-circle" aria-hidden="true"></i>
+    <h1>Signed out</h1>
+    <p>Your Portal session has ended. Your identity provider session is still active.</p>
+    <a href="/" class="sign-in-link">
+        <i class="bi bi-box-arrow-in-right" aria-hidden="true"></i>
+        <span>Sign in again</span>
+    </a>
+</section>

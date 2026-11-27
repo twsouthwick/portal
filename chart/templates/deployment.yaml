@@ -22,5 +22,16 @@ spec:
               value: kubernetes
             - name: PORTAL_KUBERNETES_NAMESPACE
               value: {{ .Release.Namespace }}
+            - name: Oidc__Authority
+              value: {{ required "oidc.authority is required" .Values.oidc.authority | quote }}
+            - name: Oidc__ClientId
+              value: {{ required "oidc.clientId is required" .Values.oidc.clientId | quote }}
+            - name: Oidc__ClientSecret
+              valueFrom:
+                secretKeyRef:
+                  name: {{ required "oidc.existingSecret is required" .Values.oidc.existingSecret | quote }}
+                  key: {{ required "oidc.clientSecretKey is required" .Values.oidc.clientSecretKey | quote }}
+            - name: Oidc__RequireHttpsMetadata
+              value: {{ .Values.oidc.requireHttpsMetadata | quote }}
           ports:
             - containerPort: 8081

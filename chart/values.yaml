@@ -7,6 +7,13 @@ service:
   type: ClusterIP
   port: 8081
 
+oidc:
+  authority: ""
+  clientId: portal-web
+  existingSecret: ""
+  clientSecretKey: client-secret
+  requireHttpsMetadata: true
+
 exampleResources:
   enabled: false
 

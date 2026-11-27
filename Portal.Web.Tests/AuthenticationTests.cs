@@ -1,0 +1,83 @@
+using System.Net;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authentication.OpenIdConnect;
+using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.IdentityModel.Protocols;
+using Microsoft.IdentityModel.Protocols.OpenIdConnect;
+using Xunit;
+
+namespace Portal.Web.Tests;
+
+public sealed class AuthenticationTests : IClassFixture<PortalWebApplicationFactory>
+{
+    private readonly PortalWebApplicationFactory _factory;
+
+    public AuthenticationTests(PortalWebApplicationFactory factory)
+    {
+        _factory = factory;
+    }
+
+    [Fact]
+    public async Task Home_ChallengesWithOidc()
+    {
+        using var client = _factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false
+        });
+
+        var response = await client.GetAsync("/");
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.StartsWith("https://identity.test/authorize", response.Headers.Location?.AbsoluteUri);
+    }
+
+    [Fact]
+    public async Task SignedOut_IsAnonymous()
+    {
+        using var client = _factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false
+        });
+
+        var response = await client.GetAsync("/auth/signed-out");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("Signed out", await response.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public void GroupsClaim_IsUsedForRoles()
+    {
+        var identity = new ClaimsIdentity(
+            [new Claim("groups", "media")],
+            authenticationType: "oidc",
+            nameType: "name",
+            roleType: "groups");
+
+        Assert.True(new ClaimsPrincipal(identity).IsInRole("media"));
+    }
+}
+
+public sealed class PortalWebApplicationFactory : WebApplicationFactory<Program>
+{
+    protected override void ConfigureWebHost(Microsoft.AspNetCore.Hosting.IWebHostBuilder builder)
+    {
+        builder.UseSetting("Oidc:Authority", "https://identity.test");
+        builder.UseSetting("Oidc:ClientId", "portal-web");
+        builder.UseSetting("Oidc:ClientSecret", "test-secret");
+        builder.UseSetting("PORTAL_PROVIDER", "file");
+        builder.ConfigureServices(services =>
+        {
+            services.PostConfigure<OpenIdConnectOptions>(OpenIdConnectDefaults.AuthenticationScheme, options =>
+            {
+                options.ConfigurationManager = new StaticConfigurationManager<OpenIdConnectConfiguration>(new OpenIdConnectConfiguration
+                {
+                    Issuer = "https://identity.test",
+                    AuthorizationEndpoint = "https://identity.test/authorize",
+                    TokenEndpoint = "https://identity.test/token"
+                });
+            });
+        });
+    }
+}

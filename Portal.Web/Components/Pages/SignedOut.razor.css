@@ -1,0 +1,43 @@
+.signed-out-content {
+    width: min(100%, 32rem);
+    text-align: center;
+}
+
+.signed-out-content > .bi-check-circle {
+    color: var(--accent-foreground-rest);
+    font-size: 3rem;
+}
+
+.signed-out-content h1 {
+    margin: 1rem 0 0.5rem;
+    font-size: 2rem;
+    letter-spacing: 0;
+}
+
+.signed-out-content p {
+    margin: 0 auto 1.5rem;
+    color: var(--neutral-foreground-hint);
+    line-height: 1.6;
+}
+
+.sign-in-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 2.5rem;
+    padding: 0.5rem 1rem;
+    color: var(--foreground-on-accent-rest);
+    background: var(--accent-fill-rest);
+    border-radius: 4px;
+    text-decoration: none;
+}
+
+.sign-in-link:hover {
+    background: var(--accent-fill-hover);
+}
+
+.sign-in-link:focus-visible {
+    outline: 2px solid var(--neutral-foreground-rest);
+    outline-offset: 3px;
+}

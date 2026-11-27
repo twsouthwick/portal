@@ -5,7 +5,7 @@ A Blazor-based intranet portal system built with .NET 10 and Aspire that allows 
 ## Features
 
 - **Role-Based Access Control**: Restrict subsites to specific user roles
-- **Trusted Header Authentication**: Integrate with reverse proxies for SSO
+- **OpenID Connect Authentication**: Integrate directly with an OIDC identity provider
 - **Static Content Serving**: Each subsite can serve its own static files
 - **Markdown Documentation**: Include usage instructions in Markdown format
 - **App Protocol Launching**: Launch native apps with fallback to app stores
@@ -119,21 +119,35 @@ await module.InvokeVoidAsync("openUrlInNewTab", "https://example.com");
 
 ## Authentication
 
-The portal uses **Trusted Header Authentication**, which integrates with reverse proxies that handle authentication and pass user information via HTTP headers.
+The portal uses OpenID Connect authorization code flow with PKCE. Anonymous requests to the application are challenged immediately. The resulting identity is stored in an HTTP-only application cookie.
 
-### How It Works
+Configure a confidential OIDC client with this redirect URI:
 
-1. A reverse proxy authenticates users (SSO, LDAP, OAuth, etc.)
-2. The proxy forwards authenticated requests with user info in headers
-3. The portal reads the headers and creates a user session
-4. Access is granted based on the user's roles
+```text
+https://<portal-host>/signin-oidc
+```
 
-### Configuration
+The ID token must contain a `groups` claim whose values match the roles in site manifests. The `name` claim is used as the display name.
 
-The portal reads two HTTP headers:
+Configure the application with:
 
-- `REMOTE_USER`: The authenticated username (required)
-- `REMOTE_ROLES`: Comma-separated list of user roles (optional)
+- `Oidc__Authority`: OIDC authority, including the realm or tenant path
+- `Oidc__ClientId`: confidential client identifier
+- `Oidc__ClientSecret`: confidential client secret
+- `Oidc__RequireHttpsMetadata`: defaults to `true`; disable only for local development
+
+Signing out clears only the Portal application cookie and leaves the identity-provider session active. The signed-out page provides a link to start a new local session.
+
+### Local Development
+
+`aspire run` starts Keycloak at `http://localhost:8080` and imports the development realm. Use either development account:
+
+| Username | Password | Groups |
+| --- | --- | --- |
+| `admin` | `admin` | `admin`, `media` |
+| `media` | `media` | `media` |
+
+The local credentials and client secret are development-only.
 
 ## Configuration
 

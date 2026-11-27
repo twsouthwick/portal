@@ -28,6 +28,6 @@
 - Follow existing Razor component and colocated `.razor.css` patterns; use the configured Fluent UI components and Bootstrap Icons rather than introducing another UI system.
 - Keep nullable reference types enabled and preserve async APIs across service and browser-interop boundaries.
 - Treat implementation and configuration as authoritative when documentation differs. Current frontend sources are under `Portal.Web/ts`, not the `Portal.Web/TypeScript` path shown in parts of the root README.
-- Trusted-header defaults in `TrustedHeaderAuthExtensions.cs` are `Remote-User`, `Remote-Groups`, and `Remote-Name`. Development identities are injected only when both `TEST_USER` and `TEST_ROLES` are set.
+- OIDC configuration uses the `Oidc` section. The `groups` claim supplies portal roles, and Aspire imports the local development realm from `Portal.AppHost/Realms`.
 - Site visibility and static-content authorization are both role-sensitive; when changing manifest or provider behavior, verify both the rendered site list and mapped content endpoints.
 - Keep changes scoped to the owning project and do not edit generated `artifacts`, `obj`, `node_modules`, or `wwwroot/dist` content.

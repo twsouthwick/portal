@@ -2,7 +2,13 @@ using Portal.Web.Components;
 using Portal.Web.Services;
 using Microsoft.FluentUI.AspNetCore.Components;
 using Portal.Web;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.OpenIdConnect;
+using Microsoft.AspNetCore.Antiforgery;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,8 +27,50 @@ builder.Services.AddRazorComponents()
 
 builder.Services.AddFluentUIComponents();
 
-builder.Services.AddAuthentication()
-    .AddTrustedHeaderAuth(options => { });
+var oidc = builder.Configuration.GetRequiredSection("Oidc");
+var authority = oidc["Authority"] ?? throw new InvalidOperationException("Oidc:Authority is required.");
+var clientId = oidc["ClientId"] ?? throw new InvalidOperationException("Oidc:ClientId is required.");
+var clientSecret = oidc["ClientSecret"] ?? throw new InvalidOperationException("Oidc:ClientSecret is required.");
+
+builder.Services
+    .AddAuthentication(options =>
+    {
+        options.DefaultAuthenticateScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+        options.DefaultSignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme = OpenIdConnectDefaults.AuthenticationScheme;
+    })
+    .AddCookie(options =>
+    {
+        options.Cookie.Name = "portal.session";
+        options.Cookie.HttpOnly = true;
+        options.Cookie.SameSite = SameSiteMode.Lax;
+        options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+    })
+    .AddOpenIdConnect(options =>
+    {
+        options.Authority = authority;
+        options.ClientId = clientId;
+        options.ClientSecret = clientSecret;
+        options.RequireHttpsMetadata = oidc.GetValue("RequireHttpsMetadata", true);
+        options.ResponseType = "code";
+        options.UsePkce = true;
+        options.MapInboundClaims = false;
+        options.SaveTokens = false;
+        options.Scope.Add("groups");
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            NameClaimType = "name",
+            RoleClaimType = "groups"
+        };
+    });
+
+builder.Services.AddAuthorization(options =>
+{
+    options.FallbackPolicy = new AuthorizationPolicyBuilder()
+        .RequireAuthenticatedUser()
+        .Build();
+});
+builder.Services.AddCascadingAuthenticationState();
 
 builder.Services.AddOutputCache();
 
@@ -49,8 +97,8 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
-app.UseHttpsRedirection();
 app.UseForwardedHeaders();
+app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 
@@ -58,13 +106,25 @@ app.UseAntiforgery();
 
 app.UseOutputCache();
 
-app.MapStaticAssets();
+app.MapStaticAssets()
+    .AllowAnonymous();
 
 app.MapRazorComponents<App>()
-    .AddInteractiveServerRenderMode();
+    .AddInteractiveServerRenderMode()
+    .RequireAuthorization();
+
+app.MapPost("/auth/logout", async (HttpContext context, IAntiforgery antiforgery) =>
+{
+    await antiforgery.ValidateRequestAsync(context);
+    await context.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+    return Results.LocalRedirect("/auth/signed-out");
+})
+    .RequireAuthorization();
 
 app.MapSiteContentEndpoints();
 
 app.MapDefaultEndpoints();
 
 app.Run();
+
+public partial class Program;
