@@ -24,7 +24,7 @@ fi
 
 adb install -r "${apks[0]}"
 adb shell am force-stop "$package"
-adb logcat -c
+adb logcat -b all -c
 launch=$(adb shell am start -W -n "$activity")
 echo "$launch"
 grep -q 'Status: ok' <<< "$launch"
@@ -51,7 +51,8 @@ for ((second = 0; second < 10; second++)); do
   adb shell dumpsys activity activities | grep -E 'mResumedActivity:|topResumedActivity=' | grep -Fq "$activity"
 done
 
-if adb logcat -b crash -d | grep -F "$package"; then
+crashes=$(adb logcat -b crash -d)
+if grep -F "$package" <<< "$crashes"; then
   echo "$package crashed during the smoke test" >&2
   exit 1
 fi

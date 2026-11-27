@@ -90,7 +90,7 @@ npm run tauri -- build                   # release executable and bundles
 | --- | --- | --- |
 | Linux x86_64 | GCC/build-essential, pkg-config, GTK 3 and WebKitGTK 4.1 development libraries, OpenSSL, Ayatana AppIndicator and librsvg development libraries, and patchelf | Ubuntu 24.04 x86_64: debug build without bundling succeeded; window opened under Xvfb. Release bundles and other architectures unverified. |
 | Windows | Rust MSVC toolchain, Visual Studio C++ Build Tools with Windows SDK, and Microsoft Edge WebView2 runtime | Unverified; no Windows build or installer tested. |
-| Android | JDK 17, Android SDK (platform, build-tools, platform-tools), Android NDK, and Rust Android targets | CI builds a debug APK for x86_64 and checks its activity on an API 35 x86_64 emulator. ARM, x86, physical devices, releases and signing are not covered. |
+| Android | JDK 17, Android SDK (platform, build-tools, platform-tools), Android NDK, and Rust Android targets | CI is configured to build a debug APK for x86_64 and check its activity on an API 35 x86_64 emulator; see the workflow result for verification. ARM, x86, physical devices, releases and signing are not covered. |
 
 For Ubuntu/Debian Linux the native packages can be installed with:
 
@@ -99,7 +99,7 @@ sudo apt-get install build-essential pkg-config libwebkit2gtk-4.1-dev \
   libssl-dev libayatana-appindicator3-dev librsvg2-dev patchelf
 ```
 
-The separate Android workflow builds and smoke-tests the placeholder shell on
+The separate Android workflow is configured to build and smoke-test the placeholder shell on
 Ubuntu 24.04 with JDK 17, SDK platform 37.0, build-tools 37.0.0, NDK
 27.3.13750724 and the `x86_64-linux-android` Rust target. It installs the APK
 on an API 35 Google APIs x86_64 emulator, launches
