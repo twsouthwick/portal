@@ -6,7 +6,10 @@ content.
 ## Status
 
 **MAPPED** — first reconstructed 2026-11-27. Current behavior is represented
-by seven EARS requirements; owner review and coherence audit remain.
+by seven EARS requirements; owner review and coherence audit remain. A
+planned client manifest endpoint and OpenAPI documentation (issue #7) are
+drafted as AUTH-008 to AUTH-019, using the issue #6 contract merged in PR #54.
+Authelia public-client validation and requirements review remain.
 
 ## References
 
@@ -17,7 +20,7 @@ by seven EARS requirements; owner review and coherence audit remain.
 - `docs/intent/identity-and-access/identity-and-access-design.md`
 
 ### EARS
-- `docs/intent/identity-and-access/identity-and-access-specs.md` — 7 specs
+- `docs/intent/identity-and-access/identity-and-access-specs.md` — 7 observed, 11 planned, 1 non-want
 
 ### Tests
 - `Portal.Web.Tests/AuthenticationTests.cs`
@@ -46,6 +49,8 @@ endpoint in `SiteDetailsExtensions.cs`; role-aware UI filtering in
 |---|---|---:|---:|---:|
 | Authentication, role policy, logout, content access | AUTH-001, AUTH-002, AUTH-003, AUTH-004, AUTH-005, AUTH-006 | 6 | 0 | 0 known implementation gaps |
 | Local identity token claims | AUTH-007 | 1 | 0 | Provider configuration and issuance lack automated integration coverage |
+| Client manifest endpoint (planned, #7) | AUTH-008, AUTH-009, AUTH-010, AUTH-011, AUTH-012, AUTH-013, AUTH-014, AUTH-015, AUTH-016 | 0 | 0 | 9 planned; Authelia validation and requirements review pending |
+| Development OpenAPI (planned, #7) | AUTH-017, AUTH-018, AUTH-019 | 0 | 0 | 2 planned; 1 explicit non-want |
 
 **Traceability:** Tests cite AUTH-001 and AUTH-002; Authelia configuration
 cites AUTH-007. The other existing behavior lacks citations. Provider issuance
@@ -69,7 +74,10 @@ endpoint is unresolved and is not counted as a passing requirement.
 
 ### Should Fix
 1. Resolve the open authorization policy for `IsPrivate` and `IsInternal`.
-2. Complete and verify `@spec` citations when the remaining behaviors change.
+2. After Authelia public-client validation, review AUTH-008 to AUTH-019, then
+   add failing tests and implement the manifest endpoint and development
+   OpenAPI using the issue #6 contract.
+3. Complete and verify `@spec` citations when the remaining behaviors change.
 
 ### Nice to Have
 1. Add direct tests for antiforgery, path traversal, range requests, and

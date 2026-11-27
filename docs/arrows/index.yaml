@@ -23,7 +23,7 @@ arrows:
     blocks: []
     blockedBy: []
     detail: identity-and-access.md
-    next: Confirm authorization policy for private and internal site content.
+    next: Review planned manifest and OpenAPI specs AUTH-008..019 after Authelia public-client validation; confirm content-endpoint policy for private/internal sites.
     drift: Partial @spec citations; local Authelia issuance lacks automated integration coverage.
   site-catalog:
     status: MAPPED
@@ -56,7 +56,7 @@ arrows:
     blocks: []
     blockedBy: []
     detail: native-client.md
-    next: Review the proposed native authentication design and cross-segment API boundary before specifying or implementing integration.
+    next: Validate the owner-selected public-client authentication against Authelia and target platforms before integration.
     drift: Current implementation is a placeholder shell; native authentication and Authelia compatibility are unverified.
   runtime-services:
     status: MAPPED
