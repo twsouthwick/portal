@@ -23,8 +23,8 @@ arrows:
     blocks: []
     blockedBy: []
     detail: identity-and-access.md
-    next: Review planned manifest and OpenAPI specs AUTH-008..019 after Authelia public-client validation; confirm content-endpoint policy for private/internal sites.
-    drift: Partial @spec citations; local Authelia issuance lacks automated integration coverage.
+    next: Validate Authelia public-client access-token claims and native redirects; confirm content-endpoint policy for private/internal sites.
+    drift: Local Authelia access-token issuance and native-client interoperability lack automated integration coverage.
   site-catalog:
     status: MAPPED
     parent: null
@@ -34,8 +34,8 @@ arrows:
     blocks: []
     blockedBy: []
     detail: site-catalog.md
-    next: Serve the client manifest endpoint and Development-only OpenAPI document (SITE-017, SITE-019, issue #7); confirm provider precedence and runtime refresh expectations.
-    drift: Client manifest specs carry @spec citations; SITE-001–009 implementation and tests have none.
+    next: Confirm provider precedence and runtime refresh expectations.
+    drift: Client manifest endpoint and OpenAPI specs cite implementation/tests; SITE-001–009 implementation and tests have none.
   portal-experience:
     status: MAPPED
     parent: null

@@ -18,6 +18,7 @@ namespace Portal.Web.Tests;
 
 public sealed class SiteContentTests
 {
+    // @spec AUTH-004 AUTH-005 AUTH-016
     [Fact]
     public async Task Content_UsesCurrentSiteRolesAndResources()
     {

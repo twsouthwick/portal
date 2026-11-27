@@ -31,19 +31,22 @@ proposal, not approved intent or evidence of working integration.
 **[owner-selected 2026-11-27; not yet validated]** A separate public OIDC
 client using the system browser and authorization-code flow with PKCE S256 is
 selected over a Portal-mediated session. The first Portal API to use it is the
-planned client manifest endpoint (issue #7), designed in the identity-and-access
-LLD. A native application cannot protect the confidential
+client manifest endpoint (`GET /api/manifest`, issue #7), designed in the
+identity-and-access LLD. The endpoint accepts signed JWT access tokens with
+the configured `Oidc:ApiAudience` (default `portal-api`) and maps trusted
+`groups` claims to roles. A native application cannot protect the confidential
 `portal-web` client secret. Portal.Web uses its own `/signin-oidc` callback
-and `portal.session` cookie, saves no OIDC tokens, and has no native
-bearer-token API authentication. The system browser, Tauri WebView, and other
-apps cannot be assumed to share cookies. The native client would not collect
-passwords or store credentials in plaintext.
+and `portal.session` cookie and saves no OIDC tokens. The manifest API has a
+separate bearer-token policy; the native client's sign-in and API integration
+are not implemented. The system browser, Tauri WebView, and other apps cannot
+be assumed to share cookies. The native client would not collect passwords or
+store credentials in plaintext.
 
 This choice depends on proving that the actual Authelia deployment supports a
 separate public client, the platform redirects, and suitable access-token
-audience and group claims. A future Portal API would need to validate issuer,
-signature, expiry, audience, and token type, obtain trusted groups, and apply
-the relevant role authorization. An ID token is not an API access token.
+audience and group claims. Portal.Web validates the issuer, signature,
+expiry, and API audience, and applies the relevant role authorization. An ID
+token is not an API access token and has a different audience.
 Requests would use a configured trusted HTTPS issuer and API endpoint, not
 destinations supplied by a callback. If these prerequisites cannot be met,
 reconsider a Portal-mediated session/API flow with the owner rather than

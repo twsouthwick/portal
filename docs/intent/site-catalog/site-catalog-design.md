@@ -94,8 +94,7 @@ for the service plugin contract.
 
 ### Error responses
 
-The manifest endpoint itself is not part of this contract's implementation.
-When served, failures use RFC 9457 problem details: an unauthenticated request
+The endpoint returns RFC 9457 problem details: an unauthenticated request
 receives 401, and a provider failure receives 503 rather than a partial
 manifest. An authenticated user with no authorized sites receives a successful
 manifest with an empty `sites` list.
@@ -111,10 +110,10 @@ keeps the wire values independent of the internal `AppStore` model.
 
 The manifest endpoint publishes this schema through ASP.NET Core's built-in
 OpenAPI document (`AddOpenApi`, `MapOpenApi`), declaring the manifest response
-and its 401 and 503 problem-details responses. The document is served only in
-the Development environment, for client type generation; no Swagger or Scalar
-UI is served. This design remains the statement of intent; the generated
-document is its machine-readable form.
+and its 401 and 503 problem-details responses, plus its JWT bearer security
+scheme. The document is served only in the Development environment, for
+client type generation; no Swagger or Scalar UI is served. The generated
+document is the machine-readable form of this contract.
 
 ## Decisions & Alternatives
 

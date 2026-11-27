@@ -143,7 +143,7 @@ satisfaction.
 
 - Should `IsPrivate` and `IsInternal` affect direct content endpoint access, or
   are they intentionally presentation-only flags?
-  For the planned client manifest, the owner decided (2026-11-27) that they
+  For the client manifest, the owner decided (2026-11-27) that they
   are client metadata and the server filters by roles only; see the
   identity-and-access LLD.
 - Is file-over-Kubernetes precedence a product invariant?

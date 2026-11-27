@@ -70,8 +70,8 @@ authentication are explicitly outside the present implementation.
 
 ### Should Fix
 1. Validate the selected public-client design against Authelia and the
-   target platforms; the planned manifest API is specified in identity-and-access
-   (AUTH-008 to AUTH-016).
+   target platforms; the manifest API is implemented in identity-and-access
+   (AUTH-008 to AUTH-016), but provider interoperability remains unvalidated.
 
 ### Nice to Have
 1. Define release packaging and signing verification once supported release
