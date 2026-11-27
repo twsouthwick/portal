@@ -67,6 +67,8 @@ Pull requests to `main` and pushes to `main` or `v*` tags build and test the sol
 
 Publishing uses the workflow's `GITHUB_TOKEN` with package-write permission. Existing GHCR packages must grant this repository's Actions workflow access. New packages are private by default; pulling them requires registry credentials unless their visibility is changed.
 
+The container uses the .NET 11 Ubuntu Resolute chiseled-extra ASP.NET image from MCR. The build job validates container packaging into a temporary archive, including the version and `latest` tags, without pushing. This requires access to MCR and its blob storage. The actual GHCR image and Helm chart pushes run only on successful branch or tag pushes, so verify both publishing steps after merging; pull requests cannot validate GHCR package permissions or the pushes themselves.
+
 ### Native client scaffold
 
 `Portal.Client` is a standalone Tauri v2 shell. It displays a placeholder and
