@@ -67,7 +67,17 @@ jobs:
 
       - name: Test client webview
         working-directory: Portal.Client
+        env:
+          PORTAL_CLIENT_TEST_ADAPTER: ./adapters/windows-tauri.js
         run: npm run test:e2e
+
+      - name: Upload UI smoke-test evidence
+        if: always()
+        uses: actions/upload-artifact@v4.6.2
+        with:
+          name: portal-client-windows-${{ matrix.arch }}-ui-smoke
+          path: Portal.Client/artifacts/
+          if-no-files-found: error
 
   linux-client:
     strategy:
