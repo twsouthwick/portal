@@ -63,7 +63,7 @@ npm run clean
 
 ### GitHub Actions
 
-Pull requests to `main` and pushes to `main` or `v*` tags build and test the solution, lint the Helm chart, and build and smoke-test the Linux native client. Successful pushes also publish the portal image to `ghcr.io/twsouthwick/portal` and the Helm chart to `oci://ghcr.io/twsouthwick/charts/portal`. The image receives the MinVer version and `latest` tags; the chart uses the same MinVer version. Both branch and tag pushes update `latest`.
+Pull requests to `main` and pushes to `main` or `v*` tags build and test the solution, lint the Helm chart, and build and smoke-test the Linux native client. The Linux job also uploads a debug AppImage as a workflow artifact. Successful pushes also publish the portal image to `ghcr.io/twsouthwick/portal` and the Helm chart to `oci://ghcr.io/twsouthwick/charts/portal`. The image receives the MinVer version and `latest` tags; the chart uses the same MinVer version. Both branch and tag pushes update `latest`.
 
 Publishing uses the workflow's `GITHUB_TOKEN` with package-write permission. Existing GHCR packages must grant this repository's Actions workflow access. New packages are private by default; pulling them requires registry credentials unless their visibility is changed.
 
@@ -88,7 +88,7 @@ npm run tauri -- build                   # release executable and bundles
 
 | Target | Required toolchain | Verification in this scaffold |
 | --- | --- | --- |
-| Linux x86_64 | GCC/build-essential, pkg-config, GTK 3 and WebKitGTK 4.1 development libraries, OpenSSL, Ayatana AppIndicator and librsvg development libraries, and patchelf | CI builds the debug executable without bundling on Ubuntu 24.04 x86_64 and checks its window under Xvfb. Release bundles and other architectures are unverified. |
+| Linux x86_64 | GCC/build-essential, pkg-config, GTK 3 and WebKitGTK 4.1 development libraries, OpenSSL, Ayatana AppIndicator and librsvg development libraries, and patchelf | CI builds a debug executable and AppImage on Ubuntu 24.04 x86_64 and checks the executable's window under Xvfb. AppImage execution, release bundles, and other architectures are unverified. |
 | Windows | Rust MSVC toolchain, Visual Studio C++ Build Tools with Windows SDK, and Microsoft Edge WebView2 runtime | Unverified; no Windows build or installer tested. |
 | Android | A supported desktop host's prerequisites, JDK 17, Android Studio/SDK (platform, build-tools, platform-tools), Android NDK, and Rust Android targets | Unverified; no Android build, emulator, or device tested. |
 
@@ -106,7 +106,7 @@ To reproduce the CI Linux smoke test on x86_64, from the repository root:
 ```bash
 cd Portal.Client
 npm ci
-npm run tauri -- build --debug --no-bundle
+npm run tauri -- build --debug --bundles appimage
 cd ..
 xvfb-run -a bash Portal.Client/smoke-linux.sh
 ```
@@ -114,9 +114,11 @@ xvfb-run -a bash Portal.Client/smoke-linux.sh
 The smoke check waits up to 30 seconds for a visible `Portal` window belonging
 to the debug executable, then verifies that both remain present for five
 seconds. It cleans up the process and prints client output and the X11 window
-tree on failure. This tests the placeholder shell's startup only, not its
-rendered content, portal connectivity, authentication, release bundles, or
-installers. Client build output is gitignored.
+tree on failure. The AppImage is created in
+`Portal.Client/src-tauri/target/debug/bundle/appimage/` and uploaded by CI, but
+is not run by the smoke check. This tests the placeholder shell's startup only,
+not its rendered content, portal connectivity, authentication, release
+bundles, or installers. Client build output is gitignored.
 
 For Android, configure `JAVA_HOME`, `ANDROID_HOME`, and `NDK_HOME` for the
 installed JDK, SDK, and NDK, then install the Rust targets for the ABIs you

@@ -34,9 +34,16 @@ jobs:
       - name: Install client dependencies
         run: npm ci --prefix Portal.Client
 
-      - name: Build debug client
+      - name: Build debug client and AppImage
         working-directory: Portal.Client
-        run: npm run tauri -- build --debug --no-bundle
+        run: npm run tauri -- build --debug --bundles appimage
+
+      - name: Upload debug AppImage
+        uses: actions/upload-artifact@v4.6.2
+        with:
+          name: portal-client-linux-x86_64-debug-appimage
+          path: Portal.Client/src-tauri/target/debug/bundle/appimage/*.AppImage
+          if-no-files-found: error
 
       - name: Smoke test client window
         run: xvfb-run -a bash Portal.Client/smoke-linux.sh
