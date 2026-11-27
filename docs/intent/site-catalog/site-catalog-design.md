@@ -43,7 +43,7 @@ Authentication and role policy are defined by the Identity and Access segment.
 | Decision | Current approach | Alternatives considered | Rationale |
 |---|---|---|---|
 | Common metadata shape | Map all providers to `SiteInfo`. **[inferred]** | Provider-specific UI models. | UI consumes one model (`Portal.Web/Services/SiteInfo.cs`). |
-| Duplicate resolution | Registration order, first match wins. **[inferred]** | Merge or reject duplicate IDs. | Implemented by `CompositePortalProvider`; files are registered first (`Program.cs:89`). Desired precedence is unconfirmed. |
+| Duplicate resolution | Registration order, first match wins. **[inferred]** | Merge or reject duplicate IDs. | Implemented by `CompositePortalProvider`; files are registered first (`Portal.Web/Program.cs:89`). Desired precedence is unconfirmed. |
 | File refresh | File manifest parsing is cached by the provider instance. **[inferred]** | Reload each request or watch for changes. | Current implementation caches its load task; README also directs operators to restart after file changes. |
 | Kubernetes reads | Query resources through the Kubernetes API and fetch referenced content. **[inferred]** | Watch/cache or a separate synchronization process. | This is the current provider contract; latency, caching, and refresh expectations are not specified. |
 

@@ -26,10 +26,11 @@ provides site/browser state to descendants. `SiteCard` disables internal sites
 when a remote-IP state is present. These are UI behaviors, not authorization
 boundaries.
 
-Launch behavior attempts configured app protocols in order and falls back to
-the website/store links when launching fails. Click frequency is stored in
-browser local storage. Browser detection and app launch are implemented in
-`Portal.Web/ts/` and called through `IClientBrowserSession`.
+Clicking the site card attempts configured app protocols in order and opens the
+site URL if those attempts fail. The separate app-launch button attempts its
+configured protocol and opens the corresponding store URL if it fails. Click
+frequency is stored in browser local storage. Browser detection and app launch
+are implemented in `Portal.Web/ts/` and called through `IClientBrowserSession`.
 
 ## Decisions & Alternatives
 

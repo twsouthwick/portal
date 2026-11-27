@@ -89,5 +89,5 @@ arrows:
     blocks: []
     blockedBy: []
     detail: build-delivery.md
-    next: Resolve current CI adapter-path discrepancy and clarify documented build prerequisites.
-    drift: Some client test-adapter paths in automation appear inconsistent with the tracked tests/adapters directory.
+    next: Add spec citations to build/test entry points and reconcile documented build prerequisites.
+    drift: No @spec annotations currently connect implementation and tests to these inferred requirements.

@@ -43,18 +43,15 @@ version and `latest` tags; chart packaging uses the computed version.
 
 ### Deferred
 
-1. The configured CI adapter values appear to use `./adapters/...` while
-   tracked adapters are in `Portal.Client/tests/adapters/`; verify the actual
-   workflow resolution before treating the test jobs as passing coverage.
-2. README's local Docker example maps port 8080 while the app and chart use
+1. README's local Docker example maps port 8080 while the app and chart use
    8081.
-3. README refers to `Portal.Web/TypeScript/`, while current sources are
+2. README refers to `Portal.Web/TypeScript/`, while current sources are
    `Portal.Web/ts/`.
-4. Root `AGENTS.md` says .NET 10 and no test projects, contrary to `global.json`,
+3. Root `AGENTS.md` says .NET 10 and no test projects, contrary to `global.json`,
    project files, and `Portal.Web.Tests/`.
-5. Android CI covers x86_64/API 35; physical devices, other ABIs, and signed
+4. Android CI covers x86_64/API 35; physical devices, other ABIs, and signed
    release packages are not verified.
-6. Successful GHCR publication and package permissions are not exercised by
+5. Successful GHCR publication and package permissions are not exercised by
    pull-request validation.
 
 ## References

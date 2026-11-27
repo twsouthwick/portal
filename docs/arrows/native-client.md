@@ -69,8 +69,6 @@ authentication are explicitly outside the present implementation.
 ### Should Fix
 1. Design and approve the native client's product, portal, and authentication
    intent before implementing integration.
-2. Investigate the adapter-path discrepancy documented in the build-delivery
-   segment.
 
 ### Nice to Have
 1. Define release packaging and signing verification once supported release

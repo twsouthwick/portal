@@ -5,7 +5,7 @@ launch behavior in the web portal.
 
 ## Status
 
-**MAPPED** — first reconstructed 2026-11-27. Seven EARS requirements describe
+**MAPPED** — first reconstructed 2026-11-27. Eight EARS requirements describe
 current UI behavior; several have no direct component or browser tests.
 
 ## References
@@ -17,7 +17,7 @@ current UI behavior; several have no direct component or browser tests.
 - `docs/intent/portal-experience/portal-experience-design.md`
 
 ### EARS
-- `docs/intent/portal-experience/portal-experience-specs.md` — 7 specs
+- `docs/intent/portal-experience/portal-experience-specs.md` — 8 specs
 
 ### Tests
 - No direct component or browser automation tests were found for the web UI.
@@ -43,7 +43,7 @@ abstraction; TypeScript launch, detection, and storage modules.
 
 | Category | Spec IDs | Implemented | Deferred | Gaps |
 |---|---|---:|---:|---:|
-| Discovery, browser filtering, launch, usage | UX-001, UX-002, UX-003, UX-004, UX-005, UX-006, UX-007 | 7 | 0 | 0 known implementation gaps |
+| Discovery, browser filtering, launch, usage | UX-001, UX-002, UX-003, UX-004, UX-005, UX-006, UX-007, UX-008 | 8 | 0 | 0 known implementation gaps |
 
 **Traceability:** UI code and tests have no `@spec` annotations. The inspected
 test projects contain no direct web component/browser tests; the status is

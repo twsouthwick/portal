@@ -55,7 +55,7 @@ behavior is claimed as tested by chart lint.
 2. RBAC is namespaced and allows `list` on PortalSites and `get` on ConfigMaps
    (`chart/templates/rbac.yaml:1-26`).
 3. The CRD constrains site metadata and app/content references
-   (`chart/templates/crds/portalsites.portal.swick.app.yaml:1-89`).
+   (`chart/templates/crds/portalsites.portal.swick.app.yaml:1-86`).
 
 ## Work Required
 

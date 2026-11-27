@@ -56,7 +56,7 @@ annotations link tests or implementation to these requirements.
 1. Aspire starts Keycloak and `media`/`admin` instances of the web project
    (`Portal.AppHost/AppHost.cs:3-32`).
 2. Shared defaults configure telemetry, discovery, resilience, and
-   health-check behavior (`Portal.ServiceDefaults/Extensions.cs:20-47,109-133`).
+   health-check behavior (`Portal.ServiceDefaults/Extensions.cs:20-47,109-129`).
 3. Data-protection keys currently use a temporary-directory path
    (`Portal.Web/Program.cs:82-87`); restart and multi-replica intent is
    unresolved.

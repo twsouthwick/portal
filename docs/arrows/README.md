@@ -58,8 +58,6 @@ path-concatenated spec IDs and every citation atomically.
   are in `Portal.Web/ts/`.
 - The README's Docker example maps port 8080, while the app/container and Helm
   chart use port 8081.
-- Client CI and Android smoke configuration appear to select adapters under
-  `./adapters/`, while tracked adapters are under `tests/adapters/`.
 - The broader product intent behind the label “Digital Fortress” is not
   represented in the inspected repository; no implementation is claimed.
 
