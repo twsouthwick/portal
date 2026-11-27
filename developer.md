@@ -271,6 +271,27 @@ to MCR and its blob storage. Actual GHCR image and Helm chart pushes run only
 on successful branch or tag pushes, so verify both publishing steps after
 merging; pull requests cannot validate GHCR package permissions or pushes.
 
+The independent `Native client release builds` workflow also runs on these
+events and on manual dispatch. It is configured to build release AppImages on
+native Linux x86_64 and ARM64 runners, `portalclient.exe` executables on native
+Windows x86_64 and ARM64 runners, and an x86_64 Android APK.
+Each job checks the output architecture and launches
+the app before uploading a workflow artifact named with the checked-out commit
+SHA. The Android job tests a temporary, locally signed copy on an API 35
+x86_64 emulator; the uploaded release APK is unsigned and must be signed
+separately before installation or distribution. Windows binaries are also
+unsigned. No distribution signing keys are used by this workflow.
+
+The workflow pins Node and Rust versions, uses `npm ci` and Cargo's locked
+dependencies, and sets `SOURCE_DATE_EPOCH` from the commit. Artifacts include
+SHA-256 checksums and commit/toolchain provenance. Hosted runner images,
+system packages, Android/Gradle dependencies and packaging tools can change, so
+bit-for-bit identical rebuilds are not guaranteed. Workflow artifacts are
+retained according to repository settings, not published as permanent GitHub
+releases. The new release targets should not be considered verified until
+their respective jobs succeed on actual runners. Android ARM devices, Windows
+installers, code signing, and portal functionality are not covered.
+
 For changes, run the focused checks for the affected project and the solution
 build/tests. Native client changes should also be checked with the relevant
 platform smoke and end-to-end tests where that platform is available. Generated

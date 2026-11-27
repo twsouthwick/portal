@@ -1,0 +1,240 @@
+name: Native client release builds
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  RUST_VERSION: 1.100.0
+  NODE_VERSION: 24.15.0
+
+jobs:
+  linux:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            arch: x86_64
+            machine: Advanced Micro Devices X86-64
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+            machine: AArch64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: Portal.Client/package-lock.json
+      - name: Install build tools
+        run: |
+          rustup toolchain install "$RUST_VERSION" --profile minimal
+          rustup default "$RUST_VERSION"
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential pkg-config libwebkit2gtk-4.1-dev libssl-dev \
+            libayatana-appindicator3-dev librsvg2-dev patchelf \
+            xvfb xauth xdotool binutils
+          npm ci --prefix Portal.Client
+          echo "SOURCE_DATE_EPOCH=$(git log -1 --format=%ct)" >> "$GITHUB_ENV"
+      - name: Build release AppImage
+        working-directory: Portal.Client
+        run: npm run tauri -- build --ci --bundles appimage -- --locked
+      - name: Verify architecture and launch AppImage
+        env:
+          EXPECTED_MACHINE: ${{ matrix.machine }}
+        run: |
+          set -euo pipefail
+          readelf -h Portal.Client/src-tauri/target/release/portalclient | grep -F "$EXPECTED_MACHINE"
+          shopt -s nullglob
+          images=(Portal.Client/src-tauri/target/release/bundle/appimage/*.AppImage)
+          test "${#images[@]}" -eq 1
+          image="$(realpath "${images[0]}")"
+          xvfb-run -a bash -c '
+            set -euo pipefail
+            APPIMAGE_EXTRACT_AND_RUN=1 "$1" &
+            pid=$!
+            trap "kill $pid 2>/dev/null || true; wait $pid 2>/dev/null || true" EXIT
+            for i in {1..30}; do
+              kill -0 "$pid"
+              if xdotool search --onlyvisible --name "^Portal$" >/dev/null 2>&1; then
+                sleep 5
+                kill -0 "$pid"
+                xdotool search --onlyvisible --name "^Portal$"
+                exit 0
+              fi
+              sleep 1
+            done
+            exit 1
+          ' _ "$image"
+          mkdir -p "$RUNNER_TEMP/native-artifact"
+          cp "$image" "$RUNNER_TEMP/native-artifact/"
+          cd "$RUNNER_TEMP/native-artifact"
+          sha256sum ./*.AppImage > SHA256SUMS
+          printf 'commit=%s\nrunner=%s\nrust=%s\nnode=%s\n' "$GITHUB_SHA" "$RUNNER_OS-${{ matrix.arch }}" "$(rustc --version)" "$(node --version)" > provenance.txt
+      - uses: actions/upload-artifact@v4.6.2
+        with:
+          name: portal-client-linux-${{ matrix.arch }}-${{ github.sha }}
+          path: ${{ runner.temp }}/native-artifact/
+          if-no-files-found: error
+
+  windows:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: windows-2022
+            arch: x86_64
+            rust: x86_64-pc-windows-msvc
+            machine: 0x8664
+          - runner: windows-11-arm
+            arch: arm64
+            rust: aarch64-pc-windows-msvc
+            machine: 0xaa64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: Portal.Client/package-lock.json
+      - name: Install build tools
+        shell: pwsh
+        run: |
+          rustup toolchain install "$env:RUST_VERSION-${{ matrix.rust }}" --profile minimal
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          rustup default "$env:RUST_VERSION-${{ matrix.rust }}"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npm ci --prefix Portal.Client
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          "SOURCE_DATE_EPOCH=$(git log -1 --format=%ct)" >> $env:GITHUB_ENV
+      - name: Build release executable
+        working-directory: Portal.Client
+        run: npm run tauri -- build --ci --no-bundle --target ${{ matrix.rust }} -- --locked
+      - name: Verify architecture and launch executable
+        shell: pwsh
+        run: |
+          $exe = Resolve-Path Portal.Client/src-tauri/target/${{ matrix.rust }}/release/portalclient.exe
+          $bytes = [IO.File]::ReadAllBytes($exe)
+          $offset = [BitConverter]::ToInt32($bytes, 0x3c)
+          if ([BitConverter]::ToUInt32($bytes, $offset) -ne 0x4550 -or [BitConverter]::ToUInt16($bytes, $offset + 4) -ne ${{ matrix.machine }}) {
+            throw "Unexpected PE architecture"
+          }
+          Add-Type @'
+          using System;
+          using System.Runtime.InteropServices;
+          public static class PortalWindow {
+              [DllImport("user32.dll")]
+              public static extern bool IsWindowVisible(IntPtr handle);
+          }
+          '@
+          $process = Start-Process $exe -PassThru
+          try {
+            $visible = $false
+            for ($i = 0; $i -lt 60; $i++) {
+              Start-Sleep -Seconds 1
+              $process.Refresh()
+              if ($process.HasExited) { throw "Client exited before its window appeared" }
+              if ($process.MainWindowTitle -eq "Portal" -and [PortalWindow]::IsWindowVisible($process.MainWindowHandle)) { $visible = $true; break }
+            }
+            if (-not $visible) { throw "Client window did not appear" }
+            Start-Sleep -Seconds 5
+            $process.Refresh()
+            if ($process.HasExited -or $process.MainWindowTitle -ne "Portal" -or -not [PortalWindow]::IsWindowVisible($process.MainWindowHandle)) { throw "Client window did not remain open" }
+          } finally {
+            if (-not $process.HasExited) { Stop-Process -Id $process.Id -Force }
+          }
+          $out = Join-Path $env:RUNNER_TEMP native-artifact
+          New-Item -ItemType Directory -Path $out | Out-Null
+          Copy-Item $exe $out
+          $hash = (Get-FileHash $exe -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  portalclient.exe" | Set-Content -Encoding ascii "$out/SHA256SUMS"
+          "commit=$env:GITHUB_SHA`nrunner=Windows-${{ matrix.arch }}`nrust=$(rustc --version)`nnode=$(node --version)" | Set-Content -Encoding ascii "$out/provenance.txt"
+      - uses: actions/upload-artifact@v4.6.2
+        with:
+          name: portal-client-windows-${{ matrix.arch }}-${{ github.sha }}
+          path: ${{ runner.temp }}/native-artifact/
+          if-no-files-found: error
+
+  android:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    env:
+      NDK_VERSION: 27.3.13750724
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: Portal.Client/package-lock.json
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3.2.2
+        with:
+          packages: platform-tools
+      - name: Install build tools
+        run: |
+          rustup toolchain install "$RUST_VERSION" --profile minimal
+          rustup default "$RUST_VERSION"
+          rustup target add x86_64-linux-android
+          sdkmanager "platform-tools" "platforms;android-37.0" "build-tools;37.0.0" "ndk;$NDK_VERSION"
+          echo "NDK_HOME=$ANDROID_HOME/ndk/$NDK_VERSION" >> "$GITHUB_ENV"
+          echo "SOURCE_DATE_EPOCH=$(git log -1 --format=%ct)" >> "$GITHUB_ENV"
+          npm ci --prefix Portal.Client
+      - name: Build release APK
+        working-directory: Portal.Client
+        run: |
+          npm run tauri -- android init --ci --skip-targets-install
+          npm run tauri -- android build --ci --apk --target x86_64 -- --locked
+      - name: Verify and prepare APK for emulator
+        run: |
+          set -euo pipefail
+          mapfile -t apks < <(find Portal.Client/src-tauri/gen/android/app/build/outputs/apk -name '*.apk' -type f)
+          test "${#apks[@]}" -eq 1
+          apk="${apks[0]}"
+          "$ANDROID_HOME/build-tools/37.0.0/aapt" dump badging "$apk" | grep -F "native-code: 'x86_64'"
+          unzip -p "$apk" lib/x86_64/libportalclient_lib.so > "$RUNNER_TEMP/client.so"
+          readelf -h "$RUNNER_TEMP/client.so" | grep -F 'Advanced Micro Devices X86-64'
+          mkdir -p "$RUNNER_TEMP/native-artifact"
+          cp "$apk" "$RUNNER_TEMP/native-artifact/"
+          (cd "$RUNNER_TEMP/native-artifact" && sha256sum ./*.apk > SHA256SUMS)
+          printf 'commit=%s\nrunner=Linux-x86_64\nrust=%s\nnode=%s\nndk=%s\n' "$GITHUB_SHA" "$(rustc --version)" "$(node --version)" "$NDK_VERSION" > "$RUNNER_TEMP/native-artifact/provenance.txt"
+          keytool -genkeypair -keystore "$RUNNER_TEMP/smoke.keystore" -storepass android -keypass android \
+            -alias smoke -dname CN=Smoke -keyalg RSA -validity 1
+          "$ANDROID_HOME/build-tools/37.0.0/apksigner" sign --ks "$RUNNER_TEMP/smoke.keystore" \
+            --ks-pass pass:android --key-pass pass:android --out "$RUNNER_TEMP/smoke.apk" "$apk"
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Smoke test release APK on x86_64 emulator
+        uses: reactivecircus/android-emulator-runner@v2.34.0
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: |
+            adb install "$RUNNER_TEMP/smoke.apk"
+            bash Portal.Client/scripts/android-smoke.sh smoke
+      - uses: actions/upload-artifact@v4.6.2
+        with:
+          name: portal-client-android-x86_64-${{ github.sha }}
+          path: ${{ runner.temp }}/native-artifact/
+          if-no-files-found: error
