@@ -113,7 +113,8 @@ Pop-Location
 ./Portal.Client/smoke-windows.ps1
 ```
 
-The smoke test checks the registered WebView2 Evergreen Runtime, launches the
+The build produces `Portal.Client/src-tauri/target/debug/portalclient.exe`.
+The smoke test checks the registered WebView2 Evergreen Runtime, launches this
 debug executable, waits up to 60 seconds for its visible `Portal` window, and
 checks the window and process for 10 seconds. It prints captured output and
 cleans up the process tree. This verifies window startup only, not page content,
