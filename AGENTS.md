@@ -3,7 +3,8 @@
 ## Start Here
 
 - Read [README.md](README.md) for product behavior, site manifests, and deployment.
-- Use the pinned SDK from `global.json`; the solution targets .NET 10.
+- Read [developer.md](developer.md) for local setup, project boundaries, build, tests, and CI.
+- Use the pinned SDK from `global.json` (currently .NET 11.0.100).
 - Run commands from the repository root unless a command includes `cd Portal.Web`.
 
 ## Build and Run
@@ -12,7 +13,7 @@
 - Run the Aspire development topology with `aspire run`; `Portal.AppHost/AppHost.cs` starts the `media` and `admin` web profiles.
 - For frontend-only work, use `cd Portal.Web && npm run dev`. Use `npm run build` for a production bundle, `npm run watch` while iterating, and `npm run clean` to remove generated output.
 - `Portal.Web/Portal.Web.csproj` runs the matching npm build before every .NET build and installs npm dependencies when `node_modules` is absent.
-- There are currently no test projects. Validate focused frontend changes with the relevant npm build, then run `dotnet build Portal.slnx` before finishing.
+- Run `dotnet test Portal.slnx` when changes affect tested behavior; validate frontend changes with the relevant npm build.
 
 ## Project Boundaries
 
@@ -27,7 +28,7 @@
 
 - Follow existing Razor component and colocated `.razor.css` patterns; use the configured Fluent UI components and Bootstrap Icons rather than introducing another UI system.
 - Keep nullable reference types enabled and preserve async APIs across service and browser-interop boundaries.
-- Treat implementation and configuration as authoritative when documentation differs. Current frontend sources are under `Portal.Web/ts`, not the `Portal.Web/TypeScript` path shown in parts of the root README.
+- Treat implementation and configuration as authoritative when documentation differs. Current frontend sources are under `Portal.Web/ts` and `Portal.Web/css`.
 - OIDC configuration uses the `Oidc` section. The `groups` claim supplies portal roles, and Aspire imports the local development realm from `Portal.AppHost/Realms`.
 - Site visibility and static-content authorization are both role-sensitive; when changing manifest or provider behavior, verify both the rendered site list and mapped content endpoints.
 - Keep changes scoped to the owning project and do not edit generated `artifacts`, `obj`, `node_modules`, or `wwwroot/dist` content.
