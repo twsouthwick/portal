@@ -71,7 +71,8 @@ The container uses the .NET 11 Ubuntu Resolute chiseled-extra ASP.NET image from
 
 The independent `Native client release builds` workflow also runs on these
 events and on manual dispatch. It is configured to build release AppImages on
-native Linux and Windows x86_64 and ARM64 runners, and an x86_64 Android APK.
+native Linux x86_64 and ARM64 runners, `portalclient.exe` executables on native
+Windows x86_64 and ARM64 runners, and an x86_64 Android APK.
 Each job checks the output architecture and launches
 the app before uploading a workflow artifact named with the checked-out commit
 SHA. The Android job tests a temporary, locally signed copy on an API 35
