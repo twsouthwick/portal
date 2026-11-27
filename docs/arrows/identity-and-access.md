@@ -5,8 +5,11 @@ content.
 
 ## Status
 
-**MAPPED** — first reconstructed 2026-11-27. Current behavior is represented
-by seven EARS requirements; owner review and coherence audit remain.
+**MAPPED** — first reconstructed 2026-11-27. Existing authentication behavior
+is represented by seven EARS requirements; owner review and coherence audit
+remain. The client manifest endpoint and Development-only OpenAPI document
+(issue #7) implement AUTH-008 to AUTH-019, using the issue #6 contract merged
+in PR #54. Authelia public-client interoperability remains unvalidated.
 
 ## References
 
@@ -17,15 +20,17 @@ by seven EARS requirements; owner review and coherence audit remain.
 - `docs/intent/identity-and-access/identity-and-access-design.md`
 
 ### EARS
-- `docs/intent/identity-and-access/identity-and-access-specs.md` — 7 specs
+- `docs/intent/identity-and-access/identity-and-access-specs.md` — 18 implemented, 1 non-want
 
 ### Tests
 - `Portal.Web.Tests/AuthenticationTests.cs`
 - `Portal.Web.Tests/SiteContentTests.cs`
+- `Portal.Web.Tests/ClientManifestEndpointTests.cs`
 
 ### Code
 - `Portal.Web/Program.cs`
 - `Portal.Web/Services/SiteDetailsExtensions.cs`
+- `Portal.Web/Services/ClientManifestEndpointExtensions.cs`
 - `Portal.Web/Components/SiteProvider.razor`
 - `Portal.AppHost/Authelia/configuration.yml`
 - `Portal.AppHost/Authelia/users.yml`
@@ -46,12 +51,17 @@ endpoint in `SiteDetailsExtensions.cs`; role-aware UI filtering in
 |---|---|---:|---:|---:|
 | Authentication, role policy, logout, content access | AUTH-001, AUTH-002, AUTH-003, AUTH-004, AUTH-005, AUTH-006 | 6 | 0 | 0 known implementation gaps |
 | Local identity token claims | AUTH-007 | 1 | 0 | Provider configuration and issuance lack automated integration coverage |
+| Client manifest endpoint (#7) | AUTH-008, AUTH-009, AUTH-010, AUTH-011, AUTH-012, AUTH-013, AUTH-014, AUTH-015, AUTH-016 | 9 | 0 | Local Authelia access-token and native redirect interoperability remain unvalidated |
+| Development OpenAPI (#7) | AUTH-017, AUTH-018, AUTH-019 | 2 | 0 | 1 explicit non-want |
 
-**Traceability:** Tests cite AUTH-001 and AUTH-002; Authelia configuration
-cites AUTH-007. The other existing behavior lacks citations. Provider issuance
-and role-based browser access were verified manually, not by an automated
-Authelia integration test. Private/internal flag enforcement at the content
-endpoint is unresolved and is not counted as a passing requirement.
+**Traceability:** Tests cite AUTH-001, AUTH-002, AUTH-004, AUTH-005, and
+AUTH-008 through AUTH-018; direct test citations for AUTH-003 and AUTH-006
+remain missing. Authelia configuration cites AUTH-007. Tests exercise JWT
+signature, issuer, audience, expiry, role filtering, conditional requests,
+provider failure, and OpenAPI behavior. Provider issuance and native redirect
+interoperability remain unvalidated against Authelia. Private/internal flag
+enforcement at the content endpoint is unresolved and is not counted as a
+passing requirement.
 
 ## Key Findings
 
@@ -69,7 +79,9 @@ endpoint is unresolved and is not counted as a passing requirement.
 
 ### Should Fix
 1. Resolve the open authorization policy for `IsPrivate` and `IsInternal`.
-2. Complete and verify `@spec` citations when the remaining behaviors change.
+2. Validate local Authelia public-client access-token and native redirect
+   interoperability before native-client integration.
+3. Audit `@spec` citations and EARS coherence after implementation.
 
 ### Nice to Have
 1. Add direct tests for antiforgery, path traversal, range requests, and

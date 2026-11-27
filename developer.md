@@ -90,6 +90,14 @@ and the `groups` scope. The Authelia client claims policy includes `groups` and
 This is not a native public client; native authentication and callback
 compatibility are tracked separately in issue #11.
 
+The authenticated `GET /api/manifest` endpoint accepts a signed JWT access
+token whose issuer matches `Oidc:Authority`, whose audience matches
+`Oidc:ApiAudience` (default `portal-api`), and whose `groups` claims carry the
+user's portal roles. The local `portal-web` client currently places `groups`
+and `name` in the ID token rather than the access token and is not configured
+as the native public client; native access-token issuance and redirect
+compatibility still need provider integration.
+
 To check the bundled site roles, sign in as `admin` and verify Site 1 and
 `/site1/content/icon.png` are accessible. In a separate browser session, sign
 in as `media`: the admin-only sites should be hidden and that content URL
