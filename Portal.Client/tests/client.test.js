@@ -44,8 +44,8 @@ describe('Portal native client', { timeout: 60000 }, () => {
 
     const deadline = Date.now() + 10000;
     while (true) {
-      if (serviceError || service.exitCode !== null) {
-        throw new Error(`tauri-driver failed to start: ${serviceError ?? service.exitCode}\n${output}`);
+      if (serviceError || service.exitCode !== null || service.signalCode !== null) {
+        throw new Error(`tauri-driver failed to start: ${serviceError ?? service.exitCode ?? service.signalCode}\n${output}`);
       }
       try {
         const response = await fetch(`http://127.0.0.1:${port}/status`, { signal: AbortSignal.timeout(1000) });
@@ -67,7 +67,7 @@ describe('Portal native client', { timeout: 60000 }, () => {
     try {
       if (driver) await driver.quit();
     } finally {
-      if (service && service.exitCode === null && !serviceError) {
+      if (service && service.exitCode === null && service.signalCode === null && !serviceError) {
         const exited = new Promise(resolve => service.once('exit', resolve));
         service.kill();
         await exited;
