@@ -46,6 +46,11 @@ jobs:
       - name: Install client dependencies
         run: npm ci --prefix Portal.Client
 
+      - name: Install Android UI automation
+        run: |
+          npm install --global appium@4.0.1
+          appium driver install uiautomator2@10.4.0
+
       - name: Build x86_64 debug APK
         working-directory: Portal.Client
         run: |

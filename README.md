@@ -90,7 +90,7 @@ npm run tauri -- build                   # release executable and bundles
 | --- | --- | --- |
 | Linux x86_64 and ARM64 | GCC/build-essential, pkg-config, GTK 3 and WebKitGTK 4.1 development libraries, OpenSSL, Ayatana AppIndicator and librsvg development libraries, and patchelf | CI builds a debug executable and AppImage on native Ubuntu 24.04 runners and runs window and WebDriver tests under Xvfb. AppImage execution and release bundles are unverified. |
 | Windows | Rust MSVC toolchain, Visual Studio C++ Build Tools with Windows SDK, and Microsoft Edge WebView2 runtime | WebDriver test setup is provided but unverified; no Windows build or installer tested. |
-| Android | JDK 17, Android SDK (platform, build-tools, platform-tools), Android NDK, and Rust Android targets | CI is configured to build a debug APK for x86_64 and check its activity on an API 35 x86_64 emulator; see the workflow result for verification. ARM, x86, physical devices, releases and signing are not covered. |
+| Android | JDK 17, Android SDK (platform, build-tools, platform-tools), Android NDK, and Rust Android targets | CI builds a debug APK for x86_64 and runs the shared UI tests on an API 35 x86_64 emulator. ARM, x86, physical devices, releases and signing are not covered. |
 
 For Ubuntu/Debian Linux the native packages can be installed with:
 
@@ -136,8 +136,8 @@ from `Portal.Client/artifacts/` even if the tests fail. A screenshot or
 artifact-capture failure fails the test job; startup failures write driver
 diagnostics when no screenshot can be captured.
 
-Windows and Android require separate adapters to run the shared tests; those
-adapters are not included or verified here.
+Windows requires a separate adapter to run the shared tests; it is not included
+or verified here.
 
 The separate Android workflow is configured to build and smoke-test the placeholder shell on
 Ubuntu 24.04 with JDK 17, SDK platform 37.0, build-tools 37.0.0, NDK
@@ -146,10 +146,14 @@ on an API 35 Google APIs x86_64 emulator, launches
 `app.swick.portal.client/.MainActivity`, and checks that the same process stays
 in the foreground for 10 seconds without a recorded crash. CI uploads a
 screenshot and activity/logcat diagnostics from `Portal.Client/artifacts/`;
-failures also print diagnostics in the job log. Unlike the Linux adapter,
-this smoke check does not exercise the shared WebView text assertions. The uploaded debug APK is for
-inspection only; this is not a functional UI, portal connectivity, release
-artifact, or signing test.
+failures also print diagnostics in the job log. The same shared tests then run
+against the installed app using Appium's UiAutomator2 driver and the Android
+WebView accessibility hierarchy. The heading must expose Android's accessibility
+heading attribute; this does not use Tauri's desktop WebDriver or a separate
+browser. Appium and UiAutomator2 must be installed locally for reproduction;
+their pinned versions require Node.js 22.22.2+ or 24.15.0+ (or 26+).
+The uploaded debug APK is for inspection only; this is not a portal connectivity,
+release artifact, or signing test.
 
 To reproduce on Linux from the repository root, install Node.js and Rust as
 above, JDK 17, and the Android SDK command-line tools. Set `JAVA_HOME` and
@@ -164,6 +168,8 @@ export NDK_HOME="$ANDROID_HOME/ndk/27.3.13750724"
 rustup target add x86_64-linux-android
 cd Portal.Client
 npm ci
+npm install --global appium@4.0.1
+appium driver install uiautomator2@10.4.0
 npm run tauri -- android init --ci --skip-targets-install
 npm run tauri -- android build --ci --debug --apk --target x86_64
 cd ..

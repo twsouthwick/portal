@@ -68,3 +68,8 @@ fi
 adb exec-out screencap -p > "$artifacts_dir/android-client.png"
 test -s "$artifacts_dir/android-client.png"
 echo "$activity remained in the foreground for 10 seconds (pid $pid)"
+
+(
+  cd Portal.Client
+  PORTAL_CLIENT_TEST_ADAPTER=./adapters/android-uiautomator2.js npm run test:e2e
+)
