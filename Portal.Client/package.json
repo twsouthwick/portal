@@ -7,10 +7,12 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "test:e2e": "node --test",
     "tauri": "tauri"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.12.6",
+    "selenium-webdriver": "4.54.0",
     "vite": "^8.4.0"
   }
 }
