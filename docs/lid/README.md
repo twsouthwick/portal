@@ -24,13 +24,23 @@ The project instructions follow [Linked-Intent Development](https://github.com/j
 
 ## Map status
 
-No LID maps are present yet. Full-project scope is declared (Full mode), but the upstream brownfield workflow requires the owner to approve the segmentation lens, granularity, and final boundaries before map artifacts are created. Do not add placeholder maps or represent the project as mapped before that approval and the complete source sweep.
+The delegated brownfield sweep has been followed by an agent-selected
+behavior-oriented medium slicing with seven leaf segments. The owner authorized
+the agent to make the best choices and document assumptions; the exact
+boundaries and inferred design decisions are therefore recorded as provisional
+for later reconciliation. The maps are `MAPPED`, not `AUDITED` or `OK`.
+
+Start at [`docs/arrows/index.yaml`](../arrows/index.yaml), then follow the
+segment documents under `docs/arrows/` to their designs and EARS specifications
+under `docs/intent/`. [`docs/arrows/README.md`](../arrows/README.md) records
+the selected lens/granularity and alternatives. Existing discrepancies are
+listed there and in the relevant LLDs for later resolution.
 
 ## Maintaining maps for a future change
 
 For a representative change to Kubernetes-backed site content:
 
-1. Start at `docs/arrows/index.yaml` and follow the segment reference for the behavior. Read the linked LLD, EARS file, tests, and implementation; if those maps do not yet exist, complete and approve the brownfield mapping first.
+1. Start at `docs/arrows/index.yaml` and follow the segment reference for the behavior. Read the linked LLD, EARS file, tests, and implementation.
 2. Check that the intended change is consistent with the HLD and the segment's current design. Update the design and EARS requirement first, then inspect and approve them.
 3. Add a test that cites the requirement ID with `@spec` and verify the test fails for the expected reason before changing implementation.
 4. Implement the behavior with a matching `@spec` annotation at its owning entry point. Run the existing targeted tests and the repository's applicable build checks.
