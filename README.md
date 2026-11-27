@@ -144,8 +144,10 @@ Ubuntu 24.04 with JDK 17, SDK platform 37.0, build-tools 37.0.0, NDK
 27.3.13750724 and the `x86_64-linux-android` Rust target. It installs the APK
 on an API 35 Google APIs x86_64 emulator, launches
 `app.swick.portal.client/.MainActivity`, and checks that the same process stays
-in the foreground for 10 seconds without a recorded crash. Failures include
-activity state and logcat output in the job log. The uploaded debug APK is for
+in the foreground for 10 seconds without a recorded crash. CI uploads a
+screenshot and activity/logcat diagnostics from `Portal.Client/artifacts/`;
+failures also print diagnostics in the job log. Unlike the Linux adapter,
+this smoke check does not exercise the shared WebView text assertions. The uploaded debug APK is for
 inspection only; this is not a functional UI, portal connectivity, release
 artifact, or signing test.
 

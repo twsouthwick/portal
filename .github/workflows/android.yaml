@@ -71,3 +71,11 @@ jobs:
           arch: x86_64
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           script: bash Portal.Client/scripts/android-smoke.sh
+
+      - name: Upload Android smoke-test evidence
+        if: always()
+        uses: actions/upload-artifact@v4.6.2
+        with:
+          name: portal-client-android-x86_64-ui-smoke
+          path: Portal.Client/artifacts/
+          if-no-files-found: warn
