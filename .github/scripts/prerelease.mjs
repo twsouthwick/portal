@@ -148,7 +148,6 @@ export async function publish({ event, repository, repositoryId, apiUrl, token, 
   assets.push({ name: 'SHA256SUMS', contents: Buffer.from(sums) });
   assets.push({ name: 'provenance.json', contents: Buffer.from(JSON.stringify({
     commit: sha, nativeRun: runId, nativeAttempt: attempt,
-    workflows: runs.map(run => ({ id: run.id, attempt: run.run_attempt, url: run.html_url })),
     artifacts: provenance,
   }, null, 2) + '\n') });
   for (const asset of assets) asset.hash = createHash('sha256').update(asset.contents).digest('hex');

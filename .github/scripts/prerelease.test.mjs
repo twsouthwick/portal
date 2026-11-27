@@ -92,18 +92,28 @@ test('failed or untrusted source runs do not mutate a release', async () => {
 });
 
 // @spec DELIVERY-008 DELIVERY-010 DELIVERY-011 DELIVERY-012
-test('publication stays draft after interruption and retries the same attempt without mixing assets', async () => {
+test('publication stays draft after verification reruns and retries the same native attempt', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'portal-prerelease-test-'));
   let ref = null;
   let release = null;
-  let interrupt = true;
   const mutations = [];
+  const workflowRequests = new Map();
   const result = (data, status = 200) => new Response(data === null ? null : JSON.stringify(data), { status });
   const request = async (url, options = {}) => {
     const path = new URL(url).pathname.replace('/repos/o/r', '');
     const method = options.method ?? 'GET';
     const body = typeof options.body === 'string' ? JSON.parse(options.body) : null;
-    if (path.includes('/actions/workflows/')) return result({ workflow_runs: [push] });
+    if (path.includes('/actions/workflows/')) {
+      const workflow = path.match(/\/actions\/workflows\/([^/]+)\/runs/)[1];
+      const count = (workflowRequests.get(workflow) ?? 0) + 1;
+      workflowRequests.set(workflow, count);
+      const rerun = workflow !== 'native-release.yaml' && count >= 2;
+      const rerunId = workflow === 'build.yaml' ? 22 : 23;
+      const run = rerun
+        ? { ...push, id: rerunId, run_attempt: 2, html_url: `https://github.com/o/r/actions/runs/${rerunId}` }
+        : { ...push, html_url: `https://github.com/o/r/actions/runs/${push.id}` };
+      return result({ workflow_runs: [run] });
+    }
     if (path.startsWith('/git/ref/tags/')) return ref ? result(ref) : result(null, 404);
     if (path === '/releases' && method === 'GET') return result(release ? [release] : []);
     if (method !== 'GET') mutations.push(`${method} ${path}`);
@@ -114,7 +124,6 @@ test('publication stays draft after interruption and retries the same attempt wi
     }
     if (path === '/releases/1/assets' && method === 'POST') {
       const name = new URL(url).searchParams.get('name');
-      if (interrupt && release.assets.length === 2) throw new Error('simulated upload interruption');
       const asset = { id: release.assets.length + 1, name, state: 'uploaded',
         digest: `sha256:${createHash('sha256').update(options.body).digest('hex')}` };
       release.assets.push(asset);
@@ -147,15 +156,16 @@ test('publication stays draft after interruption and retries the same attempt wi
   const options = { event: { workflow_run: { ...push, head_repository: { id: 123 } } }, repository: 'o/r', repositoryId: '123',
     apiUrl: 'https://api.github.com', token: 'test', publisherRunId: '1', request, download, tempRoot: dir };
   try {
-    await assert.rejects(publish(options), /simulated upload interruption/);
+    await assert.rejects(publish(options), /Verification changed during publication/);
     assert.equal(release.draft, true);
-    assert.equal(release.assets.length, 2);
-    interrupt = false;
+    assert.equal(release.assets.length, 6);
+    const provenanceDigest = release.assets.find(asset => asset.name === 'provenance.json').digest;
     const originalDigest = release.assets[0].digest;
     release.assets[0].digest = 'sha256:incorrect';
     await assert.rejects(publish({ ...options, publisherRunId: 'mismatch' }), /mismatched draft asset/);
     release.assets[0].digest = originalDigest;
     await publish({ ...options, publisherRunId: '2' });
+    assert.equal(release.assets.find(asset => asset.name === 'provenance.json').digest, provenanceDigest);
     assert.equal(release.draft, false);
     assert.equal(release.prerelease, true);
     assert.deepEqual(release.assets.map(a => a.name).sort(), [

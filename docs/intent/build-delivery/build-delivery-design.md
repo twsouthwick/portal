@@ -38,7 +38,9 @@ The release is a prerelease tagged `dev-<full commit SHA>`; version-tag,
 pull-request, and manual builds do not trigger publication. Its desktop assets
 come from one successful native workflow run and attempt, with architecture
 in their names, checksums, and build/run provenance. Existing published
-releases are immutable.
+releases are immutable. The provenance asset is determined by the source
+commit and native run/attempt; verification workflow run details are recorded
+in the release notes so verification reruns do not change the asset.
 
 Publishing uses a draft until every asset is uploaded. An interrupted draft
 may be retried only with the same native run and attempt; a draft belonging to
