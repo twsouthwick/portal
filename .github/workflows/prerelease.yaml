@@ -1,0 +1,35 @@
+name: Publish native prerelease
+
+on:
+  workflow_run:
+    workflows: ['Build and publish', 'Android debug smoke', 'Native client release builds']
+    types: [completed]
+    branches: [main]
+
+permissions: {}
+
+concurrency:
+  group: native-prerelease-${{ github.event.workflow_run.head_sha }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    # @spec DELIVERY-008 DELIVERY-009 DELIVERY-010 DELIVERY-011 DELIVERY-012
+    if: >-
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main' &&
+      github.event.workflow_run.head_repository.id == github.repository_id
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      actions: read
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          persist-credentials: false
+      - name: Gate and publish prerelease
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node .github/scripts/prerelease.mjs

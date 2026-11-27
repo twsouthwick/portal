@@ -89,5 +89,5 @@ arrows:
     blocks: []
     blockedBy: []
     detail: build-delivery.md
-    next: Add spec citations to build/test entry points and reconcile documented build prerequisites.
-    drift: No @spec annotations currently connect implementation and tests to these inferred requirements.
+    next: Verify prerelease publication on hosted runners and add citations to the original build/test entry points.
+    drift: Original build requirements lack @spec citations; prerelease publication is not yet verified on hosted runners.

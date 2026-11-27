@@ -1,0 +1,219 @@
+import { createHash } from 'node:crypto';
+import { execFileSync } from 'node:child_process';
+import { readFile, readdir, mkdir, lstat } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join, basename } from 'node:path';
+import { pathToFileURL } from 'node:url';
+
+const workflows = ['build.yaml', 'android.yaml', 'native-release.yaml'];
+const targets = [
+  { os: 'linux', arch: 'x86_64', runner: 'Linux-x86_64', extension: '.AppImage' },
+  { os: 'linux', arch: 'arm64', runner: 'Linux-arm64', extension: '.AppImage' },
+  { os: 'windows', arch: 'x86_64', runner: 'Windows-x86_64', extension: '.exe' },
+  { os: 'windows', arch: 'arm64', runner: 'Windows-arm64', extension: '.exe' },
+];
+
+export function qualifies(run, sha) {
+  return run.event === 'push' && run.head_branch === 'main' && run.head_sha === sha;
+}
+
+export function selectRun(runs, sha) {
+  const run = runs.filter(r => qualifies(r, sha)).sort((a, b) => b.id - a.id)[0];
+  return run?.status === 'completed' && run.conclusion === 'success' ? run : null;
+}
+
+export function releaseDisposition(release, marker) {
+  if (!release) return 'create';
+  if (!release.prerelease) throw new Error('Refusing to modify a stable release');
+  if (!release.draft) return 'complete';
+  if (!release.body?.includes(marker)) throw new Error('Draft belongs to another native run or attempt');
+  return 'retry';
+}
+
+export function findRelease(releases, tag) {
+  const matches = releases.filter(release => release.tag_name === tag);
+  if (matches.length > 1) throw new Error('Multiple releases use the same tag');
+  return matches[0] ?? null;
+}
+
+export function validateArtifact(expected, contents, checksums, provenance) {
+  if (basename(expected.name) !== expected.name || /[\r\n]/.test(expected.name)) throw new Error('Invalid artifact filename');
+  const lines = checksums.trim().split(/\r?\n/);
+  const match = /^([a-fA-F0-9]{64})  (?:\.\/)?(.+)$/.exec(lines[0]);
+  const hash = createHash('sha256').update(contents).digest('hex');
+  if (lines.length !== 1 || !match || match[1].toLowerCase() !== hash || match[2] !== expected.name) {
+    throw new Error('Artifact checksum or filename mismatch');
+  }
+  const values = Object.fromEntries(provenance.trim().split(/\r?\n/).map(line => {
+    const index = line.indexOf('=');
+    if (index < 1) throw new Error('Malformed provenance');
+    return [line.slice(0, index), line.slice(index + 1)];
+  }));
+  for (const [key, value] of Object.entries({ commit: expected.sha, run: expected.run, attempt: expected.attempt, runner: expected.runner })) {
+    if (values[key] !== value) throw new Error(`Provenance mismatch: ${key}`);
+  }
+  if (!values.rust || !values.node) throw new Error('Missing toolchain provenance');
+  return hash;
+}
+
+// @spec DELIVERY-008 DELIVERY-009 DELIVERY-010 DELIVERY-011 DELIVERY-012
+export async function publish({ event, repository, repositoryId, apiUrl, token, publisherRunId, request = fetch, download = execFileSync, tempRoot = tmpdir() }) {
+  const trigger = event.workflow_run;
+  const sha = trigger.head_sha;
+  if (!/^[a-f0-9]{40}$/.test(sha) || !qualifies(trigger, sha) ||
+      String(trigger.head_repository?.id) !== String(repositoryId)) throw new Error('Untrusted trigger');
+
+  const repo = repository;
+  const apiBase = `${apiUrl}/repos/${repo}`;
+  const headers = { Authorization: ['Bearer', token].join(' '), Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' };
+  async function api(url, options = {}, allow404 = false) {
+    const response = await request(url.startsWith('https://') ? url : `${apiBase}${url}`, {
+      ...options,
+      headers: { ...headers, ...options.headers },
+    });
+    if (allow404 && response.status === 404) return null;
+    if (!response.ok) throw new Error(`GitHub API ${response.status}: ${await response.text()}`);
+    if (response.status === 204) return null;
+    return response.json();
+  }
+  async function latestRuns() {
+    const selected = [];
+    for (const workflow of workflows) {
+      const runs = [];
+      for (let page = 1; ; page++) {
+        const result = await api(`/actions/workflows/${workflow}/runs?branch=main&event=push&head_sha=${sha}&per_page=100&page=${page}`);
+        runs.push(...result.workflow_runs);
+        if (result.workflow_runs.length < 100) break;
+      }
+      const run = selectRun(runs, sha);
+      if (!run) return null;
+      selected.push(run);
+    }
+    return selected;
+  }
+
+  const runs = await latestRuns();
+  if (!runs) {
+    console.log(`Waiting for all required main workflows to succeed for ${sha}.`);
+    return;
+  }
+  const native = runs[2];
+  const runId = String(native.id);
+  const attempt = String(native.run_attempt);
+  const tag = `dev-${sha}`;
+  const marker = `<!-- native-run:${runId}-attempt:${attempt} -->`;
+  let ref = await api(`/git/ref/tags/${tag}`, {}, true);
+  if (ref && (ref.object.type !== 'commit' || ref.object.sha !== sha)) throw new Error('Conflicting tag');
+  const releases = [];
+  for (let page = 1; ; page++) {
+    const result = await api(`/releases?per_page=100&page=${page}`);
+    releases.push(...result);
+    if (result.length < 100) break;
+  }
+  let release = findRelease(releases, tag);
+  if (release && !release.draft && !ref) throw new Error('Published release exists without its expected tag');
+  const disposition = releaseDisposition(release, marker);
+  if (disposition === 'complete') {
+    console.log(`Published prerelease ${tag} already exists; leaving it unchanged.`);
+    return;
+  }
+
+  const root = join(tempRoot, `portal-prerelease-${publisherRunId}`);
+  await mkdir(root, { recursive: true });
+  const assets = [];
+  const provenance = [];
+  for (const target of targets) {
+    const artifact = `portal-client-${target.os}-${target.arch}-${sha}-attempt-${attempt}`;
+    const directory = join(root, artifact);
+    await mkdir(directory);
+    await download('gh', ['run', 'download', runId, '--repo', repo, '--name', artifact, '--dir', directory], { stdio: 'inherit' });
+    const entries = await readdir(directory);
+    const binaries = entries.filter(name => name.endsWith(target.extension));
+    if (entries.length !== 3 || binaries.length !== 1 || !entries.includes('SHA256SUMS') || !entries.includes('provenance.txt')) {
+      throw new Error(`Unexpected artifact contents: ${artifact}`);
+    }
+    for (const entry of entries) {
+      if (!(await lstat(join(directory, entry))).isFile()) throw new Error(`Non-regular artifact: ${entry}`);
+    }
+    const name = binaries[0];
+    const contents = await readFile(join(directory, name));
+    const originalProvenance = await readFile(join(directory, 'provenance.txt'), 'utf8');
+    const hash = validateArtifact({ sha, run: runId, attempt, runner: target.runner, name }, contents,
+      await readFile(join(directory, 'SHA256SUMS'), 'utf8'), originalProvenance);
+    const assetName = `portal-client-${target.os}-${target.arch}${target.extension}`;
+    assets.push({ name: assetName, contents, hash });
+    provenance.push({ asset: assetName, originalName: name, artifact, details: originalProvenance.trim() });
+  }
+  const sums = assets.map(asset => `${asset.hash}  ${asset.name}`).join('\n') + '\n';
+  assets.push({ name: 'SHA256SUMS', contents: Buffer.from(sums) });
+  assets.push({ name: 'provenance.json', contents: Buffer.from(JSON.stringify({
+    commit: sha, nativeRun: runId, nativeAttempt: attempt,
+    artifacts: provenance,
+  }, null, 2) + '\n') });
+  for (const asset of assets) asset.hash = createHash('sha256').update(asset.contents).digest('hex');
+  const body = [
+    marker, `Development build for commit ${sha}.`, '',
+    ...runs.map(run => `- Verification: ${run.html_url} (attempt ${run.run_attempt})`), '',
+    'Linux AppImages and Windows executables are unsigned; Windows requires the WebView2 runtime.',
+    'Linux requires compatible system libraries and AppImage/FUSE support (or extraction).',
+    'Android APKs are not distributed: only x86_64 emulator builds are verified and distribution signing is not configured.',
+    'The native client is a placeholder and does not connect to Portal.', '',
+    'Verify SHA256SUMS before use. Build details are in provenance.json.',
+  ].join('\n');
+
+  if (disposition === 'create') {
+    if (!ref) {
+      await api('/git/refs', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ref: `refs/tags/${tag}`, sha }) });
+      ref = await api(`/git/ref/tags/${tag}`);
+      if (ref.object.type !== 'commit' || ref.object.sha !== sha) throw new Error('Created tag does not point at the source commit');
+    }
+    release = await api('/releases', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tag_name: tag, target_commitish: 'main', name: `Development ${sha}`, body, draft: true, prerelease: true, make_latest: 'false' }) });
+  } else {
+    if (!ref) throw new Error('Draft exists without its expected tag');
+  }
+  const uploadUrl = new URL(release.upload_url.replace(/\{.*$/, ''));
+  if (uploadUrl.protocol !== 'https:' || uploadUrl.hostname !== 'uploads.github.com') throw new Error('Unexpected release upload host');
+  function checkDraft(current) {
+    if (!current.draft || !current.prerelease || current.tag_name !== tag || !current.body?.includes(marker)) {
+      throw new Error('Draft changed during publication');
+    }
+    for (const uploaded of current.assets) {
+      const expected = assets.find(asset => asset.name === uploaded.name);
+      if (!expected || uploaded.state !== 'uploaded' || uploaded.digest !== `sha256:${expected.hash}`) {
+        throw new Error(`Unexpected or mismatched draft asset: ${uploaded.name}`);
+      }
+    }
+  }
+  for (const asset of assets) {
+    const current = await api(`/releases/${release.id}`);
+    checkDraft(current);
+    if (current.assets.some(uploaded => uploaded.name === asset.name)) continue;
+    const url = new URL(uploadUrl);
+    url.searchParams.set('name', asset.name);
+    await api(url.toString(), { method: 'POST', headers: { 'Content-Type': 'application/octet-stream' }, body: asset.contents });
+  }
+  const finalRuns = await latestRuns();
+  if (!finalRuns || finalRuns.some((run, i) => run.id !== runs[i].id || run.run_attempt !== runs[i].run_attempt)) {
+    throw new Error('Verification changed during publication; release remains a draft');
+  }
+  const finalRef = await api(`/git/ref/tags/${tag}`);
+  if (finalRef.object.type !== 'commit' || finalRef.object.sha !== sha) throw new Error('Tag changed during publication');
+  const finalRelease = await api(`/releases/${release.id}`);
+  checkDraft(finalRelease);
+  if (finalRelease.assets.length !== assets.length ||
+      assets.some(asset => !finalRelease.assets.some(uploaded => uploaded.name === asset.name))) {
+    throw new Error('Draft changed during publication');
+  }
+  await api(`/releases/${release.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ body, draft: false, prerelease: true, make_latest: 'false' }) });
+  console.log(`Published ${tag} for ${sha}.`);
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  const event = JSON.parse(await readFile(process.env.GITHUB_EVENT_PATH, 'utf8'));
+  publish({ event, repository: process.env.GITHUB_REPOSITORY, repositoryId: process.env.GITHUB_REPOSITORY_ID,
+    apiUrl: process.env.GITHUB_API_URL, token: process.env.GH_TOKEN, publisherRunId: process.env.GITHUB_RUN_ID })
+    .catch(error => { console.error(error); process.exitCode = 1; });
+}

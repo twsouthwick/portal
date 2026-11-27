@@ -31,6 +31,27 @@ requests. Successful pushes to the configured default branch or version tags
 publish the container image and OCI Helm chart to GHCR. The image receives
 version and `latest` tags; chart packaging uses the computed version.
 
+For native development releases, a separate publisher observes completion of
+the main build, Android debug, and native release workflows. All three must
+have succeeded on a push to `main` for the same commit before publication.
+The release is a prerelease tagged `dev-<full commit SHA>`; version-tag,
+pull-request, and manual builds do not trigger publication. Its desktop assets
+come from one successful native workflow run and attempt, with architecture
+in their names, checksums, and build/run provenance. Existing published
+releases are immutable. The provenance asset is determined by the source
+commit and native run/attempt; verification workflow run details are recorded
+in the release notes so verification reruns do not change the asset.
+
+Publishing uses a draft until every asset is uploaded. An interrupted draft
+may be retried only with the same native run and attempt; a draft belonging to
+another run must be inspected and removed manually before retrying. Native
+builds retried after failure must rerun all jobs so that the required desktop
+artifacts come from the same attempt. Concurrent publisher runs for a commit
+are serialized. The Android APK is excluded until distribution signing and
+installation on supported device ABIs are established; the x86_64 emulator
+smoke key is not a distribution key. Desktop binaries are unsigned and their
+platform prerequisites and limitations must be disclosed.
+
 ## Decisions & Alternatives
 
 | Decision | Current approach | Alternatives considered | Rationale |
@@ -53,6 +74,8 @@ version and `latest` tags; chart packaging uses the computed version.
    release packages are not verified.
 5. Successful GHCR publication and package permissions are not exercised by
    pull-request validation.
+6. Distribution signing, upgrade compatibility and device/ABI verification
+   are needed before an Android APK can be included in a prerelease.
 
 ## References
 
@@ -62,7 +85,7 @@ version and `latest` tags; chart packaging uses the computed version.
   `Directory.Build.props`, `Directory.Build.targets`,
   `Portal.Web/Portal.Web.csproj`, `Portal.Web/package.json`
 - CI workflows: `.github/workflows/build.yaml`,
-  `.github/workflows/android.yaml`
+  `.github/workflows/android.yaml`, `.github/workflows/native-release.yaml`
 - Client tests and scripts: `Portal.Client/tests/`,
   `Portal.Client/scripts/android-smoke.sh`,
   `Portal.Client/smoke-linux.sh`,
