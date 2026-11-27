@@ -38,7 +38,7 @@ remain open.
 and provide shared observability, service-discovery, resilience, and health
 defaults.
 
-**Key components:** Aspire AppHost and Keycloak realm; two web profiles;
+**Key components:** Aspire AppHost and Authelia configuration; two web profiles;
 application startup; ServiceDefaults; SDK/solution and development-container
 configuration.
 
@@ -46,15 +46,16 @@ configuration.
 
 | Category | Spec IDs | Implemented | Deferred | Gaps |
 |---|---|---:|---:|---:|
-| AppHost, defaults, health, SDK, key storage | RUNTIME-001, RUNTIME-002, RUNTIME-003, RUNTIME-004, RUNTIME-005, RUNTIME-006 | 6 | 0 | 0 known implementation gaps |
+| AppHost, defaults, health, SDK, key storage | RUNTIME-001, RUNTIME-002, RUNTIME-003, RUNTIME-004, RUNTIME-005, RUNTIME-006 | 6 | 0 | No automated AppHost topology coverage |
 
-**Traceability:** Tests verify OIDC group-to-role mapping, but no `@spec`
-annotations link tests or implementation to these requirements.
+**Traceability:** AppHost entry points cite RUNTIME-001 and RUNTIME-002; the
+running topology was verified manually. No automated test cites those IDs.
+Other runtime requirements lack citations.
 
 ## Key Findings
 
-1. Aspire starts Keycloak and `media`/`admin` instances of the web project
-   (`Portal.AppHost/AppHost.cs:3-32`).
+1. Aspire starts Authelia and `media`/`admin` instances of the web project
+   (`Portal.AppHost/AppHost.cs`, `Portal.AppHost/AutheliaResource.cs`).
 2. Shared defaults configure telemetry, discovery, resilience, and
    health-check behavior (`Portal.ServiceDefaults/Extensions.cs:20-47,109-129`).
 3. Data-protection keys currently use a temporary-directory path

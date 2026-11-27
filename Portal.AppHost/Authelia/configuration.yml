@@ -29,6 +29,7 @@ identity_providers:
     jwks:
       - key: {{ secret "/secrets/oidc.pem" | mindent 10 "|" | msquote }}
     enforce_pkce: 'always'
+    # @spec AUTH-007
     claims_policies:
       portal:
         id_token: ['groups', 'name']

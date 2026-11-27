@@ -2,7 +2,7 @@
 
 These brownfield EARS specifications record behavior observed in the current
 implementation. `[x]` means the behavior exists; it does not mean a test
-currently cites the ID. No `@spec` annotations were found in the repository.
+currently cites the ID. No `@spec` annotations were found for this segment.
 
 - [x] **UX-001** When an authenticated user opens the portal home route, the application shall render site discovery through the interactive Blazor experience. Evidence: `Portal.Web/Components/Routes.razor:1-8`, `Portal.Web/Components/Pages/Home.razor:1-33`.
 - [x] **UX-002** When the user supplies a search query or changes the site view mode, the UI shall filter or regroup the displayed site cards accordingly. Evidence: `Portal.Web/Components/SiteSearchBar.razor:1-53`, `Portal.Web/Components/SiteViewModeSelector.razor:1-56`, `Portal.Web/Components/SiteCategoryView.razor:1-43`, `Portal.Web/Components/SiteFrequencyView.razor:1-42`.

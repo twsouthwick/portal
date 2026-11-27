@@ -1,5 +1,6 @@
 var builder = DistributedApplication.CreateBuilder(args);
 
+// @spec RUNTIME-002
 var clientSecret = builder.AddParameter("portal-client-secret", secret: true);
 var authelia = builder.AddAuthelia("authelia");
 

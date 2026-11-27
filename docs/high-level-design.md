@@ -85,7 +85,7 @@ flowchart LR
   Web --> Browser[Blazor UI and browser interop]
   Web --> Content[Authorized static-content endpoint]
   Aspire[Portal.AppHost] --> Web
-  Aspire --> Keycloak[Development Keycloak]
+  Aspire --> Authelia[Development Authelia]
   Defaults[Portal.ServiceDefaults] --> Web
   Chart[Helm chart and CRD] --> Web
   Client[Portal.Client Tauri shell] -. placeholder; no integration .-> User
@@ -117,7 +117,7 @@ boundary.
 | Decision | Current approach | Alternatives considered | Rationale |
 |---|---|---|---|
 | Catalog composition | File provider precedes Kubernetes provider; first matching site ID wins. **[inferred]** | Kubernetes overrides files; merge duplicate sites; reject duplicates across sources. | This is directly observable in provider registration and composition (`Portal.Web/Program.cs:89`, `Portal.Web/Services/CompositePortalProvider.cs:10-45`). The desired override policy is unconfirmed. |
-| Identity integration | OIDC authorization code flow with PKCE and `groups` as role claims. **[inferred]** | Anonymous portal; different identity protocol or claim mapping. | Current application configuration and development realm establish this behavior (`Portal.Web/Program.cs:30-72`, `Portal.AppHost/Realms/portal-realm.json:64-75`). |
+| Identity integration | OIDC authorization code flow with PKCE and `groups` as role claims. **[inferred]** | Anonymous portal; different identity protocol or claim mapping. | Application configuration and local Authelia configuration establish this behavior (`Portal.Web/Program.cs`, `Portal.AppHost/Authelia/configuration.yml`). |
 | Client scope | Tauri remains a placeholder rather than a second portal implementation. **[inferred from README]** | Implement portal integration and authentication in the client. | README explicitly says integration is not implemented. Future client intent is open. |
 | Deployment packaging | Helm deploys the existing web container and its Kubernetes permissions. **[inferred]** | External deployment-only configuration or a separate operator. | The chart defines the deployment, service, service account, RBAC, and CRD. The operational boundaries beyond this chart are not established. |
 
@@ -140,8 +140,8 @@ satisfaction.
 - Should `IsPrivate` and `IsInternal` affect direct content endpoint access, or
   are they intentionally presentation-only flags?
 - Is file-over-Kubernetes precedence a product invariant?
-- Are the current development realm credentials and client secret strictly
-  limited to local development?
+- Are the development-only Authelia credentials and client secret isolated
+  from all non-development deployments?
 - Should production deployments use persistent/shared data-protection keys,
   probes, resource limits, or more than one replica?
 - What should the Tauri client do when portal integration is designed?

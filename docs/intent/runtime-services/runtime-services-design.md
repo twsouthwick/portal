@@ -18,9 +18,12 @@ browser services, portal providers, static assets, and content routes. The
 project uses the .NET SDK pinned by `global.json` (11.0.100) and targets
 `net11.0`.
 
-`Portal.AppHost` starts Keycloak with the checked-in development realm, then
-starts `media` and `admin` web resources with development OIDC environment
-values. Both resources wait for Keycloak and expose health checks.
+`Portal.AppHost` starts Authelia with local-only configuration, a mounted .NET
+development certificate and signing key, and Aspire secret parameters. It
+starts `media` and `admin` web processes with the same HTTPS OIDC issuer and
+client settings; both wait for Authelia's HTTPS health check. Containerized
+Portal clients require additional host routing and certificate trust, as
+documented in `developer.md`.
 
 ## Shared Defaults
 
@@ -58,7 +61,7 @@ temporary directory in the current implementation.
   `Portal.Web/Portal.Web.csproj`
 - Aspire: `Portal.AppHost/AppHost.cs`,
   `Portal.AppHost/Portal.AppHost.csproj`,
-  `Portal.AppHost/Realms/portal-realm.json`,
+  `Portal.AppHost/AutheliaResource.cs`, `Portal.AppHost/Authelia/`,
   `Portal.AppHost/appsettings.json`,
   `Portal.AppHost/appsettings.Development.json`,
   `Portal.AppHost/Properties/launchSettings.json`,

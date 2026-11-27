@@ -2,7 +2,7 @@
 
 These brownfield EARS specifications record behavior observed in the current
 implementation. `[x]` means the behavior exists; it does not mean a test
-currently cites the ID. No `@spec` annotations were found in the repository.
+currently cites the ID. No `@spec` annotations were found for this segment.
 
 - [x] **CLIENT-001** When the native client starts, it shall display the `Portal` heading and `Native client shell` placeholder text. Evidence: `Portal.Client/index.html:8-12`; test: `Portal.Client/tests/client.test.js:24-85`.
 - [x] **CLIENT-002** When the Tauri shell creates its primary window, it shall use the configured title, dimensions, frontend URL, and content security policy. Evidence: `Portal.Client/src-tauri/tauri.conf.json:3-35`.

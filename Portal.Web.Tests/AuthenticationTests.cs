@@ -25,6 +25,7 @@ public sealed class AuthenticationTests : IClassFixture<PortalWebApplicationFact
         _factory = factory;
     }
 
+    // @spec AUTH-001 AUTH-002
     [Fact]
     public async Task Home_ChallengesWithOidc()
     {
@@ -72,6 +73,7 @@ public sealed class AuthenticationTests : IClassFixture<PortalWebApplicationFact
         Assert.True(new ClaimsPrincipal(identity).IsInRole("media"));
     }
 
+    // @spec AUTH-002
     [Theory]
     [InlineData(false)]
     [InlineData(true)]

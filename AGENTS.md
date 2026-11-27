@@ -29,7 +29,7 @@
 - Follow existing Razor component and colocated `.razor.css` patterns; use the configured Fluent UI components and Bootstrap Icons rather than introducing another UI system.
 - Keep nullable reference types enabled and preserve async APIs across service and browser-interop boundaries.
 - Treat implementation and configuration as authoritative when documentation differs. Current frontend sources are under `Portal.Web/ts` and `Portal.Web/css`.
-- OIDC configuration uses the `Oidc` section. The `groups` claim supplies portal roles, and Aspire imports the local development realm from `Portal.AppHost/Realms`.
+- OIDC configuration uses the `Oidc` section. The `groups` claim supplies portal roles, and Aspire configures local Authelia from `Portal.AppHost/Authelia`.
 - Site visibility and static-content authorization are both role-sensitive; when changing manifest or provider behavior, verify both the rendered site list and mapped content endpoints.
 - Keep changes scoped to the owning project and do not edit generated `artifacts`, `obj`, `node_modules`, or `wwwroot/dist` content.
 

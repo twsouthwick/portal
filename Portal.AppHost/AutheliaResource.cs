@@ -7,6 +7,7 @@ sealed class AutheliaResource(string name) : ContainerResource(name)
 
 static class AutheliaExtensions
 {
+    // @spec RUNTIME-001
     public static IResourceBuilder<AutheliaResource> AddAuthelia(this IDistributedApplicationBuilder builder, string name)
     {
         var secretsDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".aspnet", "portal-authelia");
