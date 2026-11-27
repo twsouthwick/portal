@@ -3,8 +3,10 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.IdentityModel.Protocols;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
+using Portal.Web.Services;
 using Xunit;
 
 namespace Portal.Web.Tests;
@@ -66,9 +68,10 @@ public sealed class PortalWebApplicationFactory : WebApplicationFactory<Program>
         builder.UseSetting("Oidc:Authority", "https://identity.test");
         builder.UseSetting("Oidc:ClientId", "portal-web");
         builder.UseSetting("Oidc:ClientSecret", "test-secret");
-        builder.UseSetting("PORTAL_PROVIDER", "file");
         builder.ConfigureServices(services =>
         {
+            services.RemoveAll<IPortalProvider>();
+            services.AddSingleton<IPortalProvider>(new CompositePortalProvider());
             services.PostConfigure<OpenIdConnectOptions>(OpenIdConnectDefaults.AuthenticationScheme, options =>
             {
                 options.ConfigurationManager = new StaticConfigurationManager<OpenIdConnectConfiguration>(new OpenIdConnectConfiguration
