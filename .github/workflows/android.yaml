@@ -70,14 +70,17 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
-      - name: Install and smoke test on Android emulator
+      - name: Install, smoke test, and run shared UI tests on Android emulator
         uses: reactivecircus/android-emulator-runner@v2.34.0
         with:
           api-level: 35
           target: google_apis
           arch: x86_64
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-          script: bash Portal.Client/scripts/android-smoke.sh
+          script: |
+            bash Portal.Client/scripts/android-smoke.sh install
+            bash Portal.Client/scripts/android-smoke.sh smoke
+            bash Portal.Client/scripts/android-smoke.sh ui
 
       - name: Upload Android smoke-test evidence
         if: always()

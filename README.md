@@ -155,6 +155,10 @@ their pinned versions require Node.js 22.22.2+ or 24.15.0+ (or 26+).
 The uploaded debug APK is for inspection only; this is not a portal connectivity,
 release artifact, or signing test.
 
+The emulator action runs installation, activity smoke verification, and shared
+UI tests as separate commands on the same emulator. Each stage has its own log
+group and diagnostics file; later stages do not run if an earlier stage fails.
+
 To reproduce on Linux from the repository root, install Node.js and Rust as
 above, JDK 17, and the Android SDK command-line tools. Set `JAVA_HOME` and
 `ANDROID_HOME`, add `$ANDROID_HOME/cmdline-tools/latest/bin` and
@@ -178,7 +182,9 @@ echo no | avdmanager create avd -n portal-smoke \
 emulator -avd portal-smoke -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim &
 adb wait-for-device
 until [ "$(adb shell getprop sys.boot_completed | tr -d '\r')" = 1 ]; do sleep 2; done
-bash Portal.Client/scripts/android-smoke.sh
+bash Portal.Client/scripts/android-smoke.sh install
+bash Portal.Client/scripts/android-smoke.sh smoke
+bash Portal.Client/scripts/android-smoke.sh ui
 adb emu kill
 ```
 

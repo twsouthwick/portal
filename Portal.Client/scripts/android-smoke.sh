@@ -5,33 +5,45 @@ package=app.swick.portal.client
 activity="$package/.MainActivity"
 apk_dir=Portal.Client/src-tauri/gen/android/app/build/outputs/apk
 artifacts_dir=Portal.Client/artifacts
+stage=${1:-all}
 mkdir -p "$artifacts_dir"
+
+case "$stage" in
+  install|smoke|ui|all) ;;
+  *) echo "Usage: $0 [install|smoke|ui|all]" >&2; exit 2 ;;
+esac
 
 diagnostics() {
   status=$?
   {
-    echo "Android smoke test exit status: $status"
+    echo "Android $stage exit status: $status"
     echo "--- Activity state ---"
     adb shell dumpsys activity activities || true
     echo "--- Crash log ---"
     adb logcat -b crash -d || true
     echo "--- Recent logcat ---"
     adb logcat -d -t 500 || true
-  } > "$artifacts_dir/android-diagnostics.log" 2>&1
+  } > "$artifacts_dir/android-$stage-diagnostics.log" 2>&1
   if (( status != 0 )); then
-    cat "$artifacts_dir/android-diagnostics.log" >&2
+    cat "$artifacts_dir/android-$stage-diagnostics.log" >&2
     adb exec-out screencap -p > "$artifacts_dir/android-failure.png" || rm -f "$artifacts_dir/android-failure.png"
   fi
 }
 trap diagnostics EXIT
 
-mapfile -t apks < <(find "$apk_dir" -type f -name '*.apk')
-if (( ${#apks[@]} != 1 )); then
-  echo "Expected exactly one debug APK in $apk_dir, found ${#apks[@]}" >&2
-  exit 1
-fi
+install_apk() {
+  echo "::group::Install Android APK"
+  mapfile -t apks < <(find "$apk_dir" -type f -name '*.apk')
+  if (( ${#apks[@]} != 1 )); then
+    echo "Expected exactly one debug APK in $apk_dir, found ${#apks[@]}" >&2
+    return 1
+  fi
+  adb install -r "${apks[0]}"
+  echo "::endgroup::"
+}
 
-adb install -r "${apks[0]}"
+smoke_test() {
+echo "::group::Launch and verify Android activity"
 adb shell am force-stop "$package"
 adb logcat -b all -c
 launch=$(adb shell am start -W -n "$activity")
@@ -68,8 +80,21 @@ fi
 adb exec-out screencap -p > "$artifacts_dir/android-client.png"
 test -s "$artifacts_dir/android-client.png"
 echo "$activity remained in the foreground for 10 seconds (pid $pid)"
+echo "::endgroup::"
+}
 
-(
-  cd Portal.Client
-  PORTAL_CLIENT_TEST_ADAPTER=./adapters/android-uiautomator2.js npm run test:e2e
-)
+ui_test() {
+  echo "::group::Run shared Android UI tests"
+  (
+    cd Portal.Client
+    PORTAL_CLIENT_TEST_ADAPTER=./adapters/android-uiautomator2.js npm run test:e2e
+  )
+  echo "::endgroup::"
+}
+
+case "$stage" in
+  install) install_apk ;;
+  smoke) smoke_test ;;
+  ui) ui_test ;;
+  all) install_apk; smoke_test; ui_test ;;
+esac

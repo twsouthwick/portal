@@ -16,7 +16,7 @@ async function unusedPort() {
   return port;
 }
 
-export async function isVisible(driver, { role, text }) {
+export async function isVisible(driver, { role, text }, record = () => {}) {
   try {
     return await driver.wait(async () => {
       const webviews = await driver.findElements(By.className('android.webkit.WebView'));
@@ -25,8 +25,12 @@ export async function isVisible(driver, { role, text }) {
         for (const element of elements) {
           const label = (await element.getText()).trim();
           const description = (await element.getDomAttribute('content-desc') ?? '').trim();
-          if ((label === text || description === text) && await element.getDomAttribute('displayed') === 'true' &&
-            (!role || (role === 'heading' && await element.getDomAttribute('heading') === 'true'))) return true;
+          if (label === text || description === text) {
+            const displayed = await element.getDomAttribute('displayed');
+            const heading = role === 'heading' ? await element.getDomAttribute('heading') : null;
+            record(`Matched requested text ${JSON.stringify(text)}: displayed=${displayed}, heading=${heading}`);
+            if (displayed === 'true' && (!role || (role === 'heading' && heading === 'true'))) return true;
+          }
         }
       }
       return false;
@@ -42,6 +46,7 @@ export async function createAdapter() {
   let service;
   let serviceError;
   let output = '';
+  const observations = new Set();
 
   return {
     async launch() {
@@ -81,7 +86,7 @@ export async function createAdapter() {
     },
 
     async isVisible(query) {
-      return isVisible(driver, query);
+      return isVisible(driver, query, observation => observations.add(observation));
     },
 
     async captureScreenshot(file) {
@@ -92,7 +97,10 @@ export async function createAdapter() {
     },
 
     async diagnostics() {
-      return output ? `Appium output:\n${output}` : '';
+      return [
+        observations.size ? `UI observations:\n${[...observations].join('\n')}` : '',
+        output ? `Appium output:\n${output}` : '',
+      ].filter(Boolean).join('\n\n');
     },
 
     async cleanup() {
