@@ -67,9 +67,9 @@ export async function createAdapter() {
             const elements = await webview.findElements(By.xpath('.//*'));
             for (const element of elements) {
               const label = (await element.getText()).trim();
-              const description = (await element.getAttribute('content-desc') ?? '').trim();
+              const description = (await element.getDomAttribute('content-desc') ?? '').trim();
               if ((label === text || description === text) && await element.isDisplayed() &&
-                (!role || (role === 'heading' && await element.getAttribute('heading') === 'true'))) return true;
+                (!role || (role === 'heading' && await element.getDomAttribute('heading') === 'true'))) return true;
             }
           }
           return false;
