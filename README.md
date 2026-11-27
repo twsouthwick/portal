@@ -90,7 +90,7 @@ npm run tauri -- build                   # release executable and bundles
 | --- | --- | --- |
 | Linux x86_64 | GCC/build-essential, pkg-config, GTK 3 and WebKitGTK 4.1 development libraries, OpenSSL, Ayatana AppIndicator and librsvg development libraries, and patchelf | Ubuntu 24.04 x86_64: debug build without bundling succeeded; window opened under Xvfb. Release bundles and other architectures unverified. |
 | Windows | Rust MSVC toolchain, Visual Studio C++ Build Tools with Windows SDK, and Microsoft Edge WebView2 runtime | Unverified; no Windows build or installer tested. |
-| Android | A supported desktop host's prerequisites, JDK 17, Android Studio/SDK (platform, build-tools, platform-tools), Android NDK, and Rust Android targets | Unverified; no Android build, emulator, or device tested. |
+| Android | JDK 17, Android SDK (platform, build-tools, platform-tools), Android NDK, and Rust Android targets | CI builds a debug APK for x86_64 and checks its activity on an API 35 x86_64 emulator. ARM, x86, physical devices, releases and signing are not covered. |
 
 For Ubuntu/Debian Linux the native packages can be installed with:
 
@@ -99,20 +99,44 @@ sudo apt-get install build-essential pkg-config libwebkit2gtk-4.1-dev \
   libssl-dev libayatana-appindicator3-dev librsvg2-dev patchelf
 ```
 
-For Android, configure `JAVA_HOME`, `ANDROID_HOME`, and `NDK_HOME` for the
-installed JDK, SDK, and NDK, then install the Rust targets for the ABIs you
-intend to build. For example, for an ARM64 APK:
+The separate Android workflow builds and smoke-tests the placeholder shell on
+Ubuntu 24.04 with JDK 17, SDK platform 37.0, build-tools 37.0.0, NDK
+27.3.13750724 and the `x86_64-linux-android` Rust target. It installs the APK
+on an API 35 Google APIs x86_64 emulator, launches
+`app.swick.portal.client/.MainActivity`, and checks that the same process stays
+in the foreground for 10 seconds without a recorded crash. Failures include
+activity state and logcat output in the job log. This is not a functional UI,
+portal connectivity, release artifact, or signing test.
+
+To reproduce on Linux from the repository root, install Node.js and Rust as
+above, JDK 17, and the Android SDK command-line tools. Set `JAVA_HOME` and
+`ANDROID_HOME`, add `$ANDROID_HOME/cmdline-tools/latest/bin` and
+`$ANDROID_HOME/platform-tools` to `PATH`, and accept the SDK licenses. Install
+the same packages and build the APK:
 
 ```bash
-rustup target add aarch64-linux-android
+sdkmanager "platform-tools" "platforms;android-37.0" "build-tools;37.0.0" \
+  "ndk;27.3.13750724" "emulator" "system-images;android-35;google_apis;x86_64"
+export NDK_HOME="$ANDROID_HOME/ndk/27.3.13750724"
+rustup target add x86_64-linux-android
 cd Portal.Client
 npm ci
-npm run tauri -- android init
-npm run tauri -- android dev             # requires a device or emulator
-npm run tauri -- android build --debug --apk --target aarch64
+npm run tauri -- android init --ci --skip-targets-install
+npm run tauri -- android build --ci --debug --apk --target x86_64
+cd ..
+echo no | avdmanager create avd -n portal-smoke \
+  -k "system-images;android-35;google_apis;x86_64"
+emulator -avd portal-smoke -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim &
+adb wait-for-device
+until [ "$(adb shell getprop sys.boot_completed | tr -d '\r')" = 1 ]; do sleep 2; done
+bash Portal.Client/scripts/android-smoke.sh
+adb emu kill
 ```
 
-Android initialization generates `src-tauri/gen/android` locally; it and
+Use a hardware-accelerated emulator (KVM on Linux) and add
+`$ANDROID_HOME/emulator` to `PATH`. The smoke script clears logcat on the
+selected device; use a dedicated emulator and ensure only one device is
+connected. Android initialization generates `src-tauri/gen/android` locally; it and
 `dist`, `node_modules`, Cargo's `target`, and generated bundles are not
 committed. Release Android packages require signing configuration.
 
