@@ -2,6 +2,7 @@ using System.Net;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.IdentityModel.Protocols;
@@ -32,6 +33,13 @@ public sealed class AuthenticationTests : IClassFixture<PortalWebApplicationFact
 
         Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
         Assert.StartsWith("https://identity.test/authorize", response.Headers.Location?.AbsoluteUri);
+        var query = QueryHelpers.ParseQuery(response.Headers.Location!.Query);
+        Assert.Equal("portal-web", query["client_id"]);
+        Assert.Equal("code", query["response_type"]);
+        Assert.Equal("S256", query["code_challenge_method"]);
+        Assert.False(string.IsNullOrEmpty(query["code_challenge"]));
+        Assert.Contains("groups", query["scope"].ToString().Split(' '));
+        Assert.Equal("http://localhost/signin-oidc", query["redirect_uri"]);
     }
 
     [Fact]
