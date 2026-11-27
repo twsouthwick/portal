@@ -5,9 +5,10 @@ Tauri desktop/mobile shell and its platform-adapted smoke and UI verification.
 ## Status
 
 **MAPPED** — first reconstructed 2026-11-27. The current shell is a tested
-placeholder; portal integration is not implemented. The owner selected the
-public-client authentication design on 2026-11-27; real-provider and platform
-validation remain.
+placeholder; portal integration is not implemented. Approved MinVer versioning
+and signed multi-ABI Android packaging are implemented; hosted-run verification
+remains pending. The owner selected the public-client authentication design on
+2026-11-27; real-provider and platform validation remain.
 
 ## References
 
@@ -18,7 +19,7 @@ validation remain.
 - `docs/intent/native-client/native-client-design.md`
 
 ### EARS
-- `docs/intent/native-client/native-client-specs.md` — 5 specs
+- `docs/intent/native-client/native-client-specs.md` — 7 specs
 
 ### Tests
 - `Portal.Client/tests/client.test.js`
@@ -26,6 +27,8 @@ validation remain.
 - `Portal.Client/tests/android-webview.test.js`
 - `Portal.Client/smoke-linux.sh`
 - `Portal.Client/smoke-windows.ps1`
+- `.github/scripts/native-release.test.mjs`
+- `.github/scripts/android-signing.test.mjs`
 
 ### Code
 - `Portal.Client/index.html`
@@ -34,6 +37,8 @@ validation remain.
 - `Portal.Client/tests/adapters/`
 - `.github/workflows/build.yaml`
 - `.github/workflows/android.yaml`
+- `.github/workflows/native-release.yaml`
+- `.github/scripts/configure-android-signing.mjs`
 
 ## Architecture
 
@@ -49,10 +54,11 @@ smoke scripts.
 | Category | Spec IDs | Implemented | Deferred | Gaps |
 |---|---|---:|---:|---:|
 | Shell and configured verification | CLIENT-001, CLIENT-002, CLIENT-003, CLIENT-004, CLIENT-005 | 5 | 0 | 0 known shell gaps |
+| Approved release packaging | CLIENT-006, CLIENT-007 | 2 | 0 | Hosted signing and platform builds remain unverified |
 
-**Traceability:** The shared tests assert placeholder content, but no
-`@spec` annotations link tests or code to these IDs. Portal connectivity and
-authentication are explicitly outside the present implementation.
+**Traceability:** Android signing, ABI, versioning, and release workflow tests
+cite the approved EARS IDs. Portal connectivity and authentication are
+explicitly outside the present implementation.
 
 ## Key Findings
 
@@ -66,7 +72,8 @@ authentication are explicitly outside the present implementation.
 ## Work Required
 
 ### Must Fix
-1. No placeholder-shell defect is asserted by this mapping.
+1. Verify signed multi-ABI APK publication on a push with configured signing
+   secrets; arm64 physical-device validation remains intentionally excluded.
 
 ### Should Fix
 1. Validate the selected public-client design against Authelia and the
@@ -74,5 +81,5 @@ authentication are explicitly outside the present implementation.
    (AUTH-008 to AUTH-016), but provider interoperability remains unvalidated.
 
 ### Nice to Have
-1. Define release packaging and signing verification once supported release
-   targets are decided.
+1. Review release packaging behavior on additional physical devices after the
+   distribution pipeline is verified.

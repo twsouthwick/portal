@@ -304,7 +304,8 @@ Use a hardware-accelerated emulator (KVM on Linux) and add
 selected device; use a dedicated emulator and ensure only one device is
 connected. Android initialization generates `src-tauri/gen/android` locally;
 it and `dist`, `node_modules`, Cargo's `target`, and generated bundles are not
-committed. Release Android packages require signing configuration.
+committed. The native release workflow uses the separate distribution signing
+configuration described below.
 
 ### Client test architecture
 
@@ -362,34 +363,46 @@ pushes to `main` or `v*` tags. The main build workflow restores, builds, and
 tests `Portal.slnx`, validates container packaging without pushing, lints the
 Helm chart, and builds/tests the Linux and Windows native clients on x86_64 and
 ARM64. The separate Android workflow builds and smoke-tests an x86_64 debug
-APK. Successful pushes publish the portal image to
+APK. The native release workflow versions its desktop and Android artifacts
+with MinVer. Successful pushes publish the portal image to
 `ghcr.io/twsouthwick/portal` and the Helm chart to
 `oci://ghcr.io/twsouthwick/charts/portal`.
 
-The image uses the MinVer version and `latest` tags; the chart uses the same
-MinVer version. Both branch and tag pushes update `latest`. Publishing uses
+Main builds publish the MinVer prerelease image tag and mutable `dev` tag.
+Stable `vMAJOR.MINOR.PATCH` tags publish the exact MinVer image tag,
+`MAJOR.MINOR`, `MAJOR`, and `latest`; main and prerelease tags never move
+stable aliases. The chart version and `appVersion` match MinVer, and its image
+defaults to `appVersion` unless `image.tag` is overridden. Published container
+images use one OCI index for `linux/amd64` and `linux/arm64`. Publishing uses
 the workflow's `GITHUB_TOKEN` with package-write permission. Existing GHCR
 packages must grant this repository's Actions workflow access. New packages
 are private by default; pulling them requires registry credentials unless
 their visibility is changed.
 
 The container uses the .NET 11 Ubuntu Resolute chiseled-extra ASP.NET image
-from MCR. The build job validates container packaging into a temporary archive,
-including the version and `latest` tags, without pushing. This requires access
-to MCR and its blob storage. Actual GHCR image and Helm chart pushes run only
-on successful branch or tag pushes, so verify both publishing steps after
-merging; pull requests cannot validate GHCR package permissions or pushes.
+from MCR. The build job validates multi-architecture container packaging into
+a temporary archive without pushing. This requires access to MCR and its blob
+storage. Actual GHCR image and Helm chart pushes run only on successful main
+or stable-tag pushes; pull requests cannot validate GHCR package permissions
+or pushes.
 
-The independent `Native client release builds` workflow also runs on these
-events and on manual dispatch. It is configured to build release AppImages on
-native Linux x86_64 and ARM64 runners, `portalclient.exe` executables on native
-Windows x86_64 and ARM64 runners, and an x86_64 Android APK.
-Each job checks the output architecture and launches
-the app before uploading a workflow artifact named with the checked-out commit
-SHA. The Android job tests a temporary, locally signed copy on an API 35
-x86_64 emulator; the uploaded release APK is unsigned and must be signed
-separately before installation or distribution. Windows binaries are also
-unsigned. No distribution signing keys are used by this workflow.
+The independent `Native client release builds` workflow runs on main pushes,
+stable version tags, pull requests, and manual dispatch. It builds release
+AppImages on native Linux x86_64 and ARM64 runners and `portalclient.exe`
+executables on native Windows x86_64 and ARM64 runners. On push events, it also
+builds one signed Android APK containing `arm64-v8a` and `x86_64`; CI inspects
+both native libraries and smoke-tests the signed APK on an API 35 x86_64
+emulator. It does not test on a physical device or claim arm64 device
+validation. Release artifacts include SHA-256 checksums and commit, run,
+attempt, version, architecture, and toolchain provenance. Desktop binaries
+remain unsigned.
+
+The Android release job requires these repository Actions secrets:
+`ANDROID_KEYSTORE_BASE64` (base64-encoded keystore),
+`ANDROID_KEYSTORE_PASSWORD`, and `ANDROID_KEY_ALIAS`. The key password is the
+same as the keystore password. The workflow writes temporary signing
+configuration under the generated Android project and does not upload the
+keystore or properties file.
 
 The workflow pins Node and Rust versions, uses `npm ci` and Cargo's locked
 dependencies, and sets `SOURCE_DATE_EPOCH` from the commit. Artifacts include
@@ -397,35 +410,33 @@ SHA-256 checksums and commit/toolchain provenance. Hosted runner images,
 system packages, Android/Gradle dependencies and packaging tools can change, so
 bit-for-bit identical rebuilds are not guaranteed.
 
-### Native prerelease publication
+### Native release publication
 
-The `Publish native prerelease` workflow reacts to completion of any of the
-three workflows above. It publishes only when the latest matching `main` push
-run of each workflow has completed successfully for the same commit, including
-the main workflow's GHCR publishing job. PR, tag and manual runs do not
-publish and do not receive release-write credentials. Existing image and chart
-publication is unchanged.
+The `Publish native release` workflow reacts to completion of the main build,
+Android debug smoke, and native release workflows. For a `main` push it updates
+one rolling prerelease tagged `dev`; for a stable `vMAJOR.MINOR.PATCH` tag it
+creates an immutable GitHub Release. Each publication waits until all three
+matching runs for the same commit have succeeded. Pull requests, manual runs,
+and non-stable tags do not publish. Only the publisher receives release-write
+permissions.
 
-The [Releases page](https://github.com/twsouthwick/portal/releases) contains one prerelease per commit, tagged
-`dev-<full 40-character commit SHA>` and pointing to that commit. Release
-notes link to the verification runs; `provenance.json` identifies the native
-run and attempt, original artifacts and toolchain details. `SHA256SUMS` covers
-the four architecture-specific desktop files. These checksums and provenance
-are generated by CI, not independently signed attestations.
+The [Releases page](https://github.com/twsouthwick/portal/releases) has one
+mutable `dev` prerelease and immutable stable releases. Release notes link to
+the verification runs; run-qualified provenance identifies the native run,
+attempt, original artifacts, and toolchain details. `SHA256SUMS` covers all
+four desktop assets and the Android APK. These checksums and provenance are
+generated by CI, not independently signed attestations.
 
 Linux x86_64/ARM64 AppImages are smoke-tested on Ubuntu 24.04; they require a
 compatible Linux desktop and AppImage/FUSE support (or extraction). Windows
 x86_64/ARM64 executables require WebView2 Evergreen Runtime; no installer is
 provided. Both are unsigned and can trigger operating-system warnings.
 The native client remains a placeholder without Portal connectivity or
-authentication. No Android APK is included: the only tested ABI is x86_64 on
-an API 35 emulator, the uploaded build is unsigned, and the temporary
-smoke-test signing key is not suitable for distribution. Android distribution
-signing, upgrade compatibility, physical-device testing and supported ABIs
-remain tracked in the [build-delivery design](docs/intent/build-delivery/build-delivery-design.md)
-before any APK can be published.
+authentication. Android's x86_64 ABI is emulator-tested; arm64 is included and
+architecture-checked but not device-tested. Upgrade compatibility and
+physical-device testing remain unverified.
 
-Publishers serialize per commit without cancelling a running publisher. A
+Publishers serialize repository-wide without cancelling a running publisher. A
 release is uploaded as a draft and published only after all assets are present
 and the verification runs are rechecked. A published release is never
 replaced. An interrupted draft is retried only for the same native run and
@@ -434,15 +445,15 @@ attempt fails closed. Inspect and manually remove a conflicting draft before
 retrying. Existing draft assets must match the freshly prepared files'
 GitHub-reported SHA-256 digests; unexpected or mismatched assets require
 manual inspection and cleanup. Do not manually publish or edit a draft or
-rerun verification while a publisher for that commit is running: GitHub's
-release and workflow APIs do not provide an atomic transaction across those
-operations. Rerun **all** native jobs, not just failed jobs, to produce all four
-artifacts from one attempt; rerun a completed verification workflow to
-retrigger the publisher. Recovery requires the original workflow artifacts,
-which expire according to repository retention settings. If they have expired,
-remove any matching draft after inspection and rerun all native jobs. Failed
-or pending verification does not publish; a later successful rerun triggers
-another check.
+rerun verification while a publisher is running: GitHub's release and
+workflow APIs do not provide an atomic transaction across those operations.
+Rerun **all** native jobs, not just failed jobs, to produce every artifact from
+one attempt; rerun a completed verification workflow to retrigger the
+publisher. Recovery requires the original workflow artifacts, which expire
+according to repository retention settings. If they have expired, remove any
+matching draft after inspection and rerun all native jobs. Failed or pending
+verification does not publish; a later successful rerun triggers another
+check.
 
 For changes, run the focused checks for the affected project and the solution
 build/tests. Native client changes should also be checked with the relevant

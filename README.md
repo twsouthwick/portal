@@ -28,18 +28,19 @@ local development and contribution instructions, see the
 
 ## Native development builds
 
-Successful `main` builds publish prereleases on the
-[GitHub Releases page](https://github.com/twsouthwick/portal/releases). Tags are `dev-<full commit SHA>`.
-Download the Linux AppImage or Windows executable matching your x86_64 or ARM64
-architecture and check `SHA256SUMS`. The binaries are unsigned; Windows needs
-the WebView2 runtime, and Linux needs a compatible desktop and AppImage/FUSE
-support (or AppImage extraction). The client is a placeholder and does not
-connect to Portal.
+Successful `main` builds update the rolling `dev` prerelease on the
+[GitHub Releases page](https://github.com/twsouthwick/portal/releases).
+Stable `vMAJOR.MINOR.PATCH` tags create immutable releases. Both channels
+include Linux and Windows AppImages/executables for x86_64 and ARM64 plus a
+signed Android APK containing `arm64-v8a` and `x86_64`; checksums and build
+provenance accompany the assets. The Android APK is smoke-tested on an x86_64
+emulator, while the ARM64 libraries are inspected but not device-tested.
 
-No Android APK is distributed: CI verifies x86_64 on an emulator only, using a
-temporary smoke-test key, and distribution signing and device ABIs are not
-yet established. See the [developer guide](developer.md#ci-and-contribution-checks)
-for verification, provenance, retry, and signing limitations.
+The desktop binaries are unsigned; Windows needs the WebView2 runtime, and
+Linux needs a compatible desktop and AppImage/FUSE support (or extraction).
+The client is a placeholder and does not connect to Portal. See the
+[developer guide](developer.md#ci-and-contribution-checks) for release channels,
+verification, provenance, and signing details.
 
 ## Authentication
 
@@ -221,6 +222,10 @@ services:
 Authenticate Docker to GHCR before starting a private image. Configure the OIDC
 settings above for the deployed portal. For Kubernetes installation and
 configuration, see the [Helm chart documentation](chart/README.md).
+
+Main builds publish the mutable `dev` image tag; stable `vMAJOR.MINOR.PATCH`
+releases publish version, major/minor, major, and `latest` tags. The Helm chart
+uses its matching `appVersion` by default.
 
 ## Further documentation
 
