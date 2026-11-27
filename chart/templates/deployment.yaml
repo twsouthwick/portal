@@ -1,3 +1,4 @@
+{{/* @spec K8S-007 */}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -15,7 +16,7 @@ spec:
       serviceAccountName: {{ .Release.Name }}-portal
       containers:
         - name: portal
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           env:
             - name: PORTAL_KUBERNETES_NAMESPACE

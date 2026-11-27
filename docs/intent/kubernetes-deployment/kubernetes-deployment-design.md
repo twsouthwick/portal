@@ -19,6 +19,15 @@ existing-secret name, namespace, example resources, and RBAC. The deployment
 sets OIDC environment variables and `PORTAL_KUBERNETES_NAMESPACE` and exposes
 container port 8081. The chart defaults to one replica and ClusterIP.
 
+## Approved Release Versioning
+
+The chart's `version` and `appVersion` follow the MinVer version produced by
+the release workflow. Unless a user explicitly overrides `image.tag`, the
+Deployment uses `appVersion` as its image tag. Stable chart versions therefore
+deploy the matching stable image by default, while main-branch prerelease
+charts deploy the matching versioned development image rather than a mutable
+`latest` tag.
+
 The CRD defines namespaced PortalSite objects and a schema for site metadata,
 apps, roles, visibility flags, and optional ConfigMap content references.
 RBAC grants the service account permission to list PortalSites and get
@@ -32,6 +41,7 @@ ConfigMaps in the release namespace.
 | Service exposure | ClusterIP service targeting container port 8081. **[inferred]** | External service, ingress, or another port. | `values.yaml` and the service template configure this. |
 | Kubernetes permissions | Namespaced list of PortalSites and get of ConfigMaps. **[inferred]** | Cluster-wide read or watch/get permissions. | The Role is restricted to the release namespace; whether provider refresh requires additional verbs is unconfirmed. |
 | Secret handling | OIDC secret is supplied by a pre-existing Kubernetes Secret. **[inferred]** | Store secret material in chart values. | The deployment references secret keys rather than embedding a value. |
+| Default image tag | **Owner-approved:** use chart `appVersion` unless `image.tag` is explicitly overridden. | Default to floating `latest`. | A chart installation resolves to the image version packaged by that chart, while allowing intentional overrides. |
 
 ## Open Questions & Future Decisions
 
@@ -45,8 +55,6 @@ ConfigMaps in the release namespace.
    describes a fixed set of values; which contract is intended?
 4. The README's Docker example maps 8080, while application/chart settings use
    8081.
-5. Should chart versioning continue to be driven by the CI workflow's
-   generated package version?
 
 ## References
 
@@ -59,3 +67,4 @@ ConfigMaps in the release namespace.
 - Kubernetes provider contract: `Portal.Web/Services/KubernetesPortalProvider.cs`
 - Site provider tests: `Portal.Web.Tests/KubernetesPortalProviderTests.cs`,
   `Portal.Web.Tests/PortalProviderRegistrationTests.cs`
+- Chart release test: `.github/scripts/release-workflow.test.mjs`

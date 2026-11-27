@@ -73,13 +73,23 @@ CRD and its PortalSite resources.
 
 ## OCI packaging
 
-GitHub Actions publishes the chart at `oci://ghcr.io/twsouthwick/charts/portal` on pushes to `main` and `v*` tags. It uses the same MinVer version as the image at `ghcr.io/twsouthwick/portal`. Authenticate Helm to GHCR to install a private chart:
+GitHub Actions publishes the chart at `oci://ghcr.io/twsouthwick/charts/portal`
+on pushes to `main` and stable `vMAJOR.MINOR.PATCH` tags. The chart version
+and `appVersion` use MinVer. Main builds publish the MinVer prerelease image
+tag plus the mutable `dev` tag; stable tags publish the exact version,
+`MAJOR.MINOR`, `MAJOR`, and `latest` image tags. Main builds never move stable
+image aliases. When `image.tag` is not overridden, the chart uses its
+`appVersion`, so the chart and image remain aligned.
+
+Authenticate Helm to GHCR to install a private chart:
 
 ```bash
 helm install portal oci://ghcr.io/twsouthwick/charts/portal --version <version> -n default -f values.production.yaml
 ```
 
-The chart defaults to the `latest` GHCR image. For a private image, configure registry pull credentials for the Kubernetes service account or namespace before installing. Override `image.repository` and `image.tag` when using a fork or a specific image version.
+For a private image, configure registry pull credentials for the Kubernetes
+service account or namespace before installing. Override `image.repository`
+and `image.tag` when using a fork or a specific image version.
 
 To package and publish a chart manually:
 

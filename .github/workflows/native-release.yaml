@@ -16,7 +16,30 @@ env:
   NODE_VERSION: 24.15.0
 
 jobs:
+  # @spec DELIVERY-010 CLIENT-007
+  release-info:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+      - name: Restore versioning tools
+        run: dotnet restore Portal.slnx
+      - name: Resolve MinVer version
+        id: version
+        run: |
+          version="$(dotnet msbuild Portal.Web/Portal.Web.csproj -target:MinVer -getProperty:MinVerVersion)"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
   linux:
+    needs: release-info
+    env:
+      VERSION: ${{ needs.release-info.outputs.version }}
     strategy:
       fail-fast: false
       matrix:
@@ -47,9 +70,10 @@ jobs:
             xvfb xauth xdotool binutils
           npm ci --prefix Portal.Client
           echo "SOURCE_DATE_EPOCH=$(git log -1 --format=%ct)" >> "$GITHUB_ENV"
+          printf '{"version":"%s"}\n' "$VERSION" > "$RUNNER_TEMP/tauri-release.conf.json"
       - name: Build release AppImage
         working-directory: Portal.Client
-        run: npm run tauri -- build --ci --bundles appimage -- --locked
+        run: npm run tauri -- build --ci --config "$RUNNER_TEMP/tauri-release.conf.json" --bundles appimage -- --locked
       - name: Verify architecture and launch AppImage
         env:
           EXPECTED_MACHINE: ${{ matrix.machine }}
@@ -81,7 +105,7 @@ jobs:
           cp "$image" "$RUNNER_TEMP/native-artifact/"
           cd "$RUNNER_TEMP/native-artifact"
           sha256sum ./*.AppImage > SHA256SUMS
-          printf 'commit=%s\nrun=%s\nattempt=%s\nrunner=%s\nrust=%s\nnode=%s\n' "$GITHUB_SHA" "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" "$RUNNER_OS-${{ matrix.arch }}" "$(rustc --version)" "$(node --version)" > provenance.txt
+          printf 'commit=%s\nrun=%s\nattempt=%s\nrunner=%s\nversion=%s\nrust=%s\nnode=%s\n' "$GITHUB_SHA" "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" "$RUNNER_OS-${{ matrix.arch }}" "$VERSION" "$(rustc --version)" "$(node --version)" > provenance.txt
       - uses: actions/upload-artifact@v4.6.2
         with:
           name: portal-client-linux-${{ matrix.arch }}-${{ github.sha }}-attempt-${{ github.run_attempt }}
@@ -89,6 +113,9 @@ jobs:
           if-no-files-found: error
 
   windows:
+    needs: release-info
+    env:
+      VERSION: ${{ needs.release-info.outputs.version }}
     strategy:
       fail-fast: false
       matrix:
@@ -120,9 +147,10 @@ jobs:
           npm ci --prefix Portal.Client
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           "SOURCE_DATE_EPOCH=$(git log -1 --format=%ct)" >> $env:GITHUB_ENV
+          @{ version = $env:VERSION } | ConvertTo-Json -Compress | Set-Content -NoNewline -Encoding utf8 "$env:RUNNER_TEMP/tauri-release.conf.json"
       - name: Build release executable
         working-directory: Portal.Client
-        run: npm run tauri -- build --ci --no-bundle --target ${{ matrix.rust }} -- --locked
+        run: npm run tauri -- build --ci --config "$env:RUNNER_TEMP/tauri-release.conf.json" --no-bundle --target ${{ matrix.rust }} -- --locked
       - name: Verify architecture and launch executable
         shell: pwsh
         run: |
@@ -161,7 +189,7 @@ jobs:
           Copy-Item $exe $out
           $hash = (Get-FileHash $exe -Algorithm SHA256).Hash.ToLowerInvariant()
           "$hash  portalclient.exe" | Set-Content -Encoding ascii "$out/SHA256SUMS"
-          "commit=$env:GITHUB_SHA`nrun=$env:GITHUB_RUN_ID`nattempt=$env:GITHUB_RUN_ATTEMPT`nrunner=Windows-${{ matrix.arch }}`nrust=$(rustc --version)`nnode=$(node --version)" | Set-Content -Encoding ascii "$out/provenance.txt"
+          "commit=$env:GITHUB_SHA`nrun=$env:GITHUB_RUN_ID`nattempt=$env:GITHUB_RUN_ATTEMPT`nrunner=Windows-${{ matrix.arch }}`nversion=$env:VERSION`nrust=$(rustc --version)`nnode=$(node --version)" | Set-Content -Encoding ascii "$out/provenance.txt"
       - uses: actions/upload-artifact@v4.6.2
         with:
           name: portal-client-windows-${{ matrix.arch }}-${{ github.sha }}-attempt-${{ github.run_attempt }}
@@ -169,9 +197,12 @@ jobs:
           if-no-files-found: error
 
   android:
+    needs: release-info
+    if: github.event_name == 'push'
     runs-on: ubuntu-24.04
     timeout-minutes: 75
     env:
+      VERSION: ${{ needs.release-info.outputs.version }}
       NDK_VERSION: 27.3.13750724
     steps:
       - uses: actions/checkout@v7
@@ -191,33 +222,63 @@ jobs:
         run: |
           rustup toolchain install "$RUST_VERSION" --profile minimal
           rustup default "$RUST_VERSION"
-          rustup target add x86_64-linux-android
+          rustup target add aarch64-linux-android x86_64-linux-android
           sdkmanager "platform-tools" "platforms;android-37.0" "build-tools;37.0.0" "ndk;$NDK_VERSION"
           echo "NDK_HOME=$ANDROID_HOME/ndk/$NDK_VERSION" >> "$GITHUB_ENV"
           echo "SOURCE_DATE_EPOCH=$(git log -1 --format=%ct)" >> "$GITHUB_ENV"
           npm ci --prefix Portal.Client
+          node -e 'require("node:fs").writeFileSync(process.env.RUNNER_TEMP + "/tauri-release.conf.json", JSON.stringify({ version: process.env.VERSION, bundle: { android: { versionCode: Number(process.env.GITHUB_RUN_NUMBER) } } }))'
+      - name: Initialize Android project
+        working-directory: Portal.Client
+        run: npm run tauri -- android init --ci --skip-targets-install
+      # @spec DELIVERY-012 CLIENT-006
+      - name: Configure Android release signing
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        working-directory: Portal.Client
+        run: |
+          set -euo pipefail
+          umask 077
+          test -n "$ANDROID_KEYSTORE_BASE64"
+          test -n "$ANDROID_KEYSTORE_PASSWORD"
+          test -n "$ANDROID_KEY_ALIAS"
+          if [[ "$ANDROID_KEYSTORE_PASSWORD$ANDROID_KEY_ALIAS" == *$'\n'* ||
+                "$ANDROID_KEYSTORE_PASSWORD$ANDROID_KEY_ALIAS" == *$'\r'* ]]; then
+            echo "Android signing secret values must not contain line breaks." >&2
+            exit 1
+          fi
+          keystore="$RUNNER_TEMP/portal-release.keystore"
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$keystore"
+          properties="src-tauri/gen/android/keystore.properties"
+          printf 'keyAlias=%s\npassword=%s\nstoreFile=%s\n' \
+            "$ANDROID_KEY_ALIAS" "$ANDROID_KEYSTORE_PASSWORD" "$keystore" > "$properties"
+          node ../.github/scripts/configure-android-signing.mjs src-tauri/gen/android/app/build.gradle.kts
       - name: Build release APK
         working-directory: Portal.Client
         run: |
-          npm run tauri -- android init --ci --skip-targets-install
-          npm run tauri -- android build --ci --apk --target x86_64 -- --locked
-      - name: Verify and prepare APK for emulator
+          npm run tauri -- android build --ci --apk --target aarch64 --target x86_64 \
+            --config "$RUNNER_TEMP/tauri-release.conf.json" -- --locked
+      - name: Verify and prepare signed APK
         run: |
           set -euo pipefail
           mapfile -t apks < <(find Portal.Client/src-tauri/gen/android/app/build/outputs/apk -name '*.apk' -type f)
           test "${#apks[@]}" -eq 1
           apk="${apks[0]}"
-          "$ANDROID_HOME/build-tools/37.0.0/aapt" dump badging "$apk" | grep -F "native-code: 'x86_64'"
+          native_code="$("$ANDROID_HOME/build-tools/37.0.0/aapt" dump badging "$apk" | sed -n "s/^native-code: '\\(.*\\)'/\\1/p")"
+          [[ "$native_code" == *arm64-v8a* && "$native_code" == *x86_64* ]]
+          "$ANDROID_HOME/build-tools/37.0.0/apksigner" verify --verbose "$apk"
+          unzip -p "$apk" lib/arm64-v8a/libportalclient_lib.so > "$RUNNER_TEMP/client-arm64.so"
+          readelf -h "$RUNNER_TEMP/client-arm64.so" | grep -F 'AArch64'
           unzip -p "$apk" lib/x86_64/libportalclient_lib.so > "$RUNNER_TEMP/client.so"
           readelf -h "$RUNNER_TEMP/client.so" | grep -F 'Advanced Micro Devices X86-64'
           mkdir -p "$RUNNER_TEMP/native-artifact"
           cp "$apk" "$RUNNER_TEMP/native-artifact/"
           (cd "$RUNNER_TEMP/native-artifact" && sha256sum ./*.apk > SHA256SUMS)
-          printf 'commit=%s\nrunner=Linux-x86_64\nrust=%s\nnode=%s\nndk=%s\n' "$GITHUB_SHA" "$(rustc --version)" "$(node --version)" "$NDK_VERSION" > "$RUNNER_TEMP/native-artifact/provenance.txt"
-          keytool -genkeypair -keystore "$RUNNER_TEMP/smoke.keystore" -storepass android -keypass android \
-            -alias smoke -dname CN=Smoke -keyalg RSA -validity 1
-          "$ANDROID_HOME/build-tools/37.0.0/apksigner" sign --ks "$RUNNER_TEMP/smoke.keystore" \
-            --ks-pass pass:android --key-pass pass:android --out "$RUNNER_TEMP/smoke.apk" "$apk"
+          printf 'commit=%s\nrun=%s\nattempt=%s\nrunner=Linux-Android\nversion=%s\nabi=arm64-v8a,x86_64\nrust=%s\nnode=%s\nndk=%s\n' \
+            "$GITHUB_SHA" "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" "$VERSION" \
+            "$(rustc --version)" "$(node --version)" "$NDK_VERSION" > "$RUNNER_TEMP/native-artifact/provenance.txt"
       - name: Enable KVM
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -231,10 +292,10 @@ jobs:
           arch: x86_64
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           script: |
-            adb install "$RUNNER_TEMP/smoke.apk"
+            adb install "$(find Portal.Client/src-tauri/gen/android/app/build/outputs/apk -name '*.apk' -type f)"
             bash Portal.Client/scripts/android-smoke.sh smoke
       - uses: actions/upload-artifact@v4.6.2
         with:
-          name: portal-client-android-x86_64-${{ github.sha }}-attempt-${{ github.run_attempt }}
+          name: portal-client-android-multiabi-${{ github.sha }}-attempt-${{ github.run_attempt }}
           path: ${{ runner.temp }}/native-artifact/
           if-no-files-found: error

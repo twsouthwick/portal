@@ -35,7 +35,7 @@ arrows:
     blockedBy: []
     detail: site-catalog.md
     next: Confirm provider precedence and runtime refresh expectations.
-    drift: No @spec annotations currently connect implementation and tests to these inferred requirements.
+    drift: Provider behavior and refresh requirements remain partially specified; chart image-version behavior is tracked by kubernetes-deployment.
   portal-experience:
     status: MAPPED
     parent: null
@@ -79,7 +79,7 @@ arrows:
     blockedBy: []
     detail: kubernetes-deployment.md
     next: Confirm production scaling, probes, resource limits, and image-pull configuration.
-    drift: No @spec annotations currently connect implementation and tests to these inferred requirements.
+    drift: K8S-007 is implemented and tested locally; hosted chart packaging and cluster rendering remain unverified.
   build-delivery:
     status: MAPPED
     parent: null
@@ -89,5 +89,5 @@ arrows:
     blocks: []
     blockedBy: []
     detail: build-delivery.md
-    next: Verify prerelease publication on hosted runners and add citations to the original build/test entry points.
-    drift: Original build requirements lack @spec citations; prerelease publication is not yet verified on hosted runners.
+    next: Verify owner-approved release channels on hosted main and stable-tag runs, then audit spec and test traceability.
+    drift: Release workflows and local tests are implemented; hosted GHCR, GitHub Release, and Android signing runs remain unverified.

@@ -5,7 +5,7 @@ configuration for the portal.
 
 ## Status
 
-**MAPPED** — first reconstructed 2026-11-27. Six EARS requirements capture the
+**MAPPED** — first reconstructed 2026-11-27. Seven EARS requirements capture the
 checked-in chart; production operations are not fully specified.
 
 ## References
@@ -17,12 +17,13 @@ checked-in chart; production operations are not fully specified.
 - `docs/intent/kubernetes-deployment/kubernetes-deployment-design.md`
 
 ### EARS
-- `docs/intent/kubernetes-deployment/kubernetes-deployment-specs.md` — 6 specs
+- `docs/intent/kubernetes-deployment/kubernetes-deployment-specs.md` — 7 specs
 
 ### Tests
 - `Portal.Web.Tests/KubernetesPortalProviderTests.cs`
 - `Portal.Web.Tests/PortalProviderRegistrationTests.cs`
 - CI Helm lint: `.github/workflows/build.yaml`
+- Chart release assertions: `.github/scripts/release-workflow.test.mjs`
 
 ### Code
 - `chart/`
@@ -43,10 +44,10 @@ resource; web container port 8081.
 | Category | Spec IDs | Implemented | Deferred | Gaps |
 |---|---|---:|---:|---:|
 | Chart, runtime values, RBAC, CRD, examples | K8S-001, K8S-002, K8S-003, K8S-004, K8S-005, K8S-006 | 6 | 0 | 0 known chart gaps |
+| Approved release image pinning | K8S-007 | 1 | 0 | Hosted chart packaging remains unverified |
 
-**Traceability:** Provider tests cover resource parsing and mapping; no
-`@spec` annotations link them to these requirements. No production cluster
-behavior is claimed as tested by chart lint.
+**Traceability:** The Deployment template and its release workflow test cite
+K8S-007. No production cluster behavior is claimed as tested by chart lint.
 
 ## Key Findings
 

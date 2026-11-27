@@ -26,6 +26,28 @@ discovery, sign-in, site launch integration, synchronization, and server
 interaction are not implemented. The authentication design below is a
 proposal, not approved intent or evidence of working integration.
 
+## Approved Release Packaging
+
+The client release follows the build-delivery channels: successful `main`
+builds update one rolling `dev` prerelease, while stable `vMAJOR.MINOR.PATCH`
+tags create immutable GitHub Releases. Each channel includes Linux and Windows
+executables for x86_64 and ARM64, plus one signed Android APK. The application
+version shown in release artifacts follows MinVer; stable tags use the
+corresponding stable version.
+
+The Android APK contains both `arm64-v8a` and `x86_64` native libraries and is
+signed with the repository's `ANDROID_KEYSTORE_BASE64`,
+`ANDROID_KEYSTORE_PASSWORD`, and `ANDROID_KEY_ALIAS` secrets. The key password
+equals the keystore password. CI verifies the APK's ABI entries and native
+library architecture; x86_64 continues to run on the API 35 emulator. The
+arm64 ABI is not run on a device, and release notes must state this limitation.
+The Android version name follows MinVer, while the native workflow's run
+number supplies a monotonically increasing version code for APK upgrades.
+
+Windows and Linux binaries remain unsigned. Their current platform
+prerequisites and limitations must be disclosed. The signed Android APK is
+not evidence that the placeholder client integrates with Portal.
+
 ## Proposed Native Authentication
 
 **[inferred; owner review required]** A separate public OIDC client using the
@@ -119,9 +141,9 @@ platform compatibility.
 1. What user need should the native client solve beyond displaying a shell?
 2. Is the proposed public-client model acceptable, including its API and
    provider prerequisites, or should a Portal-mediated session be designed?
-3. Which desktop and mobile targets are release requirements?
-4. Release installers, signing, production packaging, and portal integration are
-   not verified by the current scaffold checks.
+3. Should iOS become an additional release target?
+4. Desktop installers, signing, production packaging, and portal integration
+   are not part of the current release scope.
 
 ## References
 
@@ -138,3 +160,7 @@ platform compatibility.
   `Portal.Client/scripts/android-smoke.sh`,
   `Portal.Client/setup-webdriver-windows.ps1`
 - CI: `.github/workflows/build.yaml`, `.github/workflows/android.yaml`
+  and `.github/workflows/native-release.yaml`
+- Release signing configuration: `.github/scripts/configure-android-signing.mjs`
+- Release tests: `.github/scripts/native-release.test.mjs`,
+  `.github/scripts/android-signing.test.mjs`

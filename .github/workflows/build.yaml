@@ -200,8 +200,8 @@ jobs:
       - name: Test
         run: dotnet test Portal.slnx --no-build --configuration Release
 
-      - name: Test prerelease policy
-        run: node --test .github/scripts/prerelease.test.mjs
+      - name: Test release policy and workflows
+        run: node --test .github/scripts/*.test.mjs
 
       - name: Validate container packaging
         run: |
@@ -212,7 +212,8 @@ jobs:
             /t:PublishContainer \
             /p:ContainerRegistry=ghcr.io \
             "/p:ContainerRepository=${GITHUB_REPOSITORY,,}" \
-            "/p:ContainerImageTags=\"$version;latest\"" \
+            "/p:ContainerRuntimeIdentifiers=linux-x64;linux-arm64" \
+            "/p:ContainerImageTags=\"$version;validation\"" \
             "/p:Version=$version" \
             /p:ContainerImageFormat=OCI \
             "/p:ContainerArchiveOutputPath=$RUNNER_TEMP/portal-container.tar"
@@ -222,6 +223,20 @@ jobs:
           helm lint ./chart
           --set oidc.authority=https://identity.example.com
           --set oidc.existingSecret=portal-oidc
+
+      - name: Verify Helm image tag defaults and overrides
+        run: |
+          app_version="$(helm show chart ./chart | awk -F': ' '$1 == "appVersion" { gsub(/"/, "", $2); print $2 }')"
+          test -n "$app_version"
+          helm template portal ./chart \
+            --set oidc.authority=https://identity.example.com \
+            --set oidc.existingSecret=portal-oidc > "$RUNNER_TEMP/chart-default.yaml"
+          grep -F "image: \"ghcr.io/twsouthwick/portal:$app_version\"" "$RUNNER_TEMP/chart-default.yaml"
+          helm template portal ./chart \
+            --set oidc.authority=https://identity.example.com \
+            --set oidc.existingSecret=portal-oidc \
+            --set image.tag=explicit-test > "$RUNNER_TEMP/chart-override.yaml"
+          grep -F 'image: "ghcr.io/twsouthwick/portal:explicit-test"' "$RUNNER_TEMP/chart-override.yaml"
 
   publish:
     needs: build
@@ -261,6 +276,7 @@ jobs:
       - name: Restore
         run: dotnet restore Portal.slnx
 
+      # @spec DELIVERY-013 DELIVERY-014 DELIVERY-015 DELIVERY-016
       - name: Determine package names and version
         id: package
         run: |
@@ -270,8 +286,24 @@ jobs:
           echo "repository=$repository" >> "$GITHUB_OUTPUT"
           echo "owner=$owner" >> "$GITHUB_OUTPUT"
           echo "version=$version" >> "$GITHUB_OUTPUT"
+          VERSION="$version" node --input-type=module <<'NODE' >> "$GITHUB_OUTPUT"
+          import { appendFileSync } from 'node:fs';
+          import { containerTags, releaseChannel } from './.github/scripts/release-policy.mjs';
+
+          const channel = releaseChannel({
+            event: process.env.GITHUB_EVENT_NAME,
+            head_branch: process.env.GITHUB_REF_NAME,
+          });
+          if (!channel) {
+            appendFileSync(process.env.GITHUB_OUTPUT, 'publish=false\n');
+          } else {
+            const tags = containerTags(process.env.VERSION, channel);
+            appendFileSync(process.env.GITHUB_OUTPUT, `publish=true\nchannel=${channel}\ntags=${tags.join(';')}\n`);
+          }
+          NODE
 
       - name: Login to GHCR
+        if: steps.package.outputs.publish == 'true'
         env:
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GHCR_USERNAME: ${{ github.actor }}
@@ -280,9 +312,11 @@ jobs:
           printf '%s' "$GHCR_TOKEN" | helm registry login ghcr.io --username "$GHCR_USERNAME" --password-stdin
 
       - name: Publish container
+        if: steps.package.outputs.publish == 'true'
         env:
           IMAGE_REPOSITORY: ${{ steps.package.outputs.repository }}
           VERSION: ${{ steps.package.outputs.version }}
+          IMAGE_TAGS: ${{ steps.package.outputs.tags }}
         run: |
           dotnet publish Portal.Web/Portal.Web.csproj \
             --configuration Release \
@@ -290,11 +324,27 @@ jobs:
             /t:PublishContainer \
             /p:ContainerRegistry=ghcr.io \
             "/p:ContainerRepository=$IMAGE_REPOSITORY" \
-            "/p:ContainerImageTags=\"$VERSION;latest\"" \
+            "/p:ContainerRuntimeIdentifiers=linux-x64;linux-arm64" \
+            "/p:ContainerImageTags=\"$IMAGE_TAGS\"" \
             "/p:Version=$VERSION" \
             /p:ContainerImageFormat=OCI
 
+      # @spec DELIVERY-015
+      - name: Verify published container architectures
+        if: steps.package.outputs.publish == 'true'
+        env:
+          IMAGE_REPOSITORY: ${{ steps.package.outputs.repository }}
+          IMAGE_TAGS: ${{ steps.package.outputs.tags }}
+        run: |
+          set -euo pipefail
+          while IFS= read -r tag; do
+            manifest="$(docker buildx imagetools inspect "ghcr.io/$IMAGE_REPOSITORY:$tag")"
+            grep -Fq 'Platform: linux/amd64' <<< "$manifest"
+            grep -Fq 'Platform: linux/arm64' <<< "$manifest"
+          done < <(printf '%s' "$IMAGE_TAGS" | tr ';' '\n')
+
       - name: Package and push Helm chart
+        if: steps.package.outputs.publish == 'true'
         env:
           OWNER: ${{ steps.package.outputs.owner }}
           VERSION: ${{ steps.package.outputs.version }}

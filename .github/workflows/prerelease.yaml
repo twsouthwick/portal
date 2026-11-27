@@ -1,23 +1,23 @@
-name: Publish native prerelease
+name: Publish native release
 
 on:
   workflow_run:
     workflows: ['Build and publish', 'Android debug smoke', 'Native client release builds']
     types: [completed]
-    branches: [main]
 
 permissions: {}
 
 concurrency:
-  group: native-prerelease-${{ github.event.workflow_run.head_sha }}
+  group: native-release-${{ github.repository }}
   cancel-in-progress: false
 
 jobs:
   publish:
-    # @spec DELIVERY-008 DELIVERY-009 DELIVERY-010 DELIVERY-011 DELIVERY-012
+    # @spec DELIVERY-008 DELIVERY-009 DELIVERY-010 DELIVERY-011 DELIVERY-012 DELIVERY-017 DELIVERY-018
     if: >-
       github.event.workflow_run.event == 'push' &&
-      github.event.workflow_run.head_branch == 'main' &&
+      (github.event.workflow_run.head_branch == 'main' ||
+       startsWith(github.event.workflow_run.head_branch, 'v')) &&
       github.event.workflow_run.head_repository.id == github.repository_id
     runs-on: ubuntu-latest
     timeout-minutes: 20

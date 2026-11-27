@@ -26,6 +26,11 @@ server and native-client artifacts.
 The Tauri client is currently a placeholder shell. Its integration with the
 portal, authentication, and catalog is not implemented.
 
+The owner-approved release policy separates development builds from stable versions:
+pushes to `main` publish mutable `dev` artifacts, while stable releases are
+created from `vMAJOR.MINOR.PATCH` tags using the corresponding MinVer version.
+The stable container channel owns `latest` and floating major/minor tags.
+
 ## Target Users
 
 - **Portal users** need to find and open the sites available to their identity,
@@ -120,6 +125,7 @@ boundary.
 | Identity integration | OIDC authorization code flow with PKCE and `groups` as role claims. **[inferred]** | Anonymous portal; different identity protocol or claim mapping. | Application configuration and local Authelia configuration establish this behavior (`Portal.Web/Program.cs`, `Portal.AppHost/Authelia/configuration.yml`). |
 | Client scope | Tauri remains a placeholder rather than a second portal implementation. **[inferred from README]** | Implement portal integration and authentication in the client. | README explicitly says integration is not implemented. Future client intent is open. |
 | Deployment packaging | Helm deploys the existing web container and its Kubernetes permissions. **[inferred]** | External deployment-only configuration or a separate operator. | The chart defines the deployment, service, service account, RBAC, and CRD. The operational boundaries beyond this chart are not established. |
+| Release channels | **Owner-approved design:** main publishes rolling `dev` artifacts; stable `vMAJOR.MINOR.PATCH` tags publish MinVer-versioned releases. Stable container tags also advance `latest`, `MAJOR.MINOR`, and `MAJOR`. | Publish every main build as `latest`; retain a separate release for every main commit. | Keep deployments pinned to a chart/image version while preserving an explicit development channel. Detailed behavior is in `docs/intent/build-delivery/build-delivery-design.md`. |
 
 ## Success Metrics
 
