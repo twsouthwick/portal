@@ -63,7 +63,7 @@ npm run clean
 
 ### GitHub Actions
 
-Pull requests to `main` and pushes to `main` or `v*` tags build and test the solution, lint the Helm chart, and build and test the Linux and Windows native clients on x86_64 (AMD64) and ARM64. The client jobs upload debug AppImages or Windows executables and UI test evidence as workflow artifacts. Successful pushes also publish the portal image to `ghcr.io/twsouthwick/portal` and the Helm chart to `oci://ghcr.io/twsouthwick/charts/portal`. The image receives the MinVer version and `latest` tags; the chart uses the same MinVer version. Both branch and tag pushes update `latest`.
+Pull requests to `main` and pushes to `main` or `v*` tags build and test the solution, lint the Helm chart, and build and test the Linux and Windows native clients on x86_64 (AMD64) and ARM64. The client jobs upload debug AppImages or Windows executables and UI test evidence as workflow artifacts. A separate Android workflow builds and smoke-tests an x86_64 debug APK and uploads it as a workflow artifact. Successful pushes also publish the portal image to `ghcr.io/twsouthwick/portal` and the Helm chart to `oci://ghcr.io/twsouthwick/charts/portal`. The image receives the MinVer version and `latest` tags; the chart uses the same MinVer version. Both branch and tag pushes update `latest`.
 
 Publishing uses the workflow's `GITHUB_TOKEN` with package-write permission. Existing GHCR packages must grant this repository's Actions workflow access. New packages are private by default; pulling them requires registry credentials unless their visibility is changed.
 
@@ -90,7 +90,7 @@ npm run tauri -- build                   # release executable and bundles
 | --- | --- | --- |
 | Linux x86_64 and ARM64 | GCC/build-essential, pkg-config, GTK 3 and WebKitGTK 4.1 development libraries, OpenSSL, Ayatana AppIndicator and librsvg development libraries, and patchelf | CI builds a debug executable and AppImage on native Ubuntu 24.04 runners and runs window and WebDriver tests under Xvfb. AppImage execution and release bundles are unverified. |
 | Windows x86_64 (AMD64) and ARM64 | Rust MSVC toolchain, Visual Studio C++ Build Tools with Windows SDK, Microsoft Edge WebView2 Evergreen Runtime and matching Edge WebDriver | CI builds and uploads unbundled debug executables on Windows Server 2022 x64 and Windows 11 ARM64; it checks window visibility and runs the shared WebDriver tests. Installers, release packaging, and signing are not tested. |
-| Android | A supported desktop host's prerequisites, JDK 17, Android Studio/SDK (platform, build-tools, platform-tools), Android NDK, and Rust Android targets | Unverified; no Android build, emulator, or device tested. |
+| Android | JDK 17, Android SDK (platform, build-tools, platform-tools), Android NDK, and Rust Android targets | CI builds a debug APK for x86_64 and runs the shared UI tests on an API 35 x86_64 emulator. ARM, x86, physical devices, releases and signing are not covered. |
 
 For Ubuntu/Debian Linux the native packages can be installed with:
 
@@ -163,28 +163,63 @@ artifact-capture failure fails the test job; startup failures write driver
 diagnostics when no screenshot can be captured.
 
 The Windows adapter selects the same Tauri/WebDriver implementation on Windows;
-CI installs the Edge WebDriver matching the registered WebView2 version. Android
-needs a separate Appium adapter
-and an Android-targeted app launch/attach implementation; on the host running
-the suite, select it with
-`PORTAL_CLIENT_TEST_ADAPTER=./adapters/android-appium.js npm run test:e2e`.
-The shared assertions do not depend on Tauri's desktop driver, which is not
-assumed to support Android. An Android adapter is not included or verified here.
+CI installs the Edge WebDriver matching the registered WebView2 version.
 
-For Android, configure `JAVA_HOME`, `ANDROID_HOME`, and `NDK_HOME` for the
-installed JDK, SDK, and NDK, then install the Rust targets for the ABIs you
-intend to build. For example, for an ARM64 APK:
+The separate Android workflow is configured to build and smoke-test the placeholder shell on
+Ubuntu 24.04 with JDK 17, SDK platform 37.0, build-tools 37.0.0, NDK
+27.3.13750724 and the `x86_64-linux-android` Rust target. It installs the APK
+on an API 35 Google APIs x86_64 emulator, launches
+`app.swick.portal.client/.MainActivity`, and checks that the same process stays
+in the foreground for 10 seconds without a recorded crash. CI uploads a
+screenshot and activity/logcat diagnostics from `Portal.Client/artifacts/`;
+failures also print diagnostics in the job log. The same shared tests then run
+against the installed app using Appium's UiAutomator2 driver for native
+visibility and screenshots. Because Android's accessibility hierarchy does not
+reliably expose the HTML heading role, the heading assertion uses Chrome DevTools
+Protocol against the debug APK's actual WebView DOM, connected through an adb
+forward to the app process. It checks a visible `main h1`, not a separate
+browser. Appium and UiAutomator2 must be installed locally for reproduction;
+their pinned versions require Node.js 22.22.2+ or 24.15.0+ (or 26+).
+The uploaded debug APK is for inspection only; this is not a portal connectivity,
+release artifact, or signing test.
+
+The emulator action runs installation, activity smoke verification, and shared
+UI tests as separate commands on the same emulator. Each stage has its own log
+group and diagnostics file; later stages do not run if an earlier stage fails.
+
+To reproduce on Linux from the repository root, install Node.js and Rust as
+above, JDK 17, and the Android SDK command-line tools. Set `JAVA_HOME` and
+`ANDROID_HOME`, add `$ANDROID_HOME/cmdline-tools/latest/bin` and
+`$ANDROID_HOME/platform-tools` to `PATH`, and accept the SDK licenses. Install
+the same packages and build the APK:
 
 ```bash
-rustup target add aarch64-linux-android
+sdkmanager "platform-tools" "platforms;android-37.0" "build-tools;37.0.0" \
+  "ndk;27.3.13750724" "emulator" "system-images;android-35;google_apis;x86_64"
+export NDK_HOME="$ANDROID_HOME/ndk/27.3.13750724"
+rustup target add x86_64-linux-android
 cd Portal.Client
 npm ci
-npm run tauri -- android init
-npm run tauri -- android dev             # requires a device or emulator
-npm run tauri -- android build --debug --apk --target aarch64
+npm install --global appium@4.0.1
+appium driver install uiautomator2@10.4.0
+npm run tauri -- android init --ci --skip-targets-install
+npm run tauri -- android build --ci --debug --apk --target x86_64
+cd ..
+echo no | avdmanager create avd -n portal-smoke \
+  -k "system-images;android-35;google_apis;x86_64"
+emulator -avd portal-smoke -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim &
+adb wait-for-device
+until [ "$(adb shell getprop sys.boot_completed | tr -d '\r')" = 1 ]; do sleep 2; done
+bash Portal.Client/scripts/android-smoke.sh install
+bash Portal.Client/scripts/android-smoke.sh smoke
+bash Portal.Client/scripts/android-smoke.sh ui
+adb emu kill
 ```
 
-Android initialization generates `src-tauri/gen/android` locally; it and
+Use a hardware-accelerated emulator (KVM on Linux) and add
+`$ANDROID_HOME/emulator` to `PATH`. The smoke script clears logcat on the
+selected device; use a dedicated emulator and ensure only one device is
+connected. Android initialization generates `src-tauri/gen/android` locally; it and
 `dist`, `node_modules`, Cargo's `target`, and generated bundles are not
 committed. Release Android packages require signing configuration.
 

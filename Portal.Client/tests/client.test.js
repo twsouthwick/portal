@@ -28,7 +28,7 @@ async function writeDiagnostics(error) {
   );
 }
 
-describe('Portal native client', { timeout: 60000 }, () => {
+describe('Portal native client', { timeout: 180000 }, () => {
   before(async () => {
     await mkdir(artifactsDir, { recursive: true });
     try {
