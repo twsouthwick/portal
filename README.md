@@ -147,9 +147,11 @@ on an API 35 Google APIs x86_64 emulator, launches
 in the foreground for 10 seconds without a recorded crash. CI uploads a
 screenshot and activity/logcat diagnostics from `Portal.Client/artifacts/`;
 failures also print diagnostics in the job log. The same shared tests then run
-against the installed app using Appium's UiAutomator2 driver and the Android
-WebView accessibility hierarchy. The heading must expose Android's accessibility
-heading attribute; this does not use Tauri's desktop WebDriver or a separate
+against the installed app using Appium's UiAutomator2 driver for native
+visibility and screenshots. Because Android's accessibility hierarchy does not
+reliably expose the HTML heading role, the heading assertion uses Chrome DevTools
+Protocol against the debug APK's actual WebView DOM, connected through an adb
+forward to the app process. It checks a visible `main h1`, not a separate
 browser. Appium and UiAutomator2 must be installed locally for reproduction;
 their pinned versions require Node.js 22.22.2+ or 24.15.0+ (or 26+).
 The uploaded debug APK is for inspection only; this is not a portal connectivity,

@@ -2,6 +2,7 @@ import { spawn } from 'node:child_process';
 import { writeFile } from 'node:fs/promises';
 import net from 'node:net';
 import { Builder, By, error } from 'selenium-webdriver';
+import { connectWebView, headingExpression } from './android-webview.js';
 
 const packageName = 'app.swick.portal.client';
 
@@ -17,6 +18,7 @@ async function unusedPort() {
 }
 
 export async function isVisible(driver, { role, text }, record = () => {}) {
+  if (role) throw new Error(`Unsupported native UI role: ${role}`);
   try {
     return await driver.wait(async () => {
       const webviews = await driver.findElements(By.className('android.webkit.WebView'));
@@ -27,9 +29,8 @@ export async function isVisible(driver, { role, text }, record = () => {}) {
           const description = (await element.getDomAttribute('content-desc') ?? '').trim();
           if (label === text || description === text) {
             const displayed = await element.getDomAttribute('displayed');
-            const heading = role === 'heading' ? await element.getDomAttribute('heading') : null;
-            record(`Matched requested text ${JSON.stringify(text)}: displayed=${displayed}, heading=${heading}`);
-            if (displayed === 'true' && (!role || (role === 'heading' && heading === 'true'))) return true;
+            record(`Matched requested text ${JSON.stringify(text)}: displayed=${displayed}`);
+            if (displayed === 'true') return true;
           }
         }
       }
@@ -47,6 +48,7 @@ export async function createAdapter() {
   let serviceError;
   let output = '';
   const observations = new Set();
+  let webview;
 
   return {
     async launch() {
@@ -86,6 +88,18 @@ export async function createAdapter() {
     },
 
     async isVisible(query) {
+      if (query.role === 'heading') {
+        webview ??= await connectWebView(packageName);
+        return driver.wait(async () => {
+          const visible = await webview.evaluate(headingExpression(query.text));
+          if (typeof visible !== 'boolean') throw new Error('WebView returned an invalid heading visibility result.');
+          return visible;
+        }, 10000)
+          .catch(failure => {
+            if (failure instanceof error.TimeoutError) return false;
+            throw failure;
+          });
+      }
       return isVisible(driver, query, observation => observations.add(observation));
     },
 
@@ -105,7 +119,11 @@ export async function createAdapter() {
 
     async cleanup() {
       try {
-        if (driver) await driver.quit();
+        try {
+          if (webview) await webview.cleanup();
+        } finally {
+          if (driver) await driver.quit();
+        }
       } finally {
         if (service && service.exitCode === null && service.signalCode === null && !serviceError) {
           const exited = new Promise(resolve => service.once('exit', resolve));
