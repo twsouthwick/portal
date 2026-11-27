@@ -2,26 +2,29 @@
 set -euo pipefail
 
 client_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-log="$(mktemp)"
+artifacts_dir="${PORTAL_CLIENT_ARTIFACTS:-$client_dir/artifacts}"
+mkdir -p "$artifacts_dir"
+log="$artifacts_dir/window-smoke.log"
+: >"$log"
 pid=""
 
 cleanup() {
   status=$?
   if (( status != 0 )); then
-    echo "Client smoke test failed (exit $status)." >&2
-    echo "--- Client output ---" >&2
+    {
+      echo "Client smoke test failed (exit $status)."
+      echo "--- X11 window tree ---"
+      xwininfo -root -tree || true
+      if [[ -n "$pid" ]]; then
+        ps -f -p "$pid" || true
+      fi
+    } >>"$log" 2>&1
     cat "$log" >&2
-    echo "--- X11 window tree ---" >&2
-    xwininfo -root -tree >&2 || true
-    if [[ -n "$pid" ]]; then
-      ps -f -p "$pid" >&2 || true
-    fi
   fi
   if [[ -n "$pid" ]]; then
     kill "$pid" 2>/dev/null || true
     wait "$pid" 2>/dev/null || true
   fi
-  rm -f "$log"
 }
 trap cleanup EXIT
 

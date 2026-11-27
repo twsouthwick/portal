@@ -124,15 +124,35 @@ the built native webview through Tauri WebDriver and check the placeholder
 heading and text; they do not test portal connectivity, authentication,
 release bundles, or installers. Client build output is gitignored.
 
-The shared tests use JavaScript and Node's built-in test runner. Add shared
-scenarios under `Portal.Client/tests`; use `process.platform` and the test
-runner's `skip` option for platform-specific cases. On Windows, build the
-debug client, install `tauri-driver` as above, and put the Microsoft Edge
-WebDriver matching the installed WebView2 version on `PATH` as
-`msedgedriver.exe` before running `npm run test:e2e`. This Windows setup has not
-yet been verified in CI. Tauri's native driver supports Linux and Windows;
-Android requires a separate Appium-based adapter and is not covered by these
-tests.
+The shared tests in `Portal.Client/tests/client.test.js` define the UI
+assertions once. They use a small adapter contract (`launch`, `isVisible`,
+`captureScreenshot`, `diagnostics`, and `cleanup`) selected with
+`PORTAL_CLIENT_TEST_ADAPTER`. Each adapter exports `createAdapter()` returning
+those async methods; `isVisible({ role, text })` checks exact visible text,
+`captureScreenshot(file)` writes to the supplied path, and `diagnostics()`
+returns a log string. CI runs the Linux Tauri/WebDriver adapter against the
+actual native WebView under Xvfb, and uploads its screenshot and diagnostic logs
+from `Portal.Client/artifacts/` even if the tests fail. A screenshot or
+artifact-capture failure fails the test job; startup failures write driver
+diagnostics when no screenshot can be captured.
+
+Windows can run the exact same suite after building the debug client and
+installing `tauri-driver` plus the matching Microsoft Edge WebDriver
+(`msedgedriver.exe`) on `PATH`; provide a Windows adapter implementing the
+same contract and select it in PowerShell with:
+
+```powershell
+$env:PORTAL_CLIENT_TEST_ADAPTER = './adapters/windows-tauri.js'
+npm run test:e2e
+```
+
+This setup has not been verified in CI. Android needs a separate Appium adapter
+and an Android-targeted app launch/attach implementation; on the host running
+the suite, select it with
+`PORTAL_CLIENT_TEST_ADAPTER=./adapters/android-appium.js npm run test:e2e`.
+The shared assertions do not depend on Tauri's desktop driver, which is not
+assumed to support Android. Windows and Android adapters are not included or
+verified here.
 
 For Android, configure `JAVA_HOME`, `ANDROID_HOME`, and `NDK_HOME` for the
 installed JDK, SDK, and NDK, then install the Rust targets for the ABIs you
