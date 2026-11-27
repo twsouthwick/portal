@@ -63,7 +63,7 @@ npm run clean
 
 ### GitHub Actions
 
-Pull requests to `main` and pushes to `main` or `v*` tags build and test the solution, lint the Helm chart, and build and test the Linux native client on x86_64 and ARM64. The Linux jobs also upload debug AppImages as workflow artifacts. A separate Android workflow builds and smoke-tests an x86_64 debug APK and uploads it as a workflow artifact. Successful pushes also publish the portal image to `ghcr.io/twsouthwick/portal` and the Helm chart to `oci://ghcr.io/twsouthwick/charts/portal`. The image receives the MinVer version and `latest` tags; the chart uses the same MinVer version. Both branch and tag pushes update `latest`.
+Pull requests to `main` and pushes to `main` or `v*` tags build and test the solution, lint the Helm chart, and build and test the Linux and Windows native clients on x86_64 (AMD64) and ARM64. The client jobs upload debug AppImages or Windows executables and UI test evidence as workflow artifacts. A separate Android workflow builds and smoke-tests an x86_64 debug APK and uploads it as a workflow artifact. Successful pushes also publish the portal image to `ghcr.io/twsouthwick/portal` and the Helm chart to `oci://ghcr.io/twsouthwick/charts/portal`. The image receives the MinVer version and `latest` tags; the chart uses the same MinVer version. Both branch and tag pushes update `latest`.
 
 Publishing uses the workflow's `GITHUB_TOKEN` with package-write permission. Existing GHCR packages must grant this repository's Actions workflow access. New packages are private by default; pulling them requires registry credentials unless their visibility is changed.
 
@@ -89,7 +89,7 @@ npm run tauri -- build                   # release executable and bundles
 | Target | Required toolchain | Verification in this scaffold |
 | --- | --- | --- |
 | Linux x86_64 and ARM64 | GCC/build-essential, pkg-config, GTK 3 and WebKitGTK 4.1 development libraries, OpenSSL, Ayatana AppIndicator and librsvg development libraries, and patchelf | CI builds a debug executable and AppImage on native Ubuntu 24.04 runners and runs window and WebDriver tests under Xvfb. AppImage execution and release bundles are unverified. |
-| Windows | Rust MSVC toolchain, Visual Studio C++ Build Tools with Windows SDK, and Microsoft Edge WebView2 runtime | WebDriver test setup is provided but unverified; no Windows build or installer tested. |
+| Windows x86_64 (AMD64) and ARM64 | Rust MSVC toolchain, Visual Studio C++ Build Tools with Windows SDK, Microsoft Edge WebView2 Evergreen Runtime and matching Edge WebDriver | CI builds and uploads unbundled debug executables on Windows Server 2022 x64 and Windows 11 ARM64; it checks window visibility and runs the shared WebDriver tests. Installers, release packaging, and signing are not tested. |
 | Android | JDK 17, Android SDK (platform, build-tools, platform-tools), Android NDK, and Rust Android targets | CI builds a debug APK for x86_64 and runs the shared UI tests on an API 35 x86_64 emulator. ARM, x86, physical devices, releases and signing are not covered. |
 
 For Ubuntu/Debian Linux the native packages can be installed with:
@@ -100,6 +100,34 @@ sudo apt-get install build-essential pkg-config libwebkit2gtk-4.1-dev \
   libssl-dev libayatana-appindicator3-dev librsvg2-dev patchelf \
   xvfb xauth xdotool x11-utils webkit2gtk-driver
 ```
+
+To reproduce the Windows checks on an interactive Windows desktop, install
+Node.js 24, Visual Studio C++ Build Tools with Windows SDK, rustup, WebView2
+Evergreen Runtime, and the matching Edge WebDriver as `msedgedriver.exe` on
+`PATH`. Run the tests in a non-elevated PowerShell 7 session: WebView2 150+
+ignores WebDriver's debugging arguments in elevated applications. CI runs the
+shared tests at medium integrity using gsudo. Run from the repository root (replace
+`x86_64-pc-windows-msvc` with `aarch64-pc-windows-msvc` on ARM64):
+
+```powershell
+rustup toolchain install stable-x86_64-pc-windows-msvc --profile minimal
+rustup default stable-x86_64-pc-windows-msvc
+cargo install tauri-driver --version 2.1.0 --locked
+npm ci --prefix Portal.Client
+Push-Location Portal.Client
+npm run tauri -- build --debug --no-bundle
+$env:PORTAL_CLIENT_TEST_ADAPTER = './adapters/windows-tauri.js'
+npm run test:e2e
+Pop-Location
+./Portal.Client/smoke-windows.ps1
+```
+
+The `.exe` is `Portal.Client/src-tauri/target/debug/portalclient.exe`. The
+smoke test checks the registered WebView2 runtime and waits up to 60 seconds
+for the visible `Portal` window, then verifies it and the process for 10
+seconds. CI uploads the debug executable, screenshot, window and driver logs;
+the checks do not cover portal integration, authentication, installers, release
+packaging, or signing.
 
 To reproduce the CI Linux tests on a native x86_64 or ARM64 host, from the
 repository root:
@@ -136,8 +164,8 @@ from `Portal.Client/artifacts/` even if the tests fail. A screenshot or
 artifact-capture failure fails the test job; startup failures write driver
 diagnostics when no screenshot can be captured.
 
-Windows requires a separate adapter to run the shared tests; it is not included
-or verified here.
+The Windows adapter selects the same Tauri/WebDriver implementation on Windows;
+CI installs the Edge WebDriver matching the registered WebView2 version.
 
 The separate Android workflow is configured to build and smoke-test the placeholder shell on
 Ubuntu 24.04 with JDK 17, SDK platform 37.0, build-tools 37.0.0, NDK
