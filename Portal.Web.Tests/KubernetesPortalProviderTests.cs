@@ -86,6 +86,31 @@ public class KubernetesPortalProviderTests
     }
 
     [Fact]
+    public async Task GetSiteAsync_OnlyFetchesContentForRequestedSite()
+    {
+        var handler = new KubernetesHandler
+        {
+            Sites = """
+                {"items":[
+                  {"spec":{"id":"first","name":"First","contentRef":{"name":"first-content"}}},
+                  {"spec":{"id":"requested","name":"Requested","contentRef":{"name":"requested-content"}}}
+                ]}
+                """,
+            ConfigMap = """{"data":{"file.txt":"content"}}"""
+        };
+        using var client = CreateClient(handler);
+        var provider = new KubernetesPortalProvider(client, "test-ns");
+
+        var site = await provider.GetSiteAsync("requested");
+
+        Assert.Equal("requested", site?.Id);
+        Assert.Equal(
+            ["/apis/portal.swick.app/v1alpha1/namespaces/test-ns/portalsites",
+             "/api/v1/namespaces/test-ns/configmaps/requested-content"],
+            handler.Paths);
+    }
+
+    [Fact]
     public async Task GetSiteDetails_ReflectsChangesAndPropagatesFailures()
     {
         var handler = new KubernetesHandler { Sites = """{"items":[]}""" };

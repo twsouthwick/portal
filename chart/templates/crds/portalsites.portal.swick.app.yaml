@@ -35,6 +35,7 @@ spec:
                 name:
                   type: string
                   minLength: 1
+                  pattern: '\S'
                 description:
                   type: string
                 url:

@@ -67,41 +67,86 @@ public sealed partial class KubernetesPortalProvider : IPortalProvider
                 throw new InvalidDataException($"Duplicate PortalSite id '{spec.Id}'.");
             }
 
-            var site = MapPortalSiteToSiteInfo(spec);
-            if (spec.ContentRef is { } contentRef)
-            {
-                if (string.IsNullOrWhiteSpace(contentRef.Name))
-                {
-                    throw new InvalidDataException($"PortalSite '{spec.Id}' has an invalid contentRef.");
-                }
-
-                var configMap = await _kubernetes.CoreV1.ReadNamespacedConfigMapAsync(
-                    contentRef.Name, _namespace, cancellationToken: cancellationToken);
-                var files = new Dictionary<string, byte[]>(StringComparer.Ordinal);
-                foreach (var entry in configMap.Data ?? new Dictionary<string, string>())
-                {
-                    files.Add(entry.Key, Encoding.UTF8.GetBytes(entry.Value));
-                }
-                foreach (var entry in configMap.BinaryData ?? new Dictionary<string, byte[]>())
-                {
-                    files.Add(entry.Key, entry.Value);
-                }
-
-                if (contentRef.Key is { } key)
-                {
-                    if (!files.TryGetValue(key, out var value))
-                    {
-                        throw new InvalidDataException($"ConfigMap '{contentRef.Name}' does not contain key '{key}'.");
-                    }
-                    files = new Dictionary<string, byte[]>(StringComparer.Ordinal) { [key] = value };
-                }
-
-                site = site with { Content = new ConfigMapFileProvider(files) };
-            }
-            sites.Add(site);
+            sites.Add(await MapPortalSiteToSiteInfoAsync(spec, cancellationToken));
         }
 
         return new PortalDetails("Portal") { Sites = sites };
+    }
+
+    public async ValueTask<SiteInfo?> GetSiteAsync(string siteId, CancellationToken cancellationToken = default)
+    {
+        var response = await _kubernetes.CustomObjects.ListNamespacedCustomObjectAsync<JsonElement>(
+            group: _group,
+            version: _version,
+            namespaceParameter: _namespace,
+            plural: _plural,
+            cancellationToken: cancellationToken);
+
+        if (response.ValueKind != JsonValueKind.Object ||
+            !response.TryGetProperty("items", out var items) || items.ValueKind != JsonValueKind.Array)
+        {
+            throw new InvalidDataException("Kubernetes returned an invalid PortalSite list.");
+        }
+
+        var matchingSpecs = items.EnumerateArray()
+            .Select(item => item.Deserialize<KubernetesPortalSiteResource>(JsonOptions)?.Spec
+                ?? throw new InvalidDataException("PortalSite is missing its spec."))
+            .Where(spec => string.Equals(spec.Id, siteId, StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+        if (matchingSpecs.Length == 0)
+        {
+            return null;
+        }
+        if (matchingSpecs.Length > 1)
+        {
+            throw new InvalidDataException($"Duplicate PortalSite id '{siteId}'.");
+        }
+
+        return await MapPortalSiteToSiteInfoAsync(matchingSpecs[0], cancellationToken);
+    }
+
+    private async ValueTask<SiteInfo> MapPortalSiteToSiteInfoAsync(
+        KubernetesPortalSiteSpec spec, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrEmpty(spec.Id) || spec.Id.Length > 63 ||
+            !SiteIdPattern().IsMatch(spec.Id) || string.IsNullOrWhiteSpace(spec.Name))
+        {
+            throw new InvalidDataException("PortalSite must have a valid id and a non-empty name.");
+        }
+
+        var site = MapPortalSiteToSiteInfo(spec);
+        if (spec.ContentRef is { } contentRef)
+        {
+            if (string.IsNullOrWhiteSpace(contentRef.Name))
+            {
+                throw new InvalidDataException($"PortalSite '{spec.Id}' has an invalid contentRef.");
+            }
+
+            var configMap = await _kubernetes.CoreV1.ReadNamespacedConfigMapAsync(
+                contentRef.Name, _namespace, cancellationToken: cancellationToken);
+            var files = new Dictionary<string, byte[]>(StringComparer.Ordinal);
+            foreach (var entry in configMap.Data ?? new Dictionary<string, string>())
+            {
+                files.Add(entry.Key, Encoding.UTF8.GetBytes(entry.Value));
+            }
+            foreach (var entry in configMap.BinaryData ?? new Dictionary<string, byte[]>())
+            {
+                files.Add(entry.Key, entry.Value);
+            }
+
+            if (contentRef.Key is { } key)
+            {
+                if (!files.TryGetValue(key, out var value))
+                {
+                    throw new InvalidDataException($"ConfigMap '{contentRef.Name}' does not contain key '{key}'.");
+                }
+                files = new Dictionary<string, byte[]>(StringComparer.Ordinal) { [key] = value };
+            }
+
+            site = site with { Content = new ConfigMapFileProvider(files) };
+        }
+
+        return site;
     }
 
     [GeneratedRegex("^[a-z0-9]([-a-z0-9]*[a-z0-9])?$", RegexOptions.CultureInvariant)]

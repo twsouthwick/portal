@@ -29,4 +29,17 @@ public sealed class CompositePortalProvider : IPortalProvider
 
         return (portal ?? new PortalDetails("Portal")) with { Sites = sites };
     }
+
+    public async ValueTask<SiteInfo?> GetSiteAsync(string siteId, CancellationToken cancellationToken = default)
+    {
+        foreach (var provider in _providers)
+        {
+            if (await provider.GetSiteAsync(siteId, cancellationToken) is { } site)
+            {
+                return site;
+            }
+        }
+
+        return null;
+    }
 }

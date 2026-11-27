@@ -47,6 +47,7 @@ public sealed class SiteContentTests
         var response = await client.GetAsync("/home/content/file.txt");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal("content", await response.Content.ReadAsStringAsync());
+        Assert.False(response.Content.Headers.Contains("Last-Modified"));
 
         provider.Sites = [new SiteInfo { Id = "home", Name = "Home", Roles = ["media"], Content = new TestFileProvider() }];
         Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/home/content/file.txt")).StatusCode);
@@ -54,6 +55,11 @@ public sealed class SiteContentTests
         Assert.Equal(HttpStatusCode.Forbidden, (await client.GetAsync("/home/content/file.txt")).StatusCode);
         provider.Sites = [];
         Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync("/home/content/file.txt")).StatusCode);
+
+        var lastModified = new DateTimeOffset(2025, 1, 2, 3, 4, 5, TimeSpan.Zero);
+        provider.Sites = [new SiteInfo { Id = "home", Name = "Home", Content = new TestFileProvider(lastModified) }];
+        response = await client.GetAsync("/home/content/file.txt");
+        Assert.Equal(lastModified, response.Content.Headers.LastModified);
     }
 
     private sealed class MutableProvider : IPortalProvider
@@ -75,20 +81,20 @@ public sealed class SiteContentTests
         }
     }
 
-    private sealed class TestFileProvider : IFileProvider
+    private sealed class TestFileProvider(DateTimeOffset? lastModified = null) : IFileProvider
     {
-        public IFileInfo GetFileInfo(string subpath) => subpath == "file.txt" ? new TestFileInfo() : new NotFoundFileInfo(subpath);
+        public IFileInfo GetFileInfo(string subpath) => subpath == "file.txt" ? new TestFileInfo(lastModified) : new NotFoundFileInfo(subpath);
         public IDirectoryContents GetDirectoryContents(string subpath) => NotFoundDirectoryContents.Singleton;
         public IChangeToken Watch(string filter) => NullChangeToken.Singleton;
     }
 
-    private sealed class TestFileInfo : IFileInfo
+    private sealed class TestFileInfo(DateTimeOffset? lastModified) : IFileInfo
     {
         public bool Exists => true;
         public long Length => 7;
         public string? PhysicalPath => null;
         public string Name => "file.txt";
-        public DateTimeOffset LastModified => DateTimeOffset.MinValue;
+        public DateTimeOffset LastModified => lastModified ?? DateTimeOffset.MinValue;
         public bool IsDirectory => false;
         public Stream CreateReadStream() => new MemoryStream(Encoding.UTF8.GetBytes("content"));
     }

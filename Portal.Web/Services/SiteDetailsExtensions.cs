@@ -72,8 +72,7 @@ public static class SiteDetailsExtensions
         endpoints.MapGet("/{siteId}/content/{**path}", async (
             string siteId, string? path, HttpContext context, IPortalProvider portal, CancellationToken cancellationToken) =>
         {
-            var details = await portal.GetSiteDetailsAsync(cancellationToken);
-            var site = details.Sites.FirstOrDefault(site => string.Equals(site.Id, siteId, StringComparison.OrdinalIgnoreCase));
+            var site = await portal.GetSiteAsync(siteId, cancellationToken);
             if (site is null)
             {
                 return Results.NotFound();
@@ -90,11 +89,12 @@ public static class SiteDetailsExtensions
                 return Results.NotFound();
             }
 
+            DateTimeOffset? lastModified = fileInfo.LastModified == DateTimeOffset.MinValue ? null : fileInfo.LastModified;
             return Results.File(
                 fileInfo.CreateReadStream(),
                 GetContentType(fileInfo.Name),
                 fileInfo.Name,
-                fileInfo.LastModified,
+                lastModified,
                 enableRangeProcessing: true);
         })
         .RequireAuthorization()
