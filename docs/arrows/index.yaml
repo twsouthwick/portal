@@ -56,8 +56,8 @@ arrows:
     blocks: []
     blockedBy: []
     detail: native-client.md
-    next: Define portal integration and authentication intent before implementation.
-    drift: Current implementation is a placeholder shell; no portal integration is present.
+    next: Review the proposed native authentication design and cross-segment API boundary before specifying or implementing integration.
+    drift: Current implementation is a placeholder shell; native authentication and Authelia compatibility are unverified.
   runtime-services:
     status: MAPPED
     parent: null
