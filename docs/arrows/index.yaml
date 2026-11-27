@@ -34,7 +34,7 @@ arrows:
     blocks: []
     blockedBy: []
     detail: site-catalog.md
-    next: Serve the client manifest endpoint (SITE-017, issue #7); confirm provider precedence and runtime refresh expectations.
+    next: Serve the client manifest endpoint and Development-only OpenAPI document (SITE-017, SITE-019, issue #7); confirm provider precedence and runtime refresh expectations.
     drift: Client manifest specs carry @spec citations; SITE-001–009 implementation and tests have none.
   portal-experience:
     status: MAPPED

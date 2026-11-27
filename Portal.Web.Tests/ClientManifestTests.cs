@@ -1,5 +1,8 @@
+using System.ComponentModel;
+using System.Reflection;
 using System.Security.Claims;
 using System.Text.Json;
+using System.Text.Json.Schema;
 using Microsoft.Extensions.FileProviders;
 using Portal.Web.Services;
 using Xunit;
@@ -58,7 +61,7 @@ public sealed class ClientManifestTests
         var app = Assert.Single(site.Apps);
         Assert.Equal("Player", app.Name);
         Assert.Equal("player://open", app.Scheme);
-        Assert.Equal("google", app.Store);
+        Assert.Equal(ClientAppStore.Google, app.Store);
         Assert.Equal("com.example.player", app.StoreId);
     }
 
@@ -173,6 +176,34 @@ public sealed class ClientManifestTests
         var site = Assert.Single(ClientManifest.Create(details, User()).Sites);
 
         Assert.Equal(kept, site.Apps.Count == 1);
+    }
+
+    // @spec SITE-018
+    [Fact]
+    public void Schema_DescribesStoreAsLowercaseStringEnumeration()
+    {
+        var schema = JsonSchemaExporter.GetJsonSchemaAsNode(JsonSerializerOptions.Web, typeof(ClientManifest));
+
+        var store = schema["properties"]!["sites"]!["items"]!["properties"]!["apps"]!["items"]!["properties"]!["store"]!;
+
+        Assert.Equal(
+            ["none", "apple", "macos", "google", "microsoft", "windows", "linux"],
+            store["enum"]!.AsArray().Select(value => value!.GetValue<string>()));
+    }
+
+    // @spec SITE-018
+    [Theory]
+    [InlineData(typeof(ClientManifest))]
+    [InlineData(typeof(ClientSite))]
+    [InlineData(typeof(ClientSiteApp))]
+    public void Schema_DescribesEveryTypeAndField(Type type)
+    {
+        Assert.False(string.IsNullOrWhiteSpace(type.GetCustomAttribute<DescriptionAttribute>()?.Description));
+        Assert.All(
+            type.GetProperties(BindingFlags.Public | BindingFlags.Instance),
+            property => Assert.False(
+                string.IsNullOrWhiteSpace(property.GetCustomAttribute<DescriptionAttribute>()?.Description),
+                $"{type.Name}.{property.Name} has no description."));
     }
 
     private static ClaimsPrincipal User(params string[] roles)

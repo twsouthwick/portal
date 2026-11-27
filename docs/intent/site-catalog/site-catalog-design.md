@@ -100,6 +100,22 @@ receives 401, and a provider failure receives 503 rather than a partial
 manifest. An authenticated user with no authorized sites receives a successful
 manifest with an empty `sites` list.
 
+### Publication
+
+The `ClientManifest`, `ClientSite`, and `ClientSiteApp` records in
+`Portal.Web/Services/ClientManifest.cs` are the contract's code form. Each type
+and field carries a description, and `store` is a string enumeration of
+`none`, `apple`, `macos`, `google`, `microsoft`, `windows`, and `linux`, so a
+generated schema documents the contract. A client-specific store enumeration
+keeps the wire values independent of the internal `AppStore` model.
+
+The manifest endpoint publishes this schema through ASP.NET Core's built-in
+OpenAPI document (`AddOpenApi`, `MapOpenApi`), declaring the manifest response
+and its 401 and 503 problem-details responses. The document is served only in
+the Development environment, for client type generation; no Swagger or Scalar
+UI is served. This design remains the statement of intent; the generated
+document is its machine-readable form.
+
 ## Decisions & Alternatives
 
 | Decision | Current approach | Alternatives considered | Rationale |
@@ -114,6 +130,7 @@ manifest with an empty `sites` list.
 | App platform filtering in the manifest | Return all valid apps. | Server filters by a client-supplied OS. | Owner-approved (issue #6): one cacheable representation per user. |
 | Invalid URLs and schemes | Omit the invalid site URL or app; keep the site. | Reject the whole site; HTTPS-only. | Owner-approved (issue #6); the scheme allowlist is deferred to the plugin contract. |
 | Manifest errors | RFC 9457 problem details; 401, 503, empty list. | Bare status codes. | Owner-approved (issue #6). |
+| Client manifest publication | Built-in OpenAPI document, Development only, no UI; records carry descriptions and a string store enumeration. | Design table only; always-on or anonymous document; Swagger/Scalar UI. | Owner-approved (issue #6): enables client type generation without exposing a public API browser. |
 
 ## Open Questions & Future Decisions
 

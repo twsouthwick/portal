@@ -7,8 +7,8 @@ Kubernetes sources.
 
 **MAPPED** — first reconstructed 2026-11-27. Nine EARS requirements describe
 observed behavior; precedence and refresh policy remain owner decisions. The
-owner-approved client manifest contract (SITE-010–SITE-017) was added for
-issue #6; its endpoint (SITE-017) is pending.
+owner-approved client manifest contract (SITE-010–SITE-019) was added for
+issue #6; its endpoint behavior (SITE-017, SITE-019) is pending.
 
 ## References
 
@@ -19,7 +19,7 @@ issue #6; its endpoint (SITE-017) is pending.
 - `docs/intent/site-catalog/site-catalog-design.md`
 
 ### EARS
-- `docs/intent/site-catalog/site-catalog-specs.md` — 17 specs
+- `docs/intent/site-catalog/site-catalog-specs.md` — 19 specs
 
 ### Tests
 - `Portal.Web.Tests/ClientManifestTests.cs`
@@ -48,11 +48,11 @@ authenticated static-content endpoint; versioned client manifest projection.
 | Category | Spec IDs | Implemented | Deferred | Gaps |
 |---|---|---:|---:|---:|
 | File/ZIP loading, composition, Kubernetes mapping, content | SITE-001, SITE-002, SITE-003, SITE-004, SITE-005, SITE-006, SITE-007, SITE-008, SITE-009 | 9 | 0 | 0 known implementation gaps |
-| Client manifest contract | SITE-010, SITE-011, SITE-012, SITE-013, SITE-014, SITE-015, SITE-016, SITE-017 | 7 | 0 | 1 (SITE-017 endpoint errors, issue #7) |
+| Client manifest contract | SITE-010, SITE-011, SITE-012, SITE-013, SITE-014, SITE-015, SITE-016, SITE-017, SITE-018, SITE-019 | 8 | 0 | 2 (SITE-017 endpoint errors, SITE-019 OpenAPI document; issue #7) |
 
 **Traceability:** Provider and content tests cover portions of SITE-001–009,
 which carry no `@spec` annotations. Client manifest code and tests cite
-SITE-010–016 with `@spec`. The counts reflect source
+SITE-010–016 and SITE-018 with `@spec`. The counts reflect source
 reconstruction, not mechanically checked test coverage.
 
 ## Key Findings
