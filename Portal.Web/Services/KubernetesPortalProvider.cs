@@ -1,5 +1,6 @@
 using k8s;
 using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
 using System.Text;
 using System.Text.Json;
@@ -19,16 +20,19 @@ public sealed partial class KubernetesPortalProvider : IPortalProvider
     private readonly string _group;
     private readonly string _version;
     private readonly string _plural;
+    private readonly ILogger<KubernetesPortalProvider> _logger;
 
     public KubernetesPortalProvider(
         IKubernetes? kubernetes = null, string? @namespace = null,
-        string? group = null, string? version = null, string? plural = null)
+        string? group = null, string? version = null, string? plural = null,
+        ILogger<KubernetesPortalProvider>? logger = null)
     {
         _kubernetes = kubernetes ?? new Kubernetes(KubernetesClientConfiguration.BuildDefaultConfig());
         _namespace = @namespace ?? Environment.GetEnvironmentVariable("PORTAL_KUBERNETES_NAMESPACE") ?? "default";
         _group = group ?? Group;
         _version = version ?? Version;
         _plural = plural ?? Plural;
+        _logger = logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<KubernetesPortalProvider>.Instance;
         if (string.IsNullOrWhiteSpace(_namespace))
         {
             throw new ArgumentException("Kubernetes namespace must not be empty.", nameof(@namespace));
@@ -114,7 +118,7 @@ public sealed partial class KubernetesPortalProvider : IPortalProvider
             throw new InvalidDataException("PortalSite must have a valid id and a non-empty name.");
         }
 
-        var site = MapPortalSiteToSiteInfo(spec);
+        var site = MapPortalSiteToSiteInfo(spec, _logger);
         if (spec.ContentRef is { } contentRef)
         {
             if (string.IsNullOrWhiteSpace(contentRef.Name))
@@ -152,7 +156,8 @@ public sealed partial class KubernetesPortalProvider : IPortalProvider
     [GeneratedRegex("^[a-z0-9]([-a-z0-9]*[a-z0-9])?$", RegexOptions.CultureInvariant)]
     private static partial Regex SiteIdPattern();
 
-    public static SiteInfo MapPortalSiteToSiteInfo(KubernetesPortalSiteSpec spec)
+    public static SiteInfo MapPortalSiteToSiteInfo(
+        KubernetesPortalSiteSpec spec, ILogger<KubernetesPortalProvider>? logger = null)
     {
         return new SiteInfo
         {
@@ -164,7 +169,7 @@ public sealed partial class KubernetesPortalProvider : IPortalProvider
             {
                 Name = app.Name,
                 Scheme = app.Scheme,
-                Store = MapStore(app.Store),
+                Store = MapStore(app.Store, spec.Id, app.Name, logger),
                 StoreId = app.StoreId
             }).ToArray(),
             Icon = spec.Icon,
@@ -176,7 +181,7 @@ public sealed partial class KubernetesPortalProvider : IPortalProvider
         };
     }
 
-    private static AppStore MapStore(string? store)
+    private static AppStore MapStore(string? store, string siteId, string appName, ILogger<KubernetesPortalProvider>? logger)
     {
         return store?.ToLowerInvariant() switch
         {
@@ -187,8 +192,17 @@ public sealed partial class KubernetesPortalProvider : IPortalProvider
             "microsoft" => AppStore.Microsoft,
             "windows" => AppStore.Windows,
             "linux" => AppStore.Linux,
-            _ => throw new InvalidDataException($"Unknown app store '{store}'.")
+            _ => LogUnknownStore(store, siteId, appName, logger)
         };
+    }
+
+    private static AppStore LogUnknownStore(
+        string? store, string siteId, string appName, ILogger<KubernetesPortalProvider>? logger)
+    {
+        logger?.LogWarning(
+            "Unknown app store '{Store}' for app '{AppName}' on PortalSite '{SiteId}'; using no store.",
+            store, appName, siteId);
+        return AppStore.None;
     }
 
     private sealed class ConfigMapFileProvider(IReadOnlyDictionary<string, byte[]> files) : IFileProvider

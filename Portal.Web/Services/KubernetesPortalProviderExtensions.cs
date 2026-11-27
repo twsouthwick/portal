@@ -6,7 +6,7 @@ public static class KubernetesPortalProviderExtensions
 {
     public static PortalProviderBuilder AddKubernetes(this PortalProviderBuilder portal)
     {
-        return portal.AddProvider(_ =>
+        return portal.AddProvider(services =>
         {
             if (!HasKubernetesConfiguration())
             {
@@ -17,7 +17,8 @@ public static class KubernetesPortalProviderExtensions
                 ? KubernetesClientConfiguration.InClusterConfig()
                 : KubernetesClientConfiguration.BuildDefaultConfig();
             return new KubernetesPortalProvider(new Kubernetes(configuration),
-                portal.Host.Configuration["PORTAL_KUBERNETES_NAMESPACE"]);
+                portal.Host.Configuration["PORTAL_KUBERNETES_NAMESPACE"],
+                logger: services.GetRequiredService<ILogger<KubernetesPortalProvider>>());
         });
     }
 

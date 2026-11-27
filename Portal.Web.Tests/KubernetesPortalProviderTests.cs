@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text;
 using k8s;
+using Microsoft.Extensions.Logging;
 using Portal.Web.Services;
 using Xunit;
 
@@ -111,6 +112,29 @@ public class KubernetesPortalProviderTests
     }
 
     [Fact]
+    public async Task GetSiteDetails_LogsAndIgnoresUnknownAppStore()
+    {
+        var handler = new KubernetesHandler
+        {
+            Sites = """
+                {"items":[
+                  {"spec":{"id":"legacy","name":"Legacy","apps":[{"name":"App","store":"android","storeId":"app"}]}},
+                  {"spec":{"id":"valid","name":"Valid"}}
+                ]}
+                """
+        };
+        var logger = new TestLogger<KubernetesPortalProvider>();
+        using var client = CreateClient(handler);
+        var provider = new KubernetesPortalProvider(client, "test-ns", logger: logger);
+
+        var sites = (await provider.GetSiteDetailsAsync()).Sites.ToArray();
+
+        Assert.Equal(2, sites.Length);
+        Assert.Equal(AppStore.None, Assert.Single(sites[0].Apps).Store);
+        Assert.Contains(logger.Warnings, warning => warning.Contains("android") && warning.Contains("legacy"));
+    }
+
+    [Fact]
     public async Task GetSiteDetails_ReflectsChangesAndPropagatesFailures()
     {
         var handler = new KubernetesHandler { Sites = """{"items":[]}""" };
@@ -129,6 +153,24 @@ public class KubernetesPortalProviderTests
 
     private static Kubernetes CreateClient(KubernetesHandler handler) =>
         new(new KubernetesClientConfiguration { Host = "http://localhost" }, handler);
+
+    private sealed class TestLogger<T> : ILogger<T>
+    {
+        public List<string> Warnings { get; } = [];
+
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(
+            LogLevel logLevel, EventId eventId, TState state, Exception? exception,
+            Func<TState, Exception?, string> formatter)
+        {
+            if (logLevel >= LogLevel.Warning)
+            {
+                Warnings.Add(formatter(state, exception));
+            }
+        }
+    }
 
     private sealed class KubernetesHandler : DelegatingHandler
     {
