@@ -69,8 +69,8 @@ Publishing uses the workflow's `GITHUB_TOKEN` with package-write permission. Exi
 
 The independent `Native client release builds` workflow also runs on these
 events and on manual dispatch. It is configured to build release AppImages on
-native Linux x86_64 and ARM64 runners, an x86_64 Windows MSVC executable, and
-an x86_64 Android APK. Each job checks the output architecture and launches
+native Linux and Windows x86_64 and ARM64 runners, and an x86_64 Android APK.
+Each job checks the output architecture and launches
 the app before uploading a workflow artifact named with the checked-out commit
 SHA. The Android job tests a temporary, locally signed copy on an API 35
 x86_64 emulator; the uploaded release APK is unsigned and must be signed

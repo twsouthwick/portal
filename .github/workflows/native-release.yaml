@@ -89,7 +89,19 @@ jobs:
           if-no-files-found: error
 
   windows:
-    runs-on: windows-2022
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: windows-2022
+            arch: x86_64
+            rust: x86_64-pc-windows-msvc
+            machine: 0x8664
+          - runner: windows-11-arm
+            arch: arm64
+            rust: aarch64-pc-windows-msvc
+            machine: 0xaa64
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v7
@@ -101,38 +113,46 @@ jobs:
       - name: Install build tools
         shell: pwsh
         run: |
-          rustup toolchain install $env:RUST_VERSION --profile minimal
+          rustup toolchain install "$env:RUST_VERSION-${{ matrix.rust }}" --profile minimal
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          rustup default $env:RUST_VERSION
+          rustup default "$env:RUST_VERSION-${{ matrix.rust }}"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           npm ci --prefix Portal.Client
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           "SOURCE_DATE_EPOCH=$(git log -1 --format=%ct)" >> $env:GITHUB_ENV
       - name: Build release executable
         working-directory: Portal.Client
-        run: npm run tauri -- build --ci --no-bundle --target x86_64-pc-windows-msvc -- --locked
+        run: npm run tauri -- build --ci --no-bundle --target ${{ matrix.rust }} -- --locked
       - name: Verify architecture and launch executable
         shell: pwsh
         run: |
-          $exe = Resolve-Path Portal.Client/src-tauri/target/x86_64-pc-windows-msvc/release/portalclient.exe
+          $exe = Resolve-Path Portal.Client/src-tauri/target/${{ matrix.rust }}/release/portalclient.exe
           $bytes = [IO.File]::ReadAllBytes($exe)
           $offset = [BitConverter]::ToInt32($bytes, 0x3c)
-          if ([BitConverter]::ToUInt32($bytes, $offset) -ne 0x4550 -or [BitConverter]::ToUInt16($bytes, $offset + 4) -ne 0x8664) {
-            throw "Expected an x86_64 PE executable"
+          if ([BitConverter]::ToUInt32($bytes, $offset) -ne 0x4550 -or [BitConverter]::ToUInt16($bytes, $offset + 4) -ne ${{ matrix.machine }}) {
+            throw "Unexpected PE architecture"
           }
+          Add-Type @'
+          using System;
+          using System.Runtime.InteropServices;
+          public static class PortalWindow {
+              [DllImport("user32.dll")]
+              public static extern bool IsWindowVisible(IntPtr handle);
+          }
+          '@
           $process = Start-Process $exe -PassThru
           try {
             $visible = $false
-            for ($i = 0; $i -lt 30; $i++) {
+            for ($i = 0; $i -lt 60; $i++) {
               Start-Sleep -Seconds 1
               $process.Refresh()
               if ($process.HasExited) { throw "Client exited before its window appeared" }
-              if ($process.MainWindowTitle -eq "Portal") { $visible = $true; break }
+              if ($process.MainWindowTitle -eq "Portal" -and [PortalWindow]::IsWindowVisible($process.MainWindowHandle)) { $visible = $true; break }
             }
             if (-not $visible) { throw "Client window did not appear" }
             Start-Sleep -Seconds 5
             $process.Refresh()
-            if ($process.HasExited -or $process.MainWindowTitle -ne "Portal") { throw "Client window did not remain open" }
+            if ($process.HasExited -or $process.MainWindowTitle -ne "Portal" -or -not [PortalWindow]::IsWindowVisible($process.MainWindowHandle)) { throw "Client window did not remain open" }
           } finally {
             if (-not $process.HasExited) { Stop-Process -Id $process.Id -Force }
           }
@@ -141,10 +161,10 @@ jobs:
           Copy-Item $exe $out
           $hash = (Get-FileHash $exe -Algorithm SHA256).Hash.ToLowerInvariant()
           "$hash  portalclient.exe" | Set-Content -Encoding ascii "$out/SHA256SUMS"
-          "commit=$env:GITHUB_SHA`nrunner=Windows-x86_64`nrust=$(rustc --version)`nnode=$(node --version)" | Set-Content -Encoding ascii "$out/provenance.txt"
+          "commit=$env:GITHUB_SHA`nrunner=Windows-${{ matrix.arch }}`nrust=$(rustc --version)`nnode=$(node --version)" | Set-Content -Encoding ascii "$out/provenance.txt"
       - uses: actions/upload-artifact@v4.6.2
         with:
-          name: portal-client-windows-x86_64-${{ github.sha }}
+          name: portal-client-windows-${{ matrix.arch }}-${{ github.sha }}
           path: ${{ runner.temp }}/native-artifact/
           if-no-files-found: error
 
