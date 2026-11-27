@@ -11,6 +11,96 @@ permissions:
   contents: read
 
 jobs:
+  windows-client:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: windows-2022
+            arch: x86_64
+            rust: x86_64-pc-windows-msvc
+            driver: win64
+            gsudo: x64
+          - runner: windows-11-arm
+            arch: arm64
+            rust: aarch64-pc-windows-msvc
+            driver: arm64
+            gsudo: arm64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: Portal.Client/package-lock.json
+
+      - name: Set up Rust MSVC
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $true
+          rustup toolchain install stable-${{ matrix.rust }} --profile minimal
+          rustup default stable-${{ matrix.rust }}
+          rustc -vV
+
+      - name: Install Tauri WebDriver
+        run: cargo install tauri-driver --version 2.1.0 --locked
+
+      - name: Install client dependencies
+        run: npm ci --prefix Portal.Client
+
+      - name: Build debug shell
+        working-directory: Portal.Client
+        run: npm run tauri -- build --debug --no-bundle
+
+      - name: Upload debug executable
+        uses: actions/upload-artifact@v4.6.2
+        with:
+          name: portal-client-windows-${{ matrix.arch }}-debug-exe
+          path: Portal.Client/src-tauri/target/debug/portalclient.exe
+          if-no-files-found: error
+
+      - name: Verify WebView2 and smoke test window
+        run: ./Portal.Client/smoke-windows.ps1
+
+      - name: Install matching Edge WebDriver
+        run: ./Portal.Client/setup-webdriver-windows.ps1 -Architecture ${{ matrix.driver }}
+
+      - name: Prepare non-elevated UI tests
+        run: |
+          $archive = Join-Path $env:RUNNER_TEMP 'gsudo-2.6.1.zip'
+          $directory = Join-Path $env:RUNNER_TEMP 'gsudo-2.6.1'
+          Invoke-WebRequest -Uri 'https://github.com/gerardog/gsudo/releases/download/v2.6.1/gsudo.portable.zip' -OutFile $archive
+          if ((Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash -ne '21130bf178d7b9891207f00bff56f05b6b363ce9cec7b2d084e45fb12ee51f44') {
+            throw 'gsudo archive checksum mismatch.'
+          }
+          Expand-Archive -LiteralPath $archive -DestinationPath $directory
+          Join-Path $directory '${{ matrix.gsudo }}' | Add-Content -LiteralPath $env:GITHUB_PATH
+          $sid = [System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value
+          & icacls $env:GITHUB_WORKSPACE /grant "*${sid}:(OI)(CI)M"
+          if ($LASTEXITCODE -ne 0) { throw 'Failed to grant the runner user access to the workspace.' }
+
+      - name: Test client webview
+        working-directory: Portal.Client
+        env:
+          PORTAL_CLIENT_TEST_ADAPTER: ./adapters/windows-tauri.js
+        run: |
+          $groups = & gsudo --integrity Medium whoami.exe /groups
+          if ($LASTEXITCODE -ne 0 -or -not ($groups -match 'S-1-16-8192')) {
+            throw 'Could not start the UI tests at medium integrity.'
+          }
+          gsudo --integrity Medium pwsh -NoProfile -Command "npm run test:e2e"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Upload UI smoke-test evidence
+        if: always()
+        uses: actions/upload-artifact@v4.6.2
+        with:
+          name: portal-client-windows-${{ matrix.arch }}-ui-smoke
+          path: Portal.Client/artifacts/
+          if-no-files-found: error
+
   linux-client:
     strategy:
       fail-fast: false
@@ -109,6 +199,20 @@ jobs:
 
       - name: Test
         run: dotnet test Portal.slnx --no-build --configuration Release
+
+      - name: Validate container packaging
+        run: |
+          version="$(dotnet msbuild Portal.Web/Portal.Web.csproj -target:MinVer -getProperty:MinVerVersion)"
+          dotnet publish Portal.Web/Portal.Web.csproj \
+            --configuration Release \
+            --no-restore \
+            /t:PublishContainer \
+            /p:ContainerRegistry=ghcr.io \
+            "/p:ContainerRepository=${GITHUB_REPOSITORY,,}" \
+            "/p:ContainerImageTags=\"$version;latest\"" \
+            "/p:Version=$version" \
+            /p:ContainerImageFormat=OCI \
+            "/p:ContainerArchiveOutputPath=$RUNNER_TEMP/portal-container.tar"
 
       - name: Lint Helm chart
         run: >-
