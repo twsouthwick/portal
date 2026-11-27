@@ -85,8 +85,16 @@ invalidate existing OIDC signing keys. To remove local secrets, use
 directory. Portal logout clears its own cookie, not the Authelia session.
 
 The `portal-web` client is confidential and uses authorization code with PKCE
-and the `groups` scope. It is not a native public client; native authentication
-and callback compatibility are tracked separately in issue #11.
+and the `groups` scope. The Authelia client claims policy includes `groups` and
+`name` in the ID token for Portal, which currently does not fetch userinfo.
+This is not a native public client; native authentication and callback
+compatibility are tracked separately in issue #11.
+
+To check the bundled site roles, sign in as `admin` and verify Site 1 and
+`/site1/content/icon.png` are accessible. In a separate browser session, sign
+in as `media`: the admin-only sites should be hidden and that content URL
+should be denied. For media-only sites, supply your own `SITE_PATH` manifest
+with a `media` role as described in the user guide.
 
 ## Build and test
 

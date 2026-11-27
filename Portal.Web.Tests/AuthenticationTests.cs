@@ -1,12 +1,16 @@
 using System.Net;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Protocols;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
+using Microsoft.IdentityModel.Tokens;
 using Portal.Web.Services;
 using Xunit;
 
@@ -66,6 +70,39 @@ public sealed class AuthenticationTests : IClassFixture<PortalWebApplicationFact
             roleType: "groups");
 
         Assert.True(new ClaimsPrincipal(identity).IsInRole("media"));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task IdToken_GroupsArrayIsUsedForRoles(bool isAdmin)
+    {
+        var options = _factory.Services.GetRequiredService<IOptionsMonitor<OpenIdConnectOptions>>()
+            .Get(OpenIdConnectDefaults.AuthenticationScheme);
+        var key = new SymmetricSecurityKey(RandomNumberGenerator.GetBytes(32));
+        var handler = new JsonWebTokenHandler { MapInboundClaims = options.MapInboundClaims };
+        var token = handler.CreateToken(new SecurityTokenDescriptor
+        {
+            Claims = new Dictionary<string, object>
+            {
+                ["sub"] = "user",
+                ["name"] = "Portal User",
+                ["groups"] = isAdmin ? new[] { "admin", "media" } : new[] { "media" }
+            },
+            SigningCredentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256)
+        });
+        var validation = options.TokenValidationParameters.Clone();
+        validation.IssuerSigningKey = key;
+        validation.ValidateIssuer = false;
+        validation.ValidateAudience = false;
+
+        var result = await handler.ValidateTokenAsync(token, validation);
+
+        Assert.True(result.IsValid, result.Exception?.ToString());
+        var principal = new ClaimsPrincipal(result.ClaimsIdentity);
+        Assert.True(principal.IsInRole("media"));
+        Assert.Equal(isAdmin, principal.IsInRole("admin"));
+        Assert.Equal("Portal User", principal.Identity?.Name);
     }
 }
 

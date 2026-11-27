@@ -29,11 +29,15 @@ identity_providers:
     jwks:
       - key: {{ secret "/secrets/oidc.pem" | mindent 10 "|" | msquote }}
     enforce_pkce: 'always'
+    claims_policies:
+      portal:
+        id_token: ['groups', 'name']
     clients:
       - client_id: 'portal-web'
         client_name: 'Portal Web (local development only)'
         client_secret: '$argon2id$v=19$m=65536,t=3,p=4$+Q+nqIidQXW/tDCDr1CQZQ$u9NkKW3DZb4ORslzAe053L9fu9f4kW/zqP80Q+oRvxE'
         public: false
+        claims_policy: 'portal'
         authorization_policy: 'one_factor'
         redirect_uris:
           - 'https://localhost:6100/signin-oidc'
