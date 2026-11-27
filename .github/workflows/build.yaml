@@ -212,7 +212,7 @@ jobs:
             /t:PublishContainer \
             /p:ContainerRegistry=ghcr.io \
             "/p:ContainerRepository=${GITHUB_REPOSITORY,,}" \
-            "/p:ContainerRuntimeIdentifiers=linux-x64;linux-arm64" \
+            "/p:ContainerRuntimeIdentifiers=linux-x64%3Blinux-arm64" \
             "/p:ContainerImageTags=\"$version;validation\"" \
             "/p:Version=$version" \
             /p:ContainerImageFormat=OCI \
@@ -324,7 +324,7 @@ jobs:
             /t:PublishContainer \
             /p:ContainerRegistry=ghcr.io \
             "/p:ContainerRepository=$IMAGE_REPOSITORY" \
-            "/p:ContainerRuntimeIdentifiers=linux-x64;linux-arm64" \
+            "/p:ContainerRuntimeIdentifiers=linux-x64%3Blinux-arm64" \
             "/p:ContainerImageTags=\"$IMAGE_TAGS\"" \
             "/p:Version=$VERSION" \
             /p:ContainerImageFormat=OCI

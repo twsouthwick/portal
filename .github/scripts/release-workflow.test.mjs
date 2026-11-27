@@ -8,7 +8,7 @@ const deployment = await readFile(new URL('../../chart/templates/deployment.yaml
 
 // @spec DELIVERY-013 DELIVERY-014 DELIVERY-015 DELIVERY-016
 test('container release workflow uses MinVer channels and publishes both Linux architectures', () => {
-  assert.match(buildWorkflow, /ContainerRuntimeIdentifiers=linux-x64;linux-arm64/);
+  assert.equal((buildWorkflow.match(/ContainerRuntimeIdentifiers=linux-x64%3Blinux-arm64/g) ?? []).length, 2);
   assert.match(buildWorkflow, /containerTags/);
   assert.match(buildWorkflow, /MinVerVersion/);
   assert.match(buildWorkflow, /docker buildx imagetools inspect/);
