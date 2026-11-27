@@ -12,8 +12,16 @@ permissions:
 
 jobs:
   linux-client:
-    runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            arch: x86_64
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
 
@@ -29,7 +37,10 @@ jobs:
           sudo apt-get install -y --no-install-recommends \
             build-essential pkg-config libwebkit2gtk-4.1-dev libssl-dev \
             libayatana-appindicator3-dev librsvg2-dev patchelf \
-            xvfb xauth xdotool x11-utils
+            xvfb xauth xdotool x11-utils webkit2gtk-driver
+
+      - name: Install Tauri WebDriver
+        run: cargo install tauri-driver --version 2.1.0 --locked
 
       - name: Install client dependencies
         run: npm ci --prefix Portal.Client
@@ -41,12 +52,16 @@ jobs:
       - name: Upload debug AppImage
         uses: actions/upload-artifact@v4.6.2
         with:
-          name: portal-client-linux-x86_64-debug-appimage
+          name: portal-client-linux-${{ matrix.arch }}-debug-appimage
           path: Portal.Client/src-tauri/target/debug/bundle/appimage/*.AppImage
           if-no-files-found: error
 
       - name: Smoke test client window
         run: xvfb-run -a bash Portal.Client/smoke-linux.sh
+
+      - name: Test client webview
+        working-directory: Portal.Client
+        run: xvfb-run -a npm run test:e2e
 
   build:
     runs-on: ubuntu-latest
