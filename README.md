@@ -124,15 +124,20 @@ the built native webview through Tauri WebDriver and check the placeholder
 heading and text; they do not test portal connectivity, authentication,
 release bundles, or installers. Client build output is gitignored.
 
-The shared tests use JavaScript and Node's built-in test runner. Add shared
-scenarios under `Portal.Client/tests`; use `process.platform` and the test
-runner's `skip` option for platform-specific cases. On Windows, build the
-debug client, install `tauri-driver` as above, and put the Microsoft Edge
-WebDriver matching the installed WebView2 version on `PATH` as
-`msedgedriver.exe` before running `npm run test:e2e`. This Windows setup has not
-yet been verified in CI. Tauri's native driver supports Linux and Windows;
-Android requires a separate Appium-based adapter and is not covered by these
-tests.
+The shared tests in `Portal.Client/tests/client.test.js` define the UI
+assertions once. They use a small adapter contract (`launch`, `isVisible`,
+`captureScreenshot`, `diagnostics`, and `cleanup`) selected with
+`PORTAL_CLIENT_TEST_ADAPTER`. Each adapter exports `createAdapter()` returning
+those async methods; `isVisible({ role, text })` checks exact visible text,
+`captureScreenshot(file)` writes to the supplied path, and `diagnostics()`
+returns a log string. CI runs the Linux Tauri/WebDriver adapter against the
+actual native WebView under Xvfb, and uploads its screenshot and diagnostic logs
+from `Portal.Client/artifacts/` even if the tests fail. A screenshot or
+artifact-capture failure fails the test job; startup failures write driver
+diagnostics when no screenshot can be captured.
+
+Windows and Android require separate adapters to run the shared tests; those
+adapters are not included or verified here.
 
 The separate Android workflow is configured to build and smoke-test the placeholder shell on
 Ubuntu 24.04 with JDK 17, SDK platform 37.0, build-tools 37.0.0, NDK
