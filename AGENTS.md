@@ -38,7 +38,7 @@
 
 ## Linked-Intent Development (MANDATORY)
 
-Consult the `linked-intent-dev` skill for all code changes when the agent provides it. Otherwise follow [`docs/lid/workflow.md`](docs/lid/workflow.md). Intent flows downstream:
+When the `linked-intent-dev` skill is available (such as in Claude Code or Cursor with plugins), use it. Otherwise follow [`docs/lid/workflow.md`](docs/lid/workflow.md) for all code changes. Intent flows downstream:
 
 ```
 HLD → LLDs → EARS → Tests → Code

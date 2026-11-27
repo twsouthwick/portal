@@ -24,7 +24,7 @@ The project instructions follow [Linked-Intent Development](https://github.com/j
 
 ## Map status
 
-No LID maps are present yet. Full-project scope is established, but the upstream brownfield workflow requires the owner to approve the segmentation lens, granularity, and final boundaries before map artifacts are created. Do not add placeholder maps or represent the project as mapped before that approval and the complete source sweep.
+No LID maps are present yet. Full-project scope is declared (Full mode), but the upstream brownfield workflow requires the owner to approve the segmentation lens, granularity, and final boundaries before map artifacts are created. Do not add placeholder maps or represent the project as mapped before that approval and the complete source sweep.
 
 ## Maintaining maps for a future change
 
