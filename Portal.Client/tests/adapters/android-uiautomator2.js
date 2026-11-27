@@ -16,6 +16,27 @@ async function unusedPort() {
   return port;
 }
 
+export async function isVisible(driver, { role, text }) {
+  try {
+    return await driver.wait(async () => {
+      const webviews = await driver.findElements(By.className('android.webkit.WebView'));
+      for (const webview of webviews) {
+        const elements = await webview.findElements(By.xpath('.//*'));
+        for (const element of elements) {
+          const label = (await element.getText()).trim();
+          const description = (await element.getDomAttribute('content-desc') ?? '').trim();
+          if ((label === text || description === text) && await element.getDomAttribute('displayed') === 'true' &&
+            (!role || (role === 'heading' && await element.getDomAttribute('heading') === 'true'))) return true;
+        }
+      }
+      return false;
+    }, 10000);
+  } catch (failure) {
+    if (failure instanceof error.TimeoutError) return false;
+    throw failure;
+  }
+}
+
 export async function createAdapter() {
   let driver;
   let service;
@@ -59,25 +80,8 @@ export async function createAdapter() {
         .build();
     },
 
-    async isVisible({ role, text }) {
-      try {
-        return await driver.wait(async () => {
-          const webviews = await driver.findElements(By.className('android.webkit.WebView'));
-          for (const webview of webviews) {
-            const elements = await webview.findElements(By.xpath('.//*'));
-            for (const element of elements) {
-              const label = (await element.getText()).trim();
-              const description = (await element.getDomAttribute('content-desc') ?? '').trim();
-              if ((label === text || description === text) && await element.isDisplayed() &&
-                (!role || (role === 'heading' && await element.getDomAttribute('heading') === 'true'))) return true;
-            }
-          }
-          return false;
-        }, 10000);
-      } catch (failure) {
-        if (failure instanceof error.TimeoutError) return false;
-        throw failure;
-      }
+    async isVisible(query) {
+      return isVisible(driver, query);
     },
 
     async captureScreenshot(file) {
