@@ -244,16 +244,20 @@ jobs:
           test -n "$ANDROID_KEYSTORE_BASE64"
           test -n "$ANDROID_KEYSTORE_PASSWORD"
           test -n "$ANDROID_KEY_ALIAS"
-          if [[ "$ANDROID_KEYSTORE_PASSWORD$ANDROID_KEY_ALIAS" == *$'\n'* ||
-                "$ANDROID_KEYSTORE_PASSWORD$ANDROID_KEY_ALIAS" == *$'\r'* ]]; then
-            echo "Android signing secret values must not contain line breaks." >&2
-            exit 1
-          fi
           keystore="$RUNNER_TEMP/portal-release.keystore"
           printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$keystore"
           properties="src-tauri/gen/android/keystore.properties"
-          printf 'keyAlias=%s\npassword=%s\nstoreFile=%s\n' \
-            "$ANDROID_KEY_ALIAS" "$ANDROID_KEYSTORE_PASSWORD" "$keystore" > "$properties"
+          node --input-type=module - "$properties" "$keystore" <<'NODE'
+          import { writeFileSync } from 'node:fs';
+          import { escapeJavaPropertiesValue } from '../.github/scripts/configure-android-signing.mjs';
+
+          const escape = value => escapeJavaPropertiesValue(value);
+          writeFileSync(process.argv[2], [
+            `keyAlias=${escape(process.env.ANDROID_KEY_ALIAS)}`,
+            'password=' + escape(process.env.ANDROID_KEYSTORE_PASSWORD),
+            `storeFile=${escape(process.argv[3])}`,
+          ].join('\n') + '\n', { mode: 0o600 });
+          NODE
           node ../.github/scripts/configure-android-signing.mjs src-tauri/gen/android/app/build.gradle.kts
       - name: Build release APK
         working-directory: Portal.Client

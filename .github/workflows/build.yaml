@@ -208,11 +208,9 @@ jobs:
           version="$(dotnet msbuild Portal.Web/Portal.Web.csproj -target:MinVer -getProperty:MinVerVersion)"
           dotnet publish Portal.Web/Portal.Web.csproj \
             --configuration Release \
-            --no-restore \
             /t:PublishContainer \
             /p:ContainerRegistry=ghcr.io \
             "/p:ContainerRepository=${GITHUB_REPOSITORY,,}" \
-            "/p:ContainerRuntimeIdentifiers=linux-x64%3Blinux-arm64" \
             "/p:ContainerImageTags=\"$version;validation\"" \
             "/p:Version=$version" \
             /p:ContainerImageFormat=OCI \
@@ -320,11 +318,9 @@ jobs:
         run: |
           dotnet publish Portal.Web/Portal.Web.csproj \
             --configuration Release \
-            --no-restore \
             /t:PublishContainer \
             /p:ContainerRegistry=ghcr.io \
             "/p:ContainerRepository=$IMAGE_REPOSITORY" \
-            "/p:ContainerRuntimeIdentifiers=linux-x64%3Blinux-arm64" \
             "/p:ContainerImageTags=\"$IMAGE_TAGS\"" \
             "/p:Version=$VERSION" \
             /p:ContainerImageFormat=OCI
@@ -339,9 +335,9 @@ jobs:
           set -euo pipefail
           while IFS= read -r tag; do
             manifest="$(docker buildx imagetools inspect "ghcr.io/$IMAGE_REPOSITORY:$tag")"
-            grep -Fq 'Platform: linux/amd64' <<< "$manifest"
-            grep -Fq 'Platform: linux/arm64' <<< "$manifest"
-          done < <(printf '%s' "$IMAGE_TAGS" | tr ';' '\n')
+            grep -Eq 'Platform:[[:space:]]+linux/amd64' <<< "$manifest"
+            grep -Eq 'Platform:[[:space:]]+linux/arm64' <<< "$manifest"
+          done < <(printf '%s\n' "$IMAGE_TAGS" | tr ';' '\n')
 
       - name: Package and push Helm chart
         if: steps.package.outputs.publish == 'true'

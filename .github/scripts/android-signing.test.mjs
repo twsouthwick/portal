@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { configureAndroidGradleSigning } from './configure-android-signing.mjs';
+import { configureAndroidGradleSigning, escapeJavaPropertiesValue } from './configure-android-signing.mjs';
 
 const generatedGradle = `plugins {
     id("com.android.application")
@@ -22,6 +22,11 @@ test('Android generated Gradle config loads the distribution keystore for releas
   assert.match(configured, /import java\.util\.Properties/);
   assert.match(configured, /keystore\.properties/);
   assert.match(configured, /signingConfig = signingConfigs\.getByName\("portalRelease"\)/);
+});
+
+// @spec CLIENT-006
+test('Android signing secrets are escaped for Java Properties values', () => {
+  assert.equal(escapeJavaPropertiesValue(' \\tfoo:=#! café\n'), '\\ \\\\tfoo\\:\\=\\#\\! caf\\u00e9\\n');
 });
 
 // @spec CLIENT-006

@@ -3,6 +3,60 @@ import { promisify } from 'node:util';
 
 const adb = promisify(execFile);
 
+async function connectPage(port, page, Socket) {
+  const webSocketPath = new URL(page.webSocketDebuggerUrl).pathname;
+  const socket = new Socket(`ws://127.0.0.1:${port}${webSocketPath}`);
+  try {
+    await new Promise((resolve, reject) => {
+      const finish = error => {
+        clearTimeout(timer);
+        error ? reject(error) : resolve();
+      };
+      const timer = setTimeout(() => finish(new Error('Timed out connecting to the Tauri WebView.')), 10000);
+      socket.addEventListener('open', () => finish(), { once: true });
+      socket.addEventListener('error', () => finish(new Error('Failed to connect to the Tauri WebView.')), { once: true });
+    });
+  } catch (error) {
+    socket.close();
+    throw error;
+  }
+
+  let nextId = 0;
+  return {
+    socket,
+    async evaluate(expression) {
+      const id = ++nextId;
+      return new Promise((resolve, reject) => {
+        const finish = (error, value) => {
+          clearTimeout(timer);
+          socket.removeEventListener('message', onMessage);
+          socket.removeEventListener('close', onClose);
+          error ? reject(error) : resolve(value);
+        };
+        const onMessage = event => {
+          let message;
+          try { message = JSON.parse(event.data); } catch (error) { finish(error); return; }
+          if (message.id !== id) return;
+          if (message.error || message.result?.exceptionDetails) {
+            finish(new Error(`WebView evaluation failed: ${JSON.stringify(message.error ?? message.result.exceptionDetails)}`));
+          } else {
+            finish(null, message.result?.result?.value);
+          }
+        };
+        const onClose = () => finish(new Error('WebView connection closed.'));
+        const timer = setTimeout(() => finish(new Error('Timed out evaluating the WebView.')), 10000);
+        socket.addEventListener('message', onMessage);
+        socket.addEventListener('close', onClose, { once: true });
+        try {
+          socket.send(JSON.stringify({ id, method: 'Runtime.evaluate', params: { expression, returnByValue: true } }));
+        } catch (error) {
+          finish(error);
+        }
+      });
+    },
+  };
+}
+
 export async function connectWebView(packageName, { runAdb = adb, fetchImpl = fetch, Socket = WebSocket, discoveryTimeout = 15000 } = {}) {
   const { stdout } = await runAdb('adb', ['shell', 'pidof', packageName]);
   const pid = stdout.trim();
@@ -12,7 +66,7 @@ export async function connectWebView(packageName, { runAdb = adb, fetchImpl = fe
   const port = forwarded.stdout.trim();
   if (!/^\d+$/.test(port)) throw new Error(`Invalid adb forwarded port: ${JSON.stringify(port)}`);
   const removeForward = () => runAdb('adb', ['forward', '--remove', `tcp:${port}`]);
-  let socket;
+  const connections = [];
 
   try {
     const deadline = Date.now() + discoveryTimeout;
@@ -40,54 +94,40 @@ export async function connectWebView(packageName, { runAdb = adb, fetchImpl = fe
       await new Promise(resolve => setTimeout(resolve, 200));
     } while (true);
     if (discoveryError) throw discoveryError;
-    if (pages.length !== 1) throw new Error(`Expected one Tauri WebView page, found ${pages.length}.`);
-    const webSocketPath = new URL(pages[0].webSocketDebuggerUrl).pathname;
-    socket = new Socket(`ws://127.0.0.1:${port}${webSocketPath}`);
-    await new Promise((resolve, reject) => {
-      const timer = setTimeout(() => reject(new Error('Timed out connecting to the Tauri WebView.')), 10000);
-      socket.addEventListener('open', () => { clearTimeout(timer); resolve(); }, { once: true });
-      socket.addEventListener('error', () => { clearTimeout(timer); reject(new Error('Failed to connect to the Tauri WebView.')); }, { once: true });
-    });
-
-    let nextId = 0;
+    if (!pages.length) throw new Error('Expected at least one Tauri WebView page, found 0.');
+    const connectionErrors = [];
+    for (const page of pages) {
+      try {
+        connections.push(await connectPage(port, page, Socket));
+      } catch (error) {
+        connectionErrors.push(error);
+      }
+    }
+    if (!connections.length) throw connectionErrors[0];
     return {
       async evaluate(expression) {
-        const id = ++nextId;
-        return new Promise((resolve, reject) => {
-          const finish = (error, value) => {
-            clearTimeout(timer);
-            socket.removeEventListener('message', onMessage);
-            socket.removeEventListener('close', onClose);
-            error ? reject(error) : resolve(value);
-          };
-          const onMessage = event => {
-            let message;
-            try { message = JSON.parse(event.data); } catch (error) { finish(error); return; }
-            if (message.id !== id) return;
-            if (message.error || message.result?.exceptionDetails) {
-              finish(new Error(`WebView evaluation failed: ${JSON.stringify(message.error ?? message.result.exceptionDetails)}`));
-            } else {
-              finish(null, message.result?.result?.value);
-            }
-          };
-          const onClose = () => finish(new Error('WebView connection closed.'));
-          const timer = setTimeout(() => finish(new Error('Timed out evaluating the WebView.')), 10000);
-          socket.addEventListener('message', onMessage);
-          socket.addEventListener('close', onClose, { once: true });
+        const results = await Promise.all(connections.map(async connection => {
           try {
-            socket.send(JSON.stringify({ id, method: 'Runtime.evaluate', params: { expression, returnByValue: true } }));
+            return { value: await connection.evaluate(expression) };
           } catch (error) {
-            finish(error);
+            return { error };
           }
-        });
+        }));
+        const successful = results.filter(result => !result.error);
+        if (successful.some(result => result.value === true)) return true;
+        if (!successful.length) throw results[0].error;
+        return successful[0].value;
       },
       async cleanup() {
-        socket.close();
-        await removeForward();
+        try {
+          connections.forEach(({ socket }) => socket.close());
+        } finally {
+          await removeForward();
+        }
       },
     };
   } catch (error) {
-    if (socket) socket.close();
+    connections.forEach(({ socket }) => socket.close());
     await removeForward();
     throw error;
   }

@@ -2,6 +2,31 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
+export function escapeJavaPropertiesValue(value) {
+  let escaped = '';
+  for (let index = 0; index < value.length; index++) {
+    const character = value[index];
+    const code = value.charCodeAt(index);
+    switch (character) {
+      case '\\': escaped += '\\\\'; break;
+      case '\t': escaped += '\\t'; break;
+      case '\n': escaped += '\\n'; break;
+      case '\r': escaped += '\\r'; break;
+      case '\f': escaped += '\\f'; break;
+      case ' ': escaped += index === 0 ? '\\ ' : ' '; break;
+      case '=':
+      case ':':
+      case '#':
+      case '!': escaped += `\\${character}`; break;
+      default:
+        escaped += code < 0x20 || code > 0x7e
+          ? `\\u${code.toString(16).padStart(4, '0')}`
+          : character;
+    }
+  }
+  return escaped;
+}
+
 export function configureAndroidGradleSigning(source) {
   const buildTypes = [...source.matchAll(/^([ \t]*)buildTypes\s*\{/gm)];
   const releaseBuildTypes = [...source.matchAll(/^([ \t]*)getByName\("release"\)\s*\{/gm)];

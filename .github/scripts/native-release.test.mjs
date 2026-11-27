@@ -14,6 +14,8 @@ test('Android release builds one signed APK for arm64-v8a and x86_64', () => {
   assert.match(workflow, /arm64-v8a/);
   assert.match(workflow, /native_code[\s\S]*arm64-v8a[\s\S]*x86_64/);
   assert.match(workflow, /configure-android-signing\.mjs/);
+  assert.match(workflow, /escapeJavaPropertiesValue/);
+  assert.doesNotMatch(workflow, /printf 'keyAlias=/);
   assert.doesNotMatch(workflow, /smoke\.keystore/);
 });
 
