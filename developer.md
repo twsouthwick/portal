@@ -316,6 +316,39 @@ diagnostic logs from `Portal.Client/artifacts/`, including when tests fail.
 
 ## CI and contribution checks
 
+### Automatic Copilot code review
+
+The intended policy is one automatic Copilot review per eligible pull request,
+not on every push, with draft reviews disabled to avoid reviewing work in
+progress. A draft is eligible when first marked ready for review. This is a
+GitHub repository setting, not an Actions workflow; its activation and
+verification require a repository owner or administrator and are still pending.
+
+An administrator should:
+
+1. Confirm the repository's plan supports branch rulesets (GitHub Free for
+   public repositories; GitHub Pro, Team, or Enterprise Cloud for private
+   repositories) and Copilot code review is available to the PR author.
+   Copilot Free does not include code review; paid Copilot plans include it.
+   For organization-provided Copilot, an organization owner must enable the
+   **Copilot code review** policy and confirm licensing and billing settings,
+   including any policy allowing reviews for members without a license.
+2. In **Settings > Rulesets > Rulesets**, create an active branch ruleset
+   targeting **Include all branches**. Under **Branch rules**, select
+   **Automatically request Copilot code review**; leave **Review new pushes**
+   and **Review draft pull requests** unchecked. Save the ruleset.
+3. Open a new non-draft test PR targeting a covered branch, without manually
+   assigning Copilot, and confirm that Copilot posts a review. For a meaningful
+   ruleset test, disable the test author's personal automatic-review setting and
+   check for other applicable rulesets. Record the test PR link and result in
+   the issue. Verify the draft and new-push settings in GitHub as well.
+
+These settings are not verified by the repository's CI. Personal settings and
+other applicable rulesets can independently request draft or push reviews.
+See GitHub's [code review configuration](https://docs.github.com/en/copilot/how-tos/copilot-on-github/set-up-copilot/configure-code-review),
+[code review availability and billing](https://docs.github.com/en/copilot/concepts/agents/code-review),
+and [ruleset permissions and availability](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/creating-rulesets-for-a-repository).
+
 The workflows under `.github/workflows` run on pull requests to `main` and on
 pushes to `main` or `v*` tags. The main build workflow restores, builds, and
 tests `Portal.slnx`, validates container packaging without pushing, lints the
