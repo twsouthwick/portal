@@ -1,6 +1,6 @@
 FROM mcr.microsoft.com/devcontainers/base:ubuntu-24.04
 
-ARG ASPIRE_VERSION=13.5.3
+ARG ASPIRE_VERSION=17.0.0
 
 ENV DOTNET_ROOT=/usr/share/dotnet
 ENV ASPIRE_ROOT=/opt/aspire
@@ -31,9 +31,7 @@ RUN curl -fsSL https://get.helm.sh/helm-v3.15.4-linux-amd64.tar.gz -o /tmp/helm.
     && kubectl version --client --output=yaml \
     && kind --version
 
-RUN curl -fsSL https://aspire.dev/install.sh -o /tmp/install-aspire.sh \
-    && bash /tmp/install-aspire.sh --version "${ASPIRE_VERSION}" --install-path "${ASPIRE_BIN}" --skip-path \
-    && rm -f /tmp/install-aspire.sh \
+RUN dotnet tool install --tool-path "${ASPIRE_BIN}" aspire.cli --version "${ASPIRE_VERSION}" \
     && aspire --version \
     && chown -R vscode:vscode "${ASPIRE_ROOT}"
 

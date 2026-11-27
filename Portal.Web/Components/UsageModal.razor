@@ -1,33 +1,30 @@
-@implements IDialogContentComponent<SiteInfo>
-@inject NavigationManager NavigationManager
+@inherits FluentDialogInstance
 @inject IMarkdownConverter MarkdownConverter
 
 <FluentDialogBody>
-    <MarkdownSection HtmlContent="@GetMarkup()" />
-</FluentDialogBody>
-
-<FluentDialogHeader>
-    <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center" HorizontalGap="12">
-        <div class="usage-modal-icon" style="font-size: 2rem;">
-            <i class="@Content.Icon"></i>
-        </div>
-        <FluentStack Orientation="Orientation.Vertical">
-            <FluentLabel Typo="Typography.H4">@Content.Name</FluentLabel>
-            <FluentLabel Typo="Typography.Body" Style="color: var(--text-secondary);">@Content.Description</FluentLabel>
+    <TitleTemplate>
+        <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center" HorizontalGap="12">
+            <div class="usage-modal-icon" style="font-size: 2rem;">
+                <i class="@Content.Icon"></i>
+            </div>
+            <FluentStack Orientation="Orientation.Vertical">
+                <FluentLabel Typo="Typography.H4">@Content.Name</FluentLabel>
+                <FluentLabel Typo="Typography.Body" Style="color: var(--text-secondary);">@Content.Description</FluentLabel>
+            </FluentStack>
         </FluentStack>
-    </FluentStack>
-</FluentDialogHeader>
-
-<FluentDialogFooter>
-    <SiteLinks Site="@Content" IsDisabled="false" />
-</FluentDialogFooter>
+    </TitleTemplate>
+    <ChildContent>
+        <MarkdownSection HtmlContent="@GetMarkup()" />
+        <SiteLinks Site="@Content" IsDisabled="false" />
+    </ChildContent>
+</FluentDialogBody>
 
 @code {
     [Parameter]
     public SiteInfo Content { get; set; } = default!;
 
-    [CascadingParameter]
-    public FluentDialog Dialog { get; set; } = default!;
+    protected override Task OnActionClickedAsync(bool primary) =>
+        primary ? DialogInstance.CloseAsync() : DialogInstance.CancelAsync();
 
     private MarkupString GetMarkup()
     {

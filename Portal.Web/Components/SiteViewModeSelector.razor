@@ -1,23 +1,24 @@
 @inject ISiteClickTracker ClickTracker
 @inject ILocalStorageProvider LocalStorage
 
-<FluentToolbar>
+<FluentStack Orientation="Orientation.Horizontal" HorizontalGap="8">
     <FluentLabel Typo="Typography.Body">View by:</FluentLabel>
     <FluentSelect Id="viewmode-selector"
                   Class="outline"
                   @bind-Value="@selectedValue"
-                  TOption="SiteViewMode"
+                  TOption="string"
+                  TValue="string"
                   Width="200px">
-        <FluentOption Id="viewmode-categories" TOption="SiteViewMode" Value="@nameof(SiteViewMode.Categories)">
+        <FluentOption Id="viewmode-categories" TOption="string" Value="@nameof(SiteViewMode.Categories)">
             <FluentIcon Value="@(new Icons.Regular.Size20.GridDots())" Slot="start" />
             Categories
         </FluentOption>
-        <FluentOption Id="viewmode-frequency" TOption="SiteViewMode" Value="@nameof(SiteViewMode.Frequency)">
+        <FluentOption Id="viewmode-frequency" TOption="string" Value="@nameof(SiteViewMode.Frequency)">
             <FluentIcon Value="@(new Icons.Regular.Size20.ChartMultiple())" Slot="start" />
             Most Used
         </FluentOption>
     </FluentSelect>
-</FluentToolbar>
+</FluentStack>
 
 @code {
     [Parameter]

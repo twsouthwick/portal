@@ -2,6 +2,40 @@
 @import 'bootstrap-icons/font/bootstrap-icons.css';
 
 /* Add any custom styles here */
+:root {
+    color-scheme: dark;
+    --body-font: var(--fontFamilyBase);
+    --font-weight: var(--fontWeightRegular);
+    --type-ramp-base-font-size: var(--fontSizeBase400);
+    --type-ramp-base-line-height: var(--lineHeightBase400);
+    --type-ramp-plus-3-font-size: var(--fontSizeHero800);
+    --type-ramp-plus-3-line-height: var(--lineHeightHero800);
+    --type-ramp-plus-2-font-size: var(--fontSizeHero700);
+    --type-ramp-plus-2-line-height: var(--lineHeightHero700);
+    --type-ramp-minus-1-font-size: var(--fontSizeBase300);
+    --type-ramp-minus-1-line-height: var(--lineHeightBase300);
+    --type-ramp-minus-2-font-size: var(--fontSizeBase300);
+    --type-ramp-minus-2-line-height: var(--lineHeightBase300);
+    --neutral-foreground-rest: var(--colorNeutralForeground1);
+    --neutral-foreground-hint: var(--colorNeutralForeground4);
+    --neutral-layer-1: var(--colorNeutralBackground1);
+    --neutral-layer-2: var(--colorNeutralBackground2);
+    --neutral-fill-layer-rest: var(--colorNeutralBackground1);
+    --neutral-stroke-rest: var(--colorNeutralStroke1, #505050);
+    --neutral-fill-stealth-hover: var(--colorNeutralBackground1Hover, #3b3b3b);
+    --neutral-fill-strong-rest: var(--colorNeutralBackground3, #333333);
+    --neutral-fill-strong-hover: var(--colorNeutralBackground1Hover, #3b3b3b);
+    --neutral-fill-strong-active: var(--colorNeutralBackground1Pressed, #252525);
+    --accent-fill-rest: var(--colorBrandBackground);
+    --accent-fill-hover: var(--colorBrandBackgroundHover, #106ebe);
+    --accent-foreground-rest: var(--colorBrandForeground1);
+    --accent-foreground-hover: var(--colorBrandForeground2);
+    --accent-foreground-active: var(--colorBrandForeground2);
+    --foreground-on-accent-rest: var(--colorNeutralForegroundOnBrand, #ffffff);
+    --stroke-width: 1;
+    --elevation-shadow-card-rest: 0 2px 6px rgb(0 0 0 / 20%);
+}
+
 body {
     margin: 0;
     padding: 0;

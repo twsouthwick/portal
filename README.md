@@ -1,6 +1,6 @@
 ﻿# Portal - Intranet Portal System
 
-A Blazor-based intranet portal system built with .NET 10 and Aspire that allows you to manage and display multiple subsites with role-based access control.
+A Blazor-based intranet portal system built with .NET 11 and Aspire that allows you to manage and display multiple subsites with role-based access control.
 
 ## Features
 
@@ -23,7 +23,7 @@ A Blazor-based intranet portal system built with .NET 10 and Aspire that allows 
 
 ### Prerequisites
 
-- .NET 10 SDK
+- .NET 11 SDK
 - Node.js (for Webpack/TypeScript compilation)
 
 ### Devcontainer (Aspire)
@@ -34,7 +34,7 @@ This repository includes a VS Code devcontainer for local Aspire development. Re
 aspire run
 ```
 
-The container installs the pinned .NET 10 SDK from `global.json`, the matching Aspire CLI, Node.js 22, and Docker-in-Docker support so the AppHost can launch the `media` and `admin` portal instances.
+The container installs the pinned .NET 11 SDK from `global.json`, the matching Aspire CLI, Node.js 24, and Docker-in-Docker support so the AppHost can launch the `media` and `admin` portal instances.
 
 ### Building
 
