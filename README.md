@@ -67,6 +67,55 @@ Pull requests to `main` and pushes to `main` or `v*` tags build and test the sol
 
 Publishing uses the workflow's `GITHUB_TOKEN` with package-write permission. Existing GHCR packages must grant this repository's Actions workflow access. New packages are private by default; pulling them requires registry credentials unless their visibility is changed.
 
+### Native client scaffold
+
+`Portal.Client` is a standalone Tauri v2 shell. It displays a placeholder and
+does not yet connect to the portal, implement authentication, or change
+`Portal.Web` provider registration. The checked-in icons are scaffold defaults.
+
+All targets need Node.js 22.12+ (or 20.19+), npm, and Rust/Cargo via rustup.
+Install the prerequisites for your host from the
+[Tauri v2 prerequisites](https://v2.tauri.app/start/prerequisites/), then run
+from the repository root:
+
+```bash
+cd Portal.Client
+npm ci
+npm run tauri -- dev                     # desktop development
+npm run tauri -- build --debug --no-bundle # desktop debug executable
+npm run tauri -- build                   # release executable and bundles
+```
+
+| Target | Required toolchain | Verification in this scaffold |
+| --- | --- | --- |
+| Linux x86_64 | GCC/build-essential, pkg-config, GTK 3 and WebKitGTK 4.1 development libraries, OpenSSL, Ayatana AppIndicator and librsvg development libraries, and patchelf | Ubuntu 24.04 x86_64: debug build without bundling succeeded; window opened under Xvfb. Release bundles and other architectures unverified. |
+| Windows | Rust MSVC toolchain, Visual Studio C++ Build Tools with Windows SDK, and Microsoft Edge WebView2 runtime | Unverified; no Windows build or installer tested. |
+| Android | A supported desktop host's prerequisites, JDK 17, Android Studio/SDK (platform, build-tools, platform-tools), Android NDK, and Rust Android targets | Unverified; no Android build, emulator, or device tested. |
+
+For Ubuntu/Debian Linux the native packages can be installed with:
+
+```bash
+sudo apt-get install build-essential pkg-config libwebkit2gtk-4.1-dev \
+  libssl-dev libayatana-appindicator3-dev librsvg2-dev patchelf
+```
+
+For Android, configure `JAVA_HOME`, `ANDROID_HOME`, and `NDK_HOME` for the
+installed JDK, SDK, and NDK, then install the Rust targets for the ABIs you
+intend to build. For example, for an ARM64 APK:
+
+```bash
+rustup target add aarch64-linux-android
+cd Portal.Client
+npm ci
+npm run tauri -- android init
+npm run tauri -- android dev             # requires a device or emulator
+npm run tauri -- android build --debug --apk --target aarch64
+```
+
+Android initialization generates `src-tauri/gen/android` locally; it and
+`dist`, `node_modules`, Cargo's `target`, and generated bundles are not
+committed. Release Android packages require signing configuration.
+
 ### Project Structure
 
 ```
