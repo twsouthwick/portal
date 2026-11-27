@@ -11,6 +11,35 @@ permissions:
   contents: read
 
 jobs:
+  windows-client:
+    runs-on: windows-2022
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: Portal.Client/package-lock.json
+
+      - name: Set up Rust MSVC
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $true
+          rustup toolchain install stable-x86_64-pc-windows-msvc --profile minimal
+          rustup default stable-x86_64-pc-windows-msvc
+          rustc -vV
+
+      - name: Install client dependencies
+        run: npm ci --prefix Portal.Client
+
+      - name: Build debug shell
+        working-directory: Portal.Client
+        run: npm run tauri -- build --debug --no-bundle
+
+      - name: Verify WebView2 and smoke test window
+        run: ./Portal.Client/smoke-windows.ps1
+
   build:
     runs-on: ubuntu-latest
     steps:

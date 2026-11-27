@@ -89,7 +89,7 @@ npm run tauri -- build                   # release executable and bundles
 | Target | Required toolchain | Verification in this scaffold |
 | --- | --- | --- |
 | Linux x86_64 | GCC/build-essential, pkg-config, GTK 3 and WebKitGTK 4.1 development libraries, OpenSSL, Ayatana AppIndicator and librsvg development libraries, and patchelf | Ubuntu 24.04 x86_64: debug build without bundling succeeded; window opened under Xvfb. Release bundles and other architectures unverified. |
-| Windows | Rust MSVC toolchain, Visual Studio C++ Build Tools with Windows SDK, and Microsoft Edge WebView2 runtime | Unverified; no Windows build or installer tested. |
+| Windows x86_64 | Rust MSVC toolchain, Visual Studio C++ Build Tools with Windows SDK, and Microsoft Edge WebView2 Evergreen Runtime | CI builds an unbundled debug shell on Windows Server 2022 and checks that its `Portal` window opens and remains visible for 10 seconds. Other architectures, installers, release packaging, and signing are not tested. |
 | Android | A supported desktop host's prerequisites, JDK 17, Android Studio/SDK (platform, build-tools, platform-tools), Android NDK, and Rust Android targets | Unverified; no Android build, emulator, or device tested. |
 
 For Ubuntu/Debian Linux the native packages can be installed with:
@@ -98,6 +98,28 @@ For Ubuntu/Debian Linux the native packages can be installed with:
 sudo apt-get install build-essential pkg-config libwebkit2gtk-4.1-dev \
   libssl-dev libayatana-appindicator3-dev librsvg2-dev patchelf
 ```
+
+To reproduce the Windows x86_64 CI check in an interactive Windows desktop,
+install Node.js 24, the Visual Studio C++ Build Tools with Windows SDK, rustup,
+and the WebView2 Evergreen Runtime. From the repository root in PowerShell 7:
+
+```powershell
+rustup toolchain install stable-x86_64-pc-windows-msvc --profile minimal
+rustup default stable-x86_64-pc-windows-msvc
+npm ci --prefix Portal.Client
+Push-Location Portal.Client
+npm run tauri -- build --debug --no-bundle
+Pop-Location
+./Portal.Client/smoke-windows.ps1
+```
+
+The smoke test checks the registered WebView2 Evergreen Runtime, launches the
+debug executable, waits up to 60 seconds for its visible `Portal` window, and
+checks the window and process for 10 seconds. It prints captured output and
+cleans up the process tree. This verifies window startup only, not page content,
+portal integration, authentication, installers, release packaging, or signing.
+The client `dist`, `node_modules`, and Cargo `target` directories are generated
+and gitignored.
 
 For Android, configure `JAVA_HOME`, `ANDROID_HOME`, and `NDK_HOME` for the
 installed JDK, SDK, and NDK, then install the Rust targets for the ABIs you
