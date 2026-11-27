@@ -322,7 +322,12 @@ and the verification runs are rechecked. A published release is never
 replaced. An interrupted draft is retried only for the same native run and
 attempt; a conflicting tag, stable release, or draft from a different run or
 attempt fails closed. Inspect and manually remove a conflicting draft before
-retrying. Rerun **all** native jobs, not just failed jobs, to produce all four
+retrying. Existing draft assets must match the freshly prepared files'
+GitHub-reported SHA-256 digests; unexpected or mismatched assets require
+manual inspection and cleanup. Do not manually publish or edit a draft or
+rerun verification while a publisher for that commit is running: GitHub's
+release and workflow APIs do not provide an atomic transaction across those
+operations. Rerun **all** native jobs, not just failed jobs, to produce all four
 artifacts from one attempt; rerun a completed verification workflow to
 retrigger the publisher. Recovery requires the original workflow artifacts,
 which expire according to repository retention settings. If they have expired,

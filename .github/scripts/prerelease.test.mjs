@@ -115,7 +115,8 @@ test('publication stays draft after interruption and retries the same attempt wi
     if (path === '/releases/1/assets' && method === 'POST') {
       const name = new URL(url).searchParams.get('name');
       if (interrupt && release.assets.length === 2) throw new Error('simulated upload interruption');
-      const asset = { id: release.assets.length + 1, name, state: 'uploaded' };
+      const asset = { id: release.assets.length + 1, name, state: 'uploaded',
+        digest: `sha256:${createHash('sha256').update(options.body).digest('hex')}` };
       release.assets.push(asset);
       return result(asset);
     }
@@ -150,6 +151,10 @@ test('publication stays draft after interruption and retries the same attempt wi
     assert.equal(release.draft, true);
     assert.equal(release.assets.length, 2);
     interrupt = false;
+    const originalDigest = release.assets[0].digest;
+    release.assets[0].digest = 'sha256:incorrect';
+    await assert.rejects(publish({ ...options, publisherRunId: 'mismatch' }), /mismatched draft asset/);
+    release.assets[0].digest = originalDigest;
     await publish({ ...options, publisherRunId: '2' });
     assert.equal(release.draft, false);
     assert.equal(release.prerelease, true);
@@ -157,6 +162,7 @@ test('publication stays draft after interruption and retries the same attempt wi
       'SHA256SUMS', 'portal-client-linux-arm64.AppImage', 'portal-client-linux-x86_64.AppImage',
       'portal-client-windows-arm64.exe', 'portal-client-windows-x86_64.exe', 'provenance.json',
     ].sort());
+    assert.equal(mutations.some(mutation => mutation.startsWith('DELETE ')), false);
     const before = mutations.length;
     await publish({ ...options, publisherRunId: '3' });
     assert.equal(mutations.length, before);

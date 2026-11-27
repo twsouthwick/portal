@@ -151,6 +151,7 @@ export async function publish({ event, repository, repositoryId, apiUrl, token, 
     workflows: runs.map(run => ({ id: run.id, attempt: run.run_attempt, url: run.html_url })),
     artifacts: provenance,
   }, null, 2) + '\n') });
+  for (const asset of assets) asset.hash = createHash('sha256').update(asset.contents).digest('hex');
   const body = [
     marker, `Development build for commit ${sha}.`, '',
     ...runs.map(run => `- Verification: ${run.html_url} (attempt ${run.run_attempt})`), '',
@@ -172,11 +173,24 @@ export async function publish({ event, repository, repositoryId, apiUrl, token, 
       body: JSON.stringify({ tag_name: tag, target_commitish: 'main', name: `Development ${sha}`, body, draft: true, prerelease: true, make_latest: 'false' }) });
   } else {
     if (!ref) throw new Error('Draft exists without its expected tag');
-    for (const asset of release.assets) await api(`/releases/assets/${asset.id}`, { method: 'DELETE' });
   }
   const uploadUrl = new URL(release.upload_url.replace(/\{.*$/, ''));
   if (uploadUrl.protocol !== 'https:' || uploadUrl.hostname !== 'uploads.github.com') throw new Error('Unexpected release upload host');
+  function checkDraft(current) {
+    if (!current.draft || !current.prerelease || current.tag_name !== tag || !current.body?.includes(marker)) {
+      throw new Error('Draft changed during publication');
+    }
+    for (const uploaded of current.assets) {
+      const expected = assets.find(asset => asset.name === uploaded.name);
+      if (!expected || uploaded.state !== 'uploaded' || uploaded.digest !== `sha256:${expected.hash}`) {
+        throw new Error(`Unexpected or mismatched draft asset: ${uploaded.name}`);
+      }
+    }
+  }
   for (const asset of assets) {
+    const current = await api(`/releases/${release.id}`);
+    checkDraft(current);
+    if (current.assets.some(uploaded => uploaded.name === asset.name)) continue;
     const url = new URL(uploadUrl);
     url.searchParams.set('name', asset.name);
     await api(url.toString(), { method: 'POST', headers: { 'Content-Type': 'application/octet-stream' }, body: asset.contents });
@@ -188,10 +202,9 @@ export async function publish({ event, repository, repositoryId, apiUrl, token, 
   const finalRef = await api(`/git/ref/tags/${tag}`);
   if (finalRef.object.type !== 'commit' || finalRef.object.sha !== sha) throw new Error('Tag changed during publication');
   const finalRelease = await api(`/releases/${release.id}`);
-  if (!finalRelease.draft || !finalRelease.prerelease || finalRelease.tag_name !== tag ||
-      !finalRelease.body?.includes(marker) ||
-      finalRelease.assets.length !== assets.length ||
-      assets.some(asset => !finalRelease.assets.some(uploaded => uploaded.name === asset.name && uploaded.state === 'uploaded'))) {
+  checkDraft(finalRelease);
+  if (finalRelease.assets.length !== assets.length ||
+      assets.some(asset => !finalRelease.assets.some(uploaded => uploaded.name === asset.name))) {
     throw new Error('Draft changed during publication');
   }
   await api(`/releases/${release.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' },
