@@ -12,8 +12,20 @@ permissions:
 
 jobs:
   windows-client:
-    runs-on: windows-2022
-    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: windows-2022
+            arch: x86_64
+            rust: x86_64-pc-windows-msvc
+            driver: win64
+          - runner: windows-11-arm
+            arch: arm64
+            rust: aarch64-pc-windows-msvc
+            driver: arm64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
 
@@ -26,9 +38,12 @@ jobs:
       - name: Set up Rust MSVC
         run: |
           $PSNativeCommandUseErrorActionPreference = $true
-          rustup toolchain install stable-x86_64-pc-windows-msvc --profile minimal
-          rustup default stable-x86_64-pc-windows-msvc
+          rustup toolchain install stable-${{ matrix.rust }} --profile minimal
+          rustup default stable-${{ matrix.rust }}
           rustc -vV
+
+      - name: Install Tauri WebDriver
+        run: cargo install tauri-driver --version 2.1.0 --locked
 
       - name: Install client dependencies
         run: npm ci --prefix Portal.Client
@@ -37,8 +52,22 @@ jobs:
         working-directory: Portal.Client
         run: npm run tauri -- build --debug --no-bundle
 
+      - name: Upload debug executable
+        uses: actions/upload-artifact@v4.6.2
+        with:
+          name: portal-client-windows-${{ matrix.arch }}-debug-exe
+          path: Portal.Client/src-tauri/target/debug/portalclient.exe
+          if-no-files-found: error
+
       - name: Verify WebView2 and smoke test window
         run: ./Portal.Client/smoke-windows.ps1
+
+      - name: Install matching Edge WebDriver
+        run: ./Portal.Client/setup-webdriver-windows.ps1 -Architecture ${{ matrix.driver }}
+
+      - name: Test client webview
+        working-directory: Portal.Client
+        run: npm run test:e2e
 
   linux-client:
     strategy:
