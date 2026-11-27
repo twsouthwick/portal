@@ -31,3 +31,19 @@
 - OIDC configuration uses the `Oidc` section. The `groups` claim supplies portal roles, and Aspire imports the local development realm from `Portal.AppHost/Realms`.
 - Site visibility and static-content authorization are both role-sensitive; when changing manifest or provider behavior, verify both the rendered site list and mapped content endpoints.
 - Keep changes scoped to the owning project and do not edit generated `artifacts`, `obj`, `node_modules`, or `wwwroot/dist` content.
+
+## LID
+- Mode: Full
+- Version: 1.4.7
+
+## Linked-Intent Development (MANDATORY)
+
+Consult the `linked-intent-dev` skill for all code changes when the agent provides it. Otherwise follow [`docs/lid/workflow.md`](docs/lid/workflow.md). Intent flows downstream:
+
+```
+HLD → LLDs → EARS → Tests → Code
+```
+
+Treat design documents as the source of truth. Inspect and approve each phase before continuing; do not make a judgment call for the owner when a decision or interpretation is ambiguous. For brownfield mapping, read every in-scope source and configuration file, present distinct segmentation lenses and granularity options, and obtain approval of the final component boundaries before creating maps. Do not claim coverage for files that were not inspected.
+
+Start map navigation at `docs/arrows/index.yaml`, then follow the selected segment's arrow document to its design, EARS specifications, tests, and implementation. Keep the arrow index and cross-links current when maps are introduced or changed. Code and tests should cite applicable EARS IDs with `@spec` annotations.
