@@ -62,6 +62,7 @@ spec:
                         type: string
                       store:
                         type: string
+                        pattern: '^(?i:(none|apple|macos|google|microsoft|windows|linux))?$'
                       storeId:
                         type: string
                     required:
