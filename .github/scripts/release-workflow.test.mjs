@@ -29,3 +29,19 @@ test('Helm defaults to the chart appVersion while preserving explicit image tag 
   assert.match(chartValues, /tag:\s*""/);
   assert.match(deployment, /\.Values\.image\.tag \| default \.Chart\.AppVersion/);
 });
+
+const service = await readFile(new URL('../../chart/templates/service.yaml', import.meta.url), 'utf8');
+
+// @spec K8S-002
+test('chart targets the port the image listens on', () => {
+  assert.match(webProject, /<ContainerPort Include="8080" \/>/);
+  assert.match(deployment, /containerPort: 8080/);
+  assert.match(service, /targetPort: 8080/);
+  assert.doesNotMatch(deployment + service, /8081\s*$/m);
+});
+
+// @spec K8S-008
+test('chart trusts forwarded headers from the ingress by default', () => {
+  assert.match(chartValues, /forwardedHeaders:\s*\n\s+enabled: true/);
+  assert.match(deployment, /if \.Values\.forwardedHeaders\.enabled[\s\S]*?name: ASPNETCORE_FORWARDEDHEADERS_ENABLED\s+value: "true"/);
+});

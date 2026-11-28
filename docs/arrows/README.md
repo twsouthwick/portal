@@ -56,8 +56,6 @@ path-concatenated spec IDs and every citation atomically.
   project files and test directory show .NET 11 and an xUnit test project.
 - Root README examples refer to `Portal.Web/TypeScript/`, while current sources
   are in `Portal.Web/ts/`.
-- The README's Docker example maps port 8080, while the app/container and Helm
-  chart use port 8081.
 - The broader product intent behind the label “Digital Fortress” is not
   represented in the inspected repository; no implementation is claimed.
 

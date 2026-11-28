@@ -1,4 +1,4 @@
-{{/* @spec K8S-007 */}}
+{{/* @spec K8S-002 K8S-007 K8S-008 */}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -32,5 +32,9 @@ spec:
                   key: {{ required "oidc.clientSecretKey is required" .Values.oidc.clientSecretKey | quote }}
             - name: Oidc__RequireHttpsMetadata
               value: {{ .Values.oidc.requireHttpsMetadata | quote }}
+            {{- if .Values.forwardedHeaders.enabled }}
+            - name: ASPNETCORE_FORWARDEDHEADERS_ENABLED
+              value: "true"
+            {{- end }}
           ports:
-            - containerPort: 8081
+            - containerPort: 8080

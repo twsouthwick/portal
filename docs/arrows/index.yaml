@@ -78,8 +78,8 @@ arrows:
     blocks: []
     blockedBy: []
     detail: kubernetes-deployment.md
-    next: Confirm production scaling, probes, resource limits, and image-pull configuration.
-    drift: K8S-007 is implemented and tested locally; hosted chart packaging and cluster rendering remain unverified.
+    next: Decide chart SITE_PATH/probe/provider-toggle support and multi-namespace discovery (LLD open questions 5-7).
+    drift: K8S-002, K8S-007, and K8S-008 are tested locally against chart text; hosted chart packaging and cluster rendering remain unverified.
   build-delivery:
     status: MAPPED
     parent: null

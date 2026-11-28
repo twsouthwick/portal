@@ -30,7 +30,7 @@ public record SiteApp
     public string Scheme { get; init; } = null!;
 
     /// <summary>
-    /// Store name (e.g., "google-play", "apple")
+    /// Store that provides the app; manifests use a case-insensitive name such as "google" or "apple"
     /// </summary>
     public AppStore Store { get; init; }
 
