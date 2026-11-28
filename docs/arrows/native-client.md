@@ -24,7 +24,7 @@ coverage remains pending. The owner selected the public-client authentication de
 - `docs/intent/native-client/native-client-design.md`
 
 ### EARS
-- `docs/intent/native-client/native-client-specs.md` — 42 specs
+- `docs/intent/native-client/native-client-specs.md` — 43 specs
 
 ### Tests
 - `Portal.Client/tests/client.test.js`
@@ -73,7 +73,7 @@ smoke scripts.
 | Shell and configured verification | CLIENT-001, CLIENT-002, CLIENT-003, CLIENT-004, CLIENT-005 | 5 | 0 | Updated native UI E2E assertions remain unverified |
 | Approved release packaging | CLIENT-006, CLIENT-007 | 2 | 0 | Hosted signing and platform builds remain unverified |
 | Manual Portal URL onboarding | CLIENT-008 to CLIENT-013 | 6 | 0 | UI flow lacks E2E coverage; Android private-CA trust unsupported |
-| Authenticated startup and manifest cache | CLIENT-014 to CLIENT-022 | 9 | 0 | Unit-tested against a mock IdP; Authelia and platform credential stores remain unverified |
+| Authenticated startup and manifest cache | CLIENT-014 to CLIENT-022, CLIENT-043 | 10 | 0 | Unit-tested against a mock IdP; Authelia and platform credential stores remain unverified |
 | Optional well-known discovery | CLIENT-023 to CLIENT-026 | 4 | 0 | Native UI flow lacks end-to-end coverage |
 | Onboarding presentation | CLIENT-027 to CLIENT-029 | 3 | 0 | Automated viewport, native UI, and screen-reader verification remain unverified |
 | Sign-in, encrypted cache, and site list | CLIENT-030 to CLIENT-042 | 13 | 0 | Real Authelia, Android deep link/keystore, and native UI E2E remain unverified |

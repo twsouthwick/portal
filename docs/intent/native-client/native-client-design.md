@@ -263,6 +263,11 @@ origin over validated HTTPS; it is not placed in WebView storage, the manifest
 cache, logs, or diagnostics. Refresh credentials, if required by the provider,
 use the platform-protected credential store described above.
 
+On restart, before using a stored refresh token, the client compares the issuer
+from the provider it just discovered with the issuer bound to the stored
+account. If they differ, it must not send the refresh token to either issuer;
+it requires a fresh sign-in and keeps the account's cached manifest visible.
+
 The cache contains only the authenticated, role-filtered client manifest DTO
 returned by `GET /api/manifest`, together with its ETag, account key, and
 refresh timestamp. It contains no token or unfiltered provider data. It is
@@ -304,7 +309,9 @@ the onboarding HTTP policy: no credentials, no redirects, normal certificate
 validation, and a ten-second timeout. It requires an `https` issuer, a
 non-empty client ID and API audience, and an `openid` scope. Standard
 discovery then comes from `{issuer}/.well-known/openid-configuration`, and its
-issuer must equal the Portal-provided issuer exactly.
+issuer must equal the Portal-provided issuer exactly. Before refresh, the
+discovered issuer must also equal the issuer stored with the account's refresh
+token; a mismatch requires a fresh sign-in without transmitting that token.
 
 **Redirects.** Linux and Windows use the fixed loopback redirect
 `http://127.0.0.1:49152/callback`, matching the local Authelia registration.

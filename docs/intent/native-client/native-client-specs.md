@@ -32,6 +32,7 @@ workflow and local-test coverage; hosted builds and signing remain unverified.
 - [ ] **CLIENT-020** When the manifest API returns `401`, the client shall attempt token refresh and retry the request at most once; if refresh or the retry fails, it shall report that sign-in is required without exposing credentials in diagnostics.
 - [ ] **CLIENT-021** When the user signs out, the client shall clear that account's cached manifest and credentials; it shall not display the signed-out account's cache to a subsequently authenticated account.
 - [ ] **CLIENT-022** When persisting the manifest cache or credentials, the client shall use platform-protected application-private storage for the cache and the platform-protected credential store for credentials; if required protection is unavailable, it shall report the failure and shall not silently fall back to unprotected persistence.
+- [ ] **CLIENT-043** Before sending a stored refresh token, the client shall require the discovered OIDC issuer to exactly match the issuer bound to the stored account; if they differ, it shall not send the token and shall require a fresh sign-in while retaining that account's cached manifest.
 
 ### Optional well-known discovery (issue #16)
 

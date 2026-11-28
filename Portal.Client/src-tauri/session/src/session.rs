@@ -156,6 +156,18 @@ impl SessionManager {
             return Ok(None);
         };
         let provider = self.provider(state, origin).await?;
+        let account_issuer = state
+            .active
+            .as_ref()
+            .expect("active session")
+            .stored
+            .account
+            .issuer
+            .clone();
+        if provider.native.issuer != account_issuer {
+            state.active.as_mut().expect("active session").access_token = None;
+            return Ok(None);
+        }
         let tokens = match provider.refresh(&self.http, &refresh_token).await {
             Ok(tokens) => tokens,
             Err(SignInError::Token) => {
@@ -180,7 +192,7 @@ impl SessionManager {
         Ok(Some(tokens.access_token))
     }
 
-    /// @spec CLIENT-016 CLIENT-018 CLIENT-019 CLIENT-020
+    /// @spec CLIENT-016 CLIENT-018 CLIENT-019 CLIENT-020 CLIENT-043
     pub async fn refresh(&self, origin: &PortalOrigin) -> SessionView {
         let mut state = self.state.lock().await;
         self.load(&mut state);
@@ -359,18 +371,27 @@ mod tests {
     struct Portal {
         server: TestServer,
         script: Arc<StdMutex<Script>>,
+        issuer: Arc<StdMutex<String>>,
     }
 
     async fn portal(idp: &MockIdp, script: Script) -> Portal {
+        portal_with_issuer(idp.issuer(), script).await
+    }
+
+    async fn portal_with_issuer(issuer: String, script: Script) -> Portal {
         let script = Arc::new(StdMutex::new(script));
-        let native = serde_json::json!({
-            "issuer": idp.issuer(), "clientId": "portal-native",
-            "apiAudience": "portal-api", "scopes": ["openid", "offline_access"]
-        })
-        .to_string();
+        let issuer = Arc::new(StdMutex::new(issuer));
+        let metadata_issuer = issuer.clone();
         let s = script.clone();
         let server = TestServer::start(move |request| match request.path.as_str() {
-            "/.well-known/portal-native-oidc" => json(200, native.clone()),
+            "/.well-known/portal-native-oidc" => json(
+                200,
+                serde_json::json!({
+                    "issuer": metadata_issuer.lock().unwrap().clone(), "clientId": "portal-native",
+                    "apiAudience": "portal-api", "scopes": ["openid", "offline_access"]
+                })
+                .to_string(),
+            ),
             "/api/manifest" => {
                 let mut script = s.lock().unwrap();
                 let (status, etag) = if script.is_empty() { (200, Some("\"v1\"")) } else { script.remove(0) };
@@ -383,10 +404,14 @@ mod tests {
             _ => (404, vec![], String::new()),
         })
         .await;
-        Portal { server, script }
+        Portal { server, script, issuer }
     }
 
     impl Portal {
+        fn set_issuer(&self, issuer: String) {
+            *self.issuer.lock().unwrap() = issuer;
+        }
+
         fn manifest_requests(&self) -> Vec<crate::test_server::Request> {
             self.server.requests().into_iter().filter(|r| r.path == "/api/manifest").collect()
         }
@@ -454,6 +479,40 @@ mod tests {
         assert_eq!(requests[1].header("if-none-match"), Some("\"v1\""));
         // Restart has no access token, so it refreshed with the stored refresh token.
         assert_eq!(requests[1].header("authorization"), Some("Bearer access-2"));
+    }
+
+    // @spec CLIENT-043
+    #[tokio::test]
+    async fn restart_does_not_send_refresh_token_to_a_changed_issuer() {
+        let original_idp = mock_idp().await;
+        let changed_idp = mock_idp().await;
+        let portal = portal(&original_idp, vec![(200, Some("\"v1\""))]).await;
+        let dir = tempfile::tempdir().unwrap();
+        let store: Arc<dyn CredentialStore> = Arc::new(MemoryCredentialStore::default());
+        let origin = portal.server.origin();
+        sign_in(&manager(dir.path(), store.clone()), &origin).await;
+
+        portal.set_issuer(changed_idp.issuer());
+        let restarted = manager(dir.path(), store);
+        assert_eq!(restarted.startup(&origin).await.manifest.unwrap().name, "Home");
+        let view = restarted.refresh(&origin).await;
+
+        assert_eq!(view.status, SessionStatus::SignInRequired);
+        assert_eq!(view.manifest.unwrap().name, "Home");
+        assert_eq!(
+            original_idp.token_requests().len(),
+            1,
+            "original issuer should see only the sign-in exchange"
+        );
+        assert!(
+            changed_idp.token_requests().is_empty(),
+            "changed issuer must not receive the stored refresh token"
+        );
+        assert_eq!(
+            portal.manifest_requests().len(),
+            1,
+            "manifest request must wait for fresh sign-in"
+        );
     }
 
     // @spec CLIENT-020
