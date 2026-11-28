@@ -1,8 +1,21 @@
+/* @spec UX-012 */
+.signed-out-shell {
+    display: grid;
+    grid-template-rows: minmax(0, 1fr) auto;
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
+}
+
 .signed-out-layout {
     display: grid;
-    min-height: calc(100vh - 2.75rem);
-    place-items: center;
+    min-height: 0;
+    overflow-y: auto;
+    place-items: safe center;
     padding: 2rem;
+    padding-top: max(2rem, env(safe-area-inset-top, 0px));
+    padding-left: max(2rem, env(safe-area-inset-left, 0px));
+    padding-right: max(2rem, env(safe-area-inset-right, 0px));
     background:
         linear-gradient(135deg, color-mix(in srgb, var(--accent-fill-rest) 12%, transparent), transparent 45%),
         var(--neutral-layer-1);

@@ -5,8 +5,10 @@ launch behavior in the web portal.
 
 ## Status
 
-**MAPPED** — first reconstructed 2026-11-27. Twelve EARS requirements describe
+**MAPPED** — first reconstructed 2026-11-27. Thirteen EARS requirements describe
 current UI behavior, including the version footer (UX-012); several have no direct component or browser tests.
+The owner approved category-first browsing and always-visible footers on
+2026-11-28; updated UX-012 and new UX-013 are implemented.
 
 ## References
 
@@ -17,12 +19,13 @@ current UI behavior, including the version footer (UX-012); several have no dire
 - `docs/intent/portal-experience/portal-experience-design.md`
 
 ### EARS
-- `docs/intent/portal-experience/portal-experience-specs.md` — 12 specs
+- `docs/intent/portal-experience/portal-experience-specs.md` — 13 specs
 
 ### Tests
 - `Portal.Web.Tests/PortalExperienceTests.cs` — static component rendering
   regression for card height and heading markup (UX-009, UX-011), version
-  metadata stripping, and the signed-out version footer (UX-012).
+  metadata stripping, the signed-out version footer (UX-012), and category
+  rendering, selection/Back, and filtered membership events (UX-013).
 - No browser automation tests cover viewport sizing or computed layout.
 - Related server test: `Portal.Web.Tests/AuthenticationTests.cs`
 
@@ -48,14 +51,22 @@ abstraction; TypeScript launch, detection, and storage modules.
 |---|---|---:|---:|---:|
 | Discovery, browser filtering, launch, usage | UX-001, UX-002, UX-003, UX-004, UX-005, UX-006, UX-007, UX-008 | 8 | 0 | 0 known implementation gaps |
 | Card layout, header sizing, typography | UX-009, UX-010, UX-011 | 3 | 0 | Automated computed-layout and viewport coverage missing |
-| Version footer | UX-012 | 1 | 0 | Main-layout footer lacks rendering coverage (interactive-only layout) |
+| Version footer | UX-012 | 1 | 0 | Browser geometry checked; main-layout rendering, automated viewport, and device safe-area coverage remain missing |
+| Category-first navigation | UX-013 | 1 | 0 | Rendering and event regressions cover categories, counts, selection/Back, and filtered membership; actual browser focus verification remains pending |
 
 **Traceability:** Layout entry points cite UX-009–011; the component rendering
 test cites UX-009 and UX-011. `VersionFooter.razor` and
 `PortalVersion.cs` cite UX-012; tests cover the signed-out layout, while the
-main-layout footer is not rendered by a test. UX-001–008 still lack direct UI test citations.
+main-layout footer is not rendered by a test. UX-013 is cited by the layout,
+view selector, category component, and rendering/event tests.
+UX-001–008 still lack direct UI test citations.
 Computed layout was checked using a temporary browser preview, not automated
 viewport tests; the segment has not been audited.
+
+The always-visible footer was checked at 320×640 and 800×600 using the actual
+signed-out page and the main shell's scoped CSS with synthetic long content,
+including a wrapped 64-character version. These are manual browser checks,
+not persisted viewport automation or native safe-area verification.
 
 ## Key Findings
 

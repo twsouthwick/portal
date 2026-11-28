@@ -6,7 +6,7 @@ Tauri desktop/mobile shell and its platform-adapted smoke and UI verification.
 
 **MAPPED** — first reconstructed 2026-11-27. The native client checks and
 saves an untrusted origin, then signs in through the system browser (issue
-#12), caches the manifest encrypted, and shows a category-grouped site grid
+#12), caches the manifest encrypted, and shows a category chooser with a drill-down site grid
 with a details view. Real-provider, credential-store, and Android deep-link
 validation remain pending. Its onboarding screen uses the Digital Fortress name.
 Approved MinVer versioning and signed multi-ABI Android packaging are
@@ -24,7 +24,7 @@ coverage remains pending. The owner selected the public-client authentication de
 - `docs/intent/native-client/native-client-design.md`
 
 ### EARS
-- `docs/intent/native-client/native-client-specs.md` — 47 specs
+- `docs/intent/native-client/native-client-specs.md` — 48 specs
 
 ### Tests
 - `Portal.Client/tests/client.test.js`
@@ -76,8 +76,9 @@ smoke scripts.
 | Authenticated startup and manifest cache | CLIENT-014 to CLIENT-022, CLIENT-047 | 10 | 0 | Unit-tested against a mock IdP; Authelia and platform credential stores remain unverified |
 | Optional well-known discovery | CLIENT-023 to CLIENT-026 | 4 | 0 | Native UI flow lacks end-to-end coverage |
 | Onboarding presentation | CLIENT-027 to CLIENT-029 | 3 | 0 | Automated viewport, native UI, and screen-reader verification remain unverified |
-| Version footer | CLIENT-030 to CLIENT-033 | 4 | 0 | Native UI E2E coverage of the app and website versions is missing |
-| Sign-in, encrypted cache, and site list | CLIENT-034 to CLIENT-046 | 13 | 0 | Real Authelia, Android deep link/keystore, and native UI E2E remain unverified |
+| Version footer | CLIENT-030 to CLIENT-033 | 4 | 0 | Browser geometry checked with a mocked host; native UI and device safe-area validation remain pending |
+| Sign-in, encrypted cache, and site list | CLIENT-034 to CLIENT-040, CLIENT-042 to CLIENT-046 | 12 | 0 | Real Authelia, Android deep link/keystore, and native UI E2E remain unverified |
+| Category navigation | CLIENT-041, CLIENT-048 | 2 | 0 | DOM regression covers drill-down, Back/focus, refresh membership, and sign-out reset; native UI validation remains pending |
 
 **Traceability:** Android signing, ABI, versioning, and release workflow tests
 cite the approved EARS IDs. CLIENT-014 to CLIENT-022, CLIENT-034 to CLIENT-039,
@@ -89,6 +90,13 @@ CLIENT-023 to CLIENT-026, CLIENT-028 to CLIENT-029, and CLIENT-031 to
 CLIENT-032; UI tests cite CLIENT-030, CLIENT-032, and CLIENT-033; the Tauri commands
 and UI cite the applicable IDs at entry points. CLIENT-027 has been checked at
 320 and 800 CSS pixels in a browser but has no automated viewport test.
+
+CLIENT-041 and CLIENT-048 have DOM navigation regression coverage in
+`sites.test.js`. CLIENT-030's viewport-height shell was checked in a browser
+at 320×640 and 800×600 with a mocked Tauri host, 120 sites, long details, and a
+long onboarding error. The footer stayed within the viewport while content
+scrolled. These checks do not establish native Android or safe-area behavior;
+the requirements remain `[ ]` pending native-target validation.
 
 ## Key Findings
 

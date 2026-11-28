@@ -3,9 +3,9 @@
 <ConnectionState>
     <SiteProvider>
         <CascadingValue TValue="SiteViewMode" Value="viewMode" Name="CurrentViewMode">
-            <FluentLayout>
+            @* @spec UX-012 UX-013 *@
+            <div class="portal-layout">
                 @* @spec UX-010 *@
-                <FluentLayoutItem Area="LayoutArea.Header" Height="auto">
                     <header class="portal-header">
                     <PageTitle>@context.Name</PageTitle>
 
@@ -32,16 +32,13 @@
                         </form>
                     </div>
                     </header>
-                </FluentLayoutItem>
-                <FluentLayoutItem Area="LayoutArea.Content">
+                <main class="portal-content">
                     <div class="centered-container">
                         @Body
                     </div>
-                </FluentLayoutItem>
-                <FluentLayoutItem Area="LayoutArea.Footer" Height="auto">
-                    <VersionFooter />
-                </FluentLayoutItem>
-            </FluentLayout>
+                </main>
+                <VersionFooter />
+            </div>
         </CascadingValue>
     </SiteProvider>
 </ConnectionState>
@@ -56,5 +53,5 @@
 </div>
 
 @code {
-    private SiteViewMode viewMode = SiteViewMode.None;
+    private SiteViewMode viewMode = SiteViewMode.Categories;
 }

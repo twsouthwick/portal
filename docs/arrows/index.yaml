@@ -45,8 +45,8 @@ arrows:
     blocks: []
     blockedBy: []
     detail: portal-experience.md
-    next: Confirm intended filtering and launch behavior for private and internal sites.
-    drift: UX-009–012 have implementation citations and UX-009/UX-011/UX-012 have rendering regression coverage; the main-layout version footer is not rendered by a test; other UX requirements and automated viewport layout coverage remain unverified.
+    next: Verify category focus and footer safe areas on target browsers; confirm intended filtering and launch behavior for private and internal sites.
+    drift: UX-012/UX-013 are implemented with rendering/event regression and manual footer geometry checks; main-layout rendering, browser focus, automated viewport, and device safe-area coverage remain incomplete.
   native-client:
     status: MAPPED
     parent: null
@@ -56,8 +56,8 @@ arrows:
     blocks: []
     blockedBy: []
     detail: native-client.md
-    next: Validate sign-in against Authelia on desktop and Android, and verify discovery, onboarding, and the site list on native targets.
-    drift: CLIENT-014–022, CLIENT-034–047 are implemented and unit-tested but unverified against a real provider, platform credential stores, and native UI E2E; onboarding and the version footer lack native UI and automated viewport coverage.
+    next: Validate category navigation and always-visible footer on native targets; retain pending native/provider validation.
+    drift: CLIENT-030/CLIENT-041/CLIENT-048 are implemented with DOM regression and mocked-host browser geometry checks; provider, credential-store, native UI, automated viewport, and device safe-area coverage remain unverified.
   runtime-services:
     status: MAPPED
     parent: null

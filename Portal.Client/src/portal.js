@@ -29,6 +29,7 @@ const detailsPanel = $('site-details');
 
 let platform = 'unknown';
 let view = null;
+let selectedCategory = null;
 let openSiteId = null;
 let signingIn = false;
 let lastCard = null;
@@ -82,9 +83,13 @@ function renderHeader() {
   headerSignin.disabled = signingIn;
 }
 
-/** @spec CLIENT-041 CLIENT-042 */
+/** @spec CLIENT-041 CLIENT-042 CLIENT-048 */
 function renderGrid() {
   const manifest = view.manifest;
+  const groups = groupSites(manifest?.sites ?? []);
+  const selected = groups.find(group => group.category === selectedCategory);
+  if (!selected) selectedCategory = null;
+  if (openSiteId !== null && !selected?.sites.some(site => site.id === openSiteId)) openSiteId = null;
   if (!manifest) {
     siteGroups.replaceChildren(h('p', { class: 'empty-state' },
       view.status === 'refreshing' ? 'Loading your sites…' : "Your sites couldn't be loaded yet."));
@@ -94,17 +99,51 @@ function renderGrid() {
     siteGroups.replaceChildren(h('p', { class: 'empty-state' }, 'No sites are available to you yet.'));
     return;
   }
-  siteGroups.replaceChildren(...groupSites(manifest.sites).map(({ category, sites }) =>
+  if (!selected) {
+    siteGroups.replaceChildren(
+      h('section', { class: 'site-group' },
+        h('h2', { class: 'group-title' }, 'Categories'),
+        h('ul', { class: 'site-grid', role: 'list' }, groups.map(({ category, sites }) => h('li', {},
+          h('button', { class: 'category-card', type: 'button', 'data-category': category, onclick: () => showCategory(category) },
+            h('span', { class: 'site-icon' }, h('i', { class: 'bi bi-folder', 'aria-hidden': 'true' })),
+            h('span', { class: 'site-text' },
+              h('span', { class: 'site-name' }, category),
+              h('span', { class: 'site-description' }, `${sites.length} ${sites.length === 1 ? 'site' : 'sites'}`))))))));
+    return;
+  }
+  siteGroups.replaceChildren(
     h('section', { class: 'site-group' },
-      h('h2', { class: 'group-title' }, category),
-      h('ul', { class: 'site-grid', role: 'list' }, sites.map(site => h('li', {},
+      h('button', { id: 'categories-back', class: 'back-button', type: 'button', onclick: hideCategory },
+        h('i', { class: 'bi bi-arrow-left', 'aria-hidden': 'true' }), 'Back to categories'),
+      h('h2', { class: 'group-title' }, selected.category),
+      h('ul', { class: 'site-grid', role: 'list' }, selected.sites.map(site => h('li', {},
         h('button', { class: 'site-card', type: 'button', 'data-site-id': site.id, onclick: event => showDetails(site.id, event.currentTarget) },
           h('span', { class: 'site-icon' }, icon(site)),
           h('span', { class: 'site-text' },
             h('span', { class: 'site-name' }, site.name),
             site.description ? h('span', { class: 'site-description' }, site.description) : null),
           badgeList(site)))))),
-  ));
+  );
+}
+
+/** @spec CLIENT-048 */
+function showCategory(category) {
+  selectedCategory = category;
+  openSiteId = null;
+  renderGrid();
+  $('categories-back').focus();
+  resetScroll();
+}
+
+function hideCategory() {
+  const category = selectedCategory;
+  selectedCategory = null;
+  renderGrid();
+  Array.from(siteGroups.querySelectorAll('.category-card')).find(card => card.dataset.category === category)?.focus();
+}
+
+function resetScroll() {
+  document.querySelector?.('.app-content')?.scrollTo?.(0, 0);
 }
 
 /** @spec CLIENT-044 */
@@ -165,7 +204,7 @@ function showDetails(siteId, card) {
   if (renderDetails()) {
     siteGroups.hidden = true;
     $('details-back').focus();
-    window.scrollTo?.(0, 0);
+    resetScroll();
   }
 }
 
@@ -177,7 +216,7 @@ function hideDetails() {
   card?.focus();
 }
 
-/** @spec CLIENT-036 */
+/** @spec CLIENT-036 CLIENT-048 */
 function render() {
   const showSignin = view.status === 'signedOut' || (!view.manifest && view.status === 'signInRequired');
   signinPanel.hidden = !showSignin;
@@ -187,10 +226,16 @@ function render() {
   changeAddress.disabled = signingIn;
   if (showSignin) return;
   renderHeader();
+  const previousCategory = selectedCategory;
+  const previousSite = openSiteId;
   renderGrid();
   const detailsOpen = openSiteId !== null && renderDetails();
   siteGroups.hidden = detailsOpen;
   if (!detailsOpen) detailsPanel.hidden = true;
+  if (previousSite !== openSiteId || previousCategory !== selectedCategory) {
+    if (selectedCategory !== null) $('categories-back')?.focus();
+    else siteGroups.querySelectorAll('.category-card')[0]?.focus();
+  }
 }
 
 async function refresh() {
@@ -229,6 +274,7 @@ async function signIn() {
 async function signOut() {
   try {
     view = await invoke('sign_out');
+    selectedCategory = null;
     openSiteId = null;
     render();
     showBanner(view.warning, { state: 'warn' });
