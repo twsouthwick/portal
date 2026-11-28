@@ -1,6 +1,8 @@
 # Portal Helm chart
 
 This chart installs the PortalSite CRD and optional example resources for the portal.
+For versions, registry access, installing without Helm, file-backed
+deployments, and migration, see the [deployment guide](../docs/deployment.md).
 
 ## Install
 
@@ -20,6 +22,11 @@ oidc:
   clientId: portal-web
   existingSecret: portal-oidc
 ```
+
+The Service listens on port 8081 (`service.port`) and targets container port
+8080. The chart sets `ASPNETCORE_FORWARDEDHEADERS_ENABLED=true` so the OIDC
+callback uses `https` behind a TLS-terminating ingress. Set
+`forwardedHeaders.enabled=false` only when Portal is reached without a proxy.
 
 Then install the chart:
 
@@ -77,7 +84,9 @@ only when equivalent permissions are provided externally.
 `PORTAL_KUBERNETES_NAMESPACE` no longer limits discovery.
 
 The CRD is managed by this Helm release. Uninstalling the release removes the
-CRD and its PortalSite resources.
+CRD and every PortalSite resource in every namespace. The chart has no values
+for `SITE_PATH`, probes, or disabling the Kubernetes provider, and it cannot
+skip the CRD; see the [deployment guide](../docs/deployment.md).
 
 ## OCI packaging
 

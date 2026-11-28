@@ -82,11 +82,11 @@ description come from the file source when present. If neither source is
 configured, the bundled `sites` directory is used.
 
 Kubernetes uses the in-cluster service account or the default kubeconfig. The
-service account needs permission to list PortalSites and get ConfigMaps in
-all namespaces. Referenced ConfigMaps are read in the PortalSite's own
-namespace, and site IDs must be unique across namespaces. Once configured,
-Kubernetes errors are surfaced rather than silently ignored. File manifests are
-loaded at startup.
+service account needs permission to list PortalSites cluster-wide and get
+referenced ConfigMaps in their respective namespaces. The chart grants
+ConfigMap access cluster-wide. Site IDs must be unique across namespaces.
+Once configured, Kubernetes errors are surfaced rather than silently ignored.
+File manifests are loaded on first use and require a restart to refresh.
 
 The [Helm chart](chart/README.md) installs the CRD and configures these
 permissions. Changes to Kubernetes resources are picked up on subsequent
@@ -133,12 +133,8 @@ Example subsite manifest:
     {
       "name": "Audiobookshelf",
       "scheme": "audiobookshelf://",
-      "store": [
-        {
-          "name": "google-play",
-          "id": "https://play.google.com/store/apps/details?id=com.audiobookshelf.app"
-        }
-      ]
+      "store": "google",
+      "storeId": "https://play.google.com/store/apps/details?id=com.audiobookshelf.app"
     }
   ],
   "categories": ["entertainment"],
@@ -152,11 +148,20 @@ Manifest properties:
 - `name` (required): Display name
 - `description`: Brief description
 - `url`: Primary HTTP or HTTPS URL for the subsite
-- `apps`: Apps that can be launched for the subsite; each has a display `name`,
-  a protocol `scheme`, and optional `store` links
+- `apps`: Apps that can be launched for the subsite. Each app has a display
+  `name`, a protocol `scheme`, a single `store` string, and a required
+  `storeId` (a store URL or ID opened when the protocol launch fails). `store`
+  is one of `none` (default), `apple`, `macos`, `google`, `microsoft`,
+  `windows`, or `linux`, case-insensitive. Apps appear only on matching
+  platforms: `apple` on iOS and macOS, `google` on Android, and `microsoft` or
+  `windows` on Windows. An unknown `store`, an array, or a missing `storeId`
+  makes the whole file catalog fail to load.
 - `icon`: Bootstrap icon class (default: `bi bi-globe`)
 - `categories`: Categories the subsite belongs to
-- `roles`: Required roles for access; an empty or missing list makes the site public
+- `roles`: Required roles for access; an empty or missing list allows any
+  authenticated user
+- `isPrivate`: Show the site only in private browsing mode
+- `isInternal`: Disable the site for clients with a public IP address
 
 ### Usage guides and static content
 
@@ -224,14 +229,20 @@ services:
 ```
 
 Authenticate Docker to GHCR before starting a private image. Configure the OIDC
-settings above for the deployed portal. For Kubernetes installation and
-configuration, see the [Helm chart documentation](chart/README.md).
+settings above for the deployed portal. Behind a TLS-terminating reverse proxy,
+also set `ASPNETCORE_FORWARDEDHEADERS_ENABLED=true`. For Kubernetes, see the
+[deployment guide](docs/deployment.md), which covers versions, registry
+access, the CRD and RBAC without Helm, file-backed deployments, Authelia and
+Traefik, health checks, and migrating to `PortalSite` resources. The
+[Helm chart documentation](chart/README.md) covers the chart.
 
 Main builds publish the mutable `dev` image tag; stable `vMAJOR.MINOR.PATCH`
-releases publish version, major/minor, major, and `latest` tags. The Helm chart
-uses its matching `appVersion` by default.
+releases publish version, major/minor, major, and `latest` tags. No stable
+release exists yet, so `latest` is not published; pin an exact main-build
+version instead. The Helm chart uses its matching `appVersion` by default.
 
 ## Further documentation
 
 - [Developer guide](developer.md): local setup, architecture, build, tests, and CI
+- [Deployment guide](docs/deployment.md): operating Portal on Kubernetes
 - [Helm chart](chart/README.md): Kubernetes installation and configuration

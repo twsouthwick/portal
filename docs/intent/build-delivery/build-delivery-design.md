@@ -118,8 +118,8 @@ must never be modified by a development publication.
 
 ### Deferred
 
-1. README's local Docker example maps port 8080 while the app and chart use
-   8081.
+1. Resolved 2026-11-27: the image, Docker example, and chart all use container
+   port 8080.
 2. README refers to `Portal.Web/TypeScript/`, while current sources are
    `Portal.Web/ts/`.
 3. Root `AGENTS.md` says .NET 10 and no test projects, contrary to `global.json`,

@@ -14,6 +14,11 @@ oidc:
   clientSecretKey: client-secret
   requireHttpsMetadata: true
 
+# Trust X-Forwarded-Proto/For from the ingress that terminates TLS. Portal must
+# be reachable only through that proxy while this is enabled.
+forwardedHeaders:
+  enabled: true
+
 exampleResources:
   enabled: false
 
