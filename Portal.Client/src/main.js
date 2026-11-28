@@ -31,8 +31,11 @@ function resetConfirmation() {
   confirm.hidden = true;
 }
 
+let checkGeneration = 0;
+
 form.addEventListener('submit', async event => {
   event.preventDefault();
+  const generation = ++checkGeneration;
   resetConfirmation();
   if (!invoke) {
     status.textContent = 'Portal connection checks are available only in the native app.';
@@ -41,17 +44,22 @@ form.addEventListener('submit', async event => {
   status.textContent = 'Checking…';
   try {
     const { origin, outcome } = await invoke('check_portal_url', { input: input.value });
+    if (generation !== checkGeneration) return;
     status.textContent = outcomeMessages[outcome.kind](origin, outcome);
     if (outcome.kind === 'signInRequired' || outcome.kind === 'reachable') {
       checkedOrigin = origin;
       confirm.hidden = false;
     }
   } catch (error) {
+    if (generation !== checkGeneration) return;
     status.textContent = String(error);
   }
 });
 
-input.addEventListener('input', resetConfirmation);
+input.addEventListener('input', () => {
+  ++checkGeneration;
+  resetConfirmation();
+});
 
 save.addEventListener('click', async () => {
   if (!checkedOrigin) return;

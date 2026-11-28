@@ -93,9 +93,9 @@ fn classify_response(
 
 fn is_bearer_challenge(value: &reqwest::header::HeaderValue) -> bool {
     value.to_str().is_ok_and(|v| {
-        v.trim_start()
-            .get(..6)
-            .is_some_and(|s| s.eq_ignore_ascii_case("bearer"))
+        v.split_ascii_whitespace()
+            .next()
+            .is_some_and(|scheme| scheme.eq_ignore_ascii_case("bearer"))
     })
 }
 
