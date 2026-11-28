@@ -39,9 +39,9 @@ emulator, while the ARM64 libraries are inspected but not device-tested.
 
 The desktop binaries are unsigned; Windows needs the WebView2 runtime, and
 Linux needs a compatible desktop and AppImage/FUSE support (or extraction).
-The client is a placeholder and does not connect to Portal. See the
-[developer guide](developer.md#ci-and-contribution-checks) for release channels,
-verification, provenance, and signing details.
+The client can check and save a Portal address, but cannot yet sign in or load
+the site catalog. See the [developer guide](developer.md#ci-and-contribution-checks)
+for release channels, verification, provenance, and signing details.
 
 ## Authentication
 
