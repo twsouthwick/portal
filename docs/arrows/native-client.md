@@ -20,7 +20,7 @@ untrusted origin without authenticating. The owner selected the public-client au
 - `docs/intent/native-client/native-client-design.md`
 
 ### EARS
-- `docs/intent/native-client/native-client-specs.md` — 13 specs
+- `docs/intent/native-client/native-client-specs.md` — 22 specs
 
 ### Tests
 - `Portal.Client/tests/client.test.js`
@@ -60,11 +60,15 @@ smoke scripts.
 | Shell and configured verification | CLIENT-001, CLIENT-002, CLIENT-003, CLIENT-004, CLIENT-005 | 5 | 0 | 0 known shell gaps |
 | Approved release packaging | CLIENT-006, CLIENT-007 | 2 | 0 | Hosted signing and platform builds remain unverified |
 | Manual Portal URL onboarding | CLIENT-008 to CLIENT-013 | 6 | 0 | UI flow lacks E2E coverage; Android private-CA trust unsupported |
+| Authenticated startup and manifest cache (planned) | CLIENT-014 to CLIENT-022 | 0 | 9 | Native implementation and tests are absent; Authelia and platform validation remain unverified |
 
 **Traceability:** Android signing, ABI, versioning, and release workflow tests
 cite the approved EARS IDs. Portal connectivity and authentication are
-explicitly outside the present implementation. Onboarding unit tests cite
-CLIENT-008 to CLIENT-013; the Tauri commands and UI cite them at entry points.
+explicitly outside the present native-client implementation. CLIENT-014 to
+CLIENT-022 specify planned authenticated startup and cache behavior but have
+no native implementation or test coverage; Authelia and platform validation
+remain unverified. Onboarding unit tests cite CLIENT-008 to CLIENT-013; the
+Tauri commands and UI cite them at entry points.
 
 ## Key Findings
 
