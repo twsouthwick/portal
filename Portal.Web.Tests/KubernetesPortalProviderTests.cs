@@ -53,20 +53,21 @@ public class KubernetesPortalProviderTests
         Assert.Equal("com.homeassistant", app.StoreId);
     }
 
+    // @spec SITE-005 SITE-007
     [Fact]
     public async Task GetSiteDetails_ReadsCamelCaseResourcesAndConfigMapContent()
     {
         var handler = new KubernetesHandler
         {
             Sites = """
-                {"items":[{"metadata":{"name":"home"},"spec":{"id":"home","name":"Home","roles":["ops"],
+                {"items":[{"metadata":{"name":"home","namespace":"test-ns"},"spec":{"id":"home","name":"Home","roles":["ops"],
                 "isPrivate":true,"usageInstructions":"Hello","apps":[{"name":"App","store":"google","storeId":"app"}],
                 "contentRef":{"name":"home-content","key":"logo.png"}}}]}
                 """,
             ConfigMap = """{"metadata":{"name":"home-content"},"data":{"other.txt":"hidden"},"binaryData":{"logo.png":"AQID"}}"""
         };
         using var client = CreateClient(handler);
-        var provider = new KubernetesPortalProvider(client, "test-ns");
+        var provider = new KubernetesPortalProvider(client);
 
         var site = Assert.Single((await provider.GetSiteDetailsAsync()).Sites);
 
@@ -82,10 +83,11 @@ public class KubernetesPortalProviderTests
         await stream.CopyToAsync(bytes);
         Assert.Equal(new byte[] { 1, 2, 3 }, bytes.ToArray());
         Assert.False(site.Content.GetFileInfo("other.txt").Exists);
-        Assert.Contains("/apis/portal.swick.app/v1alpha1/namespaces/test-ns/portalsites", handler.Paths);
+        Assert.Contains("/apis/portal.swick.app/v1alpha1/portalsites", handler.Paths);
         Assert.Contains("/api/v1/namespaces/test-ns/configmaps/home-content", handler.Paths);
     }
 
+    // @spec SITE-005 SITE-007
     [Fact]
     public async Task GetSiteAsync_OnlyFetchesContentForRequestedSite()
     {
@@ -93,22 +95,117 @@ public class KubernetesPortalProviderTests
         {
             Sites = """
                 {"items":[
-                  {"spec":{"id":"first","name":"First","contentRef":{"name":"first-content"}}},
-                  {"spec":{"id":"requested","name":"Requested","contentRef":{"name":"requested-content"}}}
+                  {"metadata":{"namespace":"first-ns"},"spec":{"id":"first","name":"First","contentRef":{"name":"first-content"}}},
+                  {"metadata":{"namespace":"requested-ns"},"spec":{"id":"requested","name":"Requested","contentRef":{"name":"requested-content"}}}
                 ]}
                 """,
             ConfigMap = """{"data":{"file.txt":"content"}}"""
         };
         using var client = CreateClient(handler);
-        var provider = new KubernetesPortalProvider(client, "test-ns");
+        var provider = new KubernetesPortalProvider(client);
 
         var site = await provider.GetSiteAsync("requested");
 
         Assert.Equal("requested", site?.Id);
         Assert.Equal(
-            ["/apis/portal.swick.app/v1alpha1/namespaces/test-ns/portalsites",
-             "/api/v1/namespaces/test-ns/configmaps/requested-content"],
+            ["/apis/portal.swick.app/v1alpha1/portalsites",
+             "/api/v1/namespaces/requested-ns/configmaps/requested-content"],
             handler.Paths);
+    }
+
+    // @spec SITE-005 SITE-007
+    [Fact]
+    public async Task GetSiteDetails_ReadsContentInEachResourceNamespace()
+    {
+        var handler = new KubernetesHandler
+        {
+            Sites = """
+                {"items":[
+                  {"metadata":{"namespace":"first-ns"},"spec":{"id":"first","name":"First","contentRef":{"name":"content"}}},
+                  {"metadata":{"namespace":"second-ns"},"spec":{"id":"second","name":"Second","contentRef":{"name":"content"}}}
+                ]}
+                """,
+            ConfigMap = """{"data":{"file.txt":"content"}}"""
+        };
+        using var client = CreateClient(handler);
+        var provider = new KubernetesPortalProvider(client);
+
+        var sites = (await provider.GetSiteDetailsAsync()).Sites.ToArray();
+
+        Assert.Equal(["first", "second"], sites.Select(site => site.Id));
+        Assert.All(sites, site => Assert.True(site.Content?.GetFileInfo("file.txt").Exists));
+        Assert.Equal(
+            ["/apis/portal.swick.app/v1alpha1/portalsites",
+             "/api/v1/namespaces/first-ns/configmaps/content",
+             "/api/v1/namespaces/second-ns/configmaps/content"],
+            handler.Paths);
+    }
+
+    // @spec SITE-007
+    [Theory]
+    [InlineData(false, null)]
+    [InlineData(true, null)]
+    [InlineData(false, "")]
+    [InlineData(true, "")]
+    [InlineData(false, " ")]
+    [InlineData(true, " ")]
+    public async Task ContentReference_RejectsMissingNamespace(bool lookup, string? resourceNamespace)
+    {
+        var handler = new KubernetesHandler
+        {
+            Sites = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                items = new[]
+                {
+                    new
+                    {
+                        metadata = new { @namespace = resourceNamespace },
+                        spec = new { id = "home", name = "Home", contentRef = new { name = "content" } }
+                    }
+                }
+            })
+        };
+        using var client = CreateClient(handler);
+        var provider = new KubernetesPortalProvider(client);
+
+        var error = await Assert.ThrowsAsync<InvalidDataException>(async () =>
+        {
+            if (lookup)
+                await provider.GetSiteAsync("home");
+            else
+                await provider.GetSiteDetailsAsync();
+        });
+
+        Assert.Contains("namespace", error.Message);
+        Assert.Single(handler.Paths);
+    }
+
+    // @spec SITE-020
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task CrossNamespaceDuplicates_AreRejected(bool lookup)
+    {
+        var handler = new KubernetesHandler
+        {
+            Sites = """
+                {"items":[
+                  {"metadata":{"namespace":"first-ns"},"spec":{"id":"home","name":"First"}},
+                  {"metadata":{"namespace":"second-ns"},"spec":{"id":"home","name":"Second"}}
+                ]}
+                """
+        };
+        using var client = CreateClient(handler);
+        var provider = new KubernetesPortalProvider(client);
+
+        var error = await Assert.ThrowsAsync<InvalidDataException>(async () =>
+        {
+            if (lookup)
+                await provider.GetSiteAsync("HOME");
+            else
+                await provider.GetSiteDetailsAsync();
+        });
+        Assert.Contains("Duplicate PortalSite id", error.Message);
     }
 
     [Fact]
@@ -125,7 +222,7 @@ public class KubernetesPortalProviderTests
         };
         var logger = new TestLogger<KubernetesPortalProvider>();
         using var client = CreateClient(handler);
-        var provider = new KubernetesPortalProvider(client, "test-ns", logger: logger);
+        var provider = new KubernetesPortalProvider(client, logger: logger);
 
         var sites = (await provider.GetSiteDetailsAsync()).Sites.ToArray();
 
@@ -139,7 +236,7 @@ public class KubernetesPortalProviderTests
     {
         var handler = new KubernetesHandler { Sites = """{"items":[]}""" };
         using var client = CreateClient(handler);
-        var provider = new KubernetesPortalProvider(client, "test-ns");
+        var provider = new KubernetesPortalProvider(client);
         Assert.Empty((await provider.GetSiteDetailsAsync()).Sites);
 
         handler.Sites = """{"items":[{"spec":{"id":"new","name":"New","roles":["admin"]}}]}""";
