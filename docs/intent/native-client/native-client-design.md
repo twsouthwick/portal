@@ -7,9 +7,10 @@ prefix: CLIENT
 ## Context and Design Philosophy
 
 `Portal.Client` is a Tauri v2 desktop/mobile shell with a Vite-served static
-frontend. The checked-in UI contains only a heading and placeholder text. The
-Rust layer starts the default Tauri application and defines no commands,
-application state, IPC, API client, or authentication flow.
+frontend. The checked-in UI contains a heading, placeholder text, and the
+manual Portal URL check. The Rust layer registers only the check, save, and
+load commands for that onboarding flow, backed by the Tauri-free
+`portal-onboarding` crate; it has no manifest client or authentication flow.
 
 ## Shell and Build Configuration
 
@@ -23,8 +24,53 @@ platform adapters for desktop WebDriver and Android UI/WebView inspection.
 The developer guide states that this client does not yet connect to the portal,
 implement authentication, or change server provider registration. Portal
 discovery, sign-in, site launch integration, synchronization, and server
-interaction are not implemented. The owner-selected authentication design
+interaction are not implemented, apart from the manual Portal URL onboarding
+described below, which does not authenticate. The owner-selected authentication design
 below is not evidence of working integration.
+
+## Manual Portal URL Onboarding (issue #15)
+
+**[issue #15 acceptance criteria; authentication deferred]** When Portal
+discovery is unavailable or the user is remote, the user enters the existing
+Portal's address manually. The client treats that address as untrusted input
+from the first keystroke to the saved configuration.
+
+**Normalization.** Input is trimmed; text without `://` is treated as
+`https://`. The result must be an origin: scheme, host, and optional
+non-default port, with no user information, path other than `/`, query, or
+fragment. The serialized origin lowercases the host, applies IDNA, and omits a
+default port. HTTPS is required. Only a debug build compiled with the
+`dev-http-loopback` Cargo feature also accepts `http` for `localhost`,
+`127.0.0.0/8`, or `::1`; release builds ignore the feature.
+
+**Connection check.** The Rust host, not the WebView, sends one `GET
+{origin}/api/manifest`, the documented manifest endpoint (AUTH-008). It sends
+no credentials or cookies, follows no redirects, and times out after ten
+seconds. Certificates are validated normally against the platform trust store
+plus the Mozilla root set; there is no option to bypass validation. Android
+does not yet read user-installed CAs, so a private CA is currently
+unsupported there. An unauthenticated Portal answers `401` with a `Bearer`
+challenge; the client reports this as "Portal found; sign-in required". A
+`2xx` response is reported as reachable. Other outcomes are distinct errors:
+TLS (certificate or handshake), network (DNS or connection), timeout,
+authentication (`401` without a bearer challenge, `403`, or `407`, typically
+from a proxy), redirect (not followed; often a forward-auth proxy), and
+unexpected response. A found endpoint shows reachability, not Portal identity
+or trustworthiness.
+
+**Confirmation and storage.** Only the most recent successfully checked
+origin can be saved, and only after the user explicitly confirms it. Each new
+check supersedes earlier checks; a probe result updates the pending origin only
+if its check is still current. The Rust host keeps that pending origin in memory
+and rejects a save request for any other value. The saved file `portal.json` in
+the application configuration directory contains only the origin; it is
+revalidated when loaded and carries no trust or authentication state. The UI
+labels a saved origin as not yet verified or signed in.
+
+**Authentication.** Criterion 4 depends on the native public-client flow
+below, which has not been validated against Authelia or the target platforms.
+This change therefore performs no sign-in, sends no tokens, and does not claim
+a verified connection. Sign-in is added once that validation is complete.
 
 ## Approved Release Packaging
 
@@ -137,6 +183,7 @@ platform compatibility.
 | Native framework | Tauri v2 with a Vite frontend and minimal Rust bootstrap. **[inferred]** | Browser-only application or another native shell. | These are the checked-in crate and configuration. |
 | Current client scope | Placeholder shell only. **[inferred from developer guide]** | Portal-connected client. | The developer guide documents the current non-integration. |
 | Native authentication | Separate public OIDC client with system-browser code flow and PKCE S256. **[owner-selected 2026-11-27; not validated]** | Portal-mediated session/API flow. | Avoids embedding the confidential web secret or assuming shared browser cookies; requires provider and API compatibility. |
+| Manual Portal URL check | Rust host probes `/api/manifest` without credentials or redirects; the confirmed origin is saved untrusted. **[issue #15]** | Probe from the WebView; follow redirects; save on entry. | Keeps the network policy out of the WebView CSP, avoids leaking requests to redirect targets, and satisfies the issue's confirmation and no-trust criteria. |
 | UI verification | Shared Node E2E assertions use platform adapters. **[inferred]** | Separate assertions for each platform. | `Portal.Client/tests/client.test.js` shares assertions and adapters. |
 
 ## Open Questions & Future Decisions

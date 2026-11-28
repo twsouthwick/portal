@@ -4,11 +4,25 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Portal</title>
+    <script type="module" src="/src/main.js"></script>
   </head>
   <body>
     <main>
       <h1>Portal</h1>
       <p>Native client shell</p>
+      <form id="portal-url-form" novalidate>
+        <label for="portal-url">Portal URL</label>
+        <input id="portal-url" name="portal-url" type="text" inputmode="url"
+          autocomplete="url" autocapitalize="off" spellcheck="false"
+          placeholder="https://portal.example.com" required />
+        <button type="submit">Check connection</button>
+      </form>
+      <p id="portal-status" role="status" aria-live="polite"></p>
+      <div id="portal-confirm" hidden>
+        <p>Only save this address if you recognize it as your Portal. Saving does not sign you in or verify the server's identity.</p>
+        <button id="portal-save" type="button">Save this Portal URL</button>
+      </div>
+      <p id="portal-saved" hidden></p>
     </main>
   </body>
 </html>

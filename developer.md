@@ -160,14 +160,40 @@ the bundled JavaScript directly.
 - `Portal.Web/ts` and `Portal.Web/css` are frontend sources; generated bundles
   belong in `Portal.Web/wwwroot/dist`.
 - `Portal.Web.Tests` contains the web application tests.
-- `Portal.Client` is a standalone Tauri v2 shell. It currently displays a
-  placeholder and does not connect to the portal or implement authentication.
+- `Portal.Client` is a standalone Tauri v2 shell. It can check and save a
+  manually entered Portal URL but does not yet implement authentication.
 
 ## Native client
 
-The `Portal.Client` Tauri v2 shell is a scaffold; it does not yet connect to the
-portal, implement authentication, or change `Portal.Web` provider
-registration. The checked-in icons are scaffold defaults.
+The `Portal.Client` Tauri v2 shell is a scaffold. It can check and save a
+manually entered Portal URL, but it does not yet sign in, load the manifest,
+or change `Portal.Web` provider registration. The checked-in icons are scaffold
+defaults.
+
+### Manual Portal URL onboarding
+
+The user enters the Portal's HTTPS address; the client normalizes it to an
+origin and the Rust host sends one unauthenticated `GET /api/manifest` with
+normal certificate validation, no redirects, and a ten-second timeout. A `401`
+bearer challenge means the Portal was found; sign-in is not implemented yet.
+The user must confirm before the origin is saved as `portal.json` in the
+application configuration directory. The saved origin is not treated as
+trusted or authenticated. Android currently validates certificates only
+against public CAs, so a private CA is unsupported there. The logic lives in
+the Tauri-free `portal-onboarding` crate and is tested without WebKitGTK:
+
+```bash
+cd Portal.Client/src-tauri
+cargo test --locked -p portal-onboarding
+```
+
+Release builds require HTTPS. To check a local HTTP Portal on a loopback
+address, run a debug build with the development-only feature:
+
+```bash
+cd Portal.Client
+npm run tauri -- dev --features dev-http-loopback
+```
 
 All targets need Node.js 22.12+ (or 20.19+), npm, and Rust/Cargo via rustup.
 Install host prerequisites from the
