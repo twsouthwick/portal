@@ -87,7 +87,7 @@ impl PortalOrigin {
         self.0.as_str().trim_end_matches('/')
     }
 
-    pub(crate) fn join(&self, path: &str) -> Url {
+    pub fn join(&self, path: &str) -> Url {
         self.0
             .join(path)
             .expect("a relative path joins onto an origin")

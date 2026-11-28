@@ -56,8 +56,8 @@ arrows:
     blocks: []
     blockedBy: []
     detail: native-client.md
-    next: Verify discovery and the Digital Fortress onboarding screen on native targets; implement CLIENT-014–022 and validate public-client authentication.
-    drift: Manual onboarding, well-known discovery, the version footer (CLIENT-030–033), and the refreshed presentation lack native UI E2E and automated viewport coverage; CLIENT-014–022 startup/cache behavior and provider/platform validation remain unverified.
+    next: Validate sign-in against Authelia on desktop and Android, and verify discovery, onboarding, and the site list on native targets.
+    drift: CLIENT-014–022, CLIENT-034–047 are implemented and unit-tested but unverified against a real provider, platform credential stores, and native UI E2E; onboarding and the version footer lack native UI and automated viewport coverage.
   runtime-services:
     status: MAPPED
     parent: null

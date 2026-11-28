@@ -55,7 +55,8 @@ identity_providers:
         claims_policy: 'portal'
         authorization_policy: 'one_factor'
         redirect_uris:
-          - 'http://127.0.0.1:49152/callback'
+          - 'http://127.0.0.1:49152/oidc-callback'
+          - 'digital-fortress:/oidc-callback'
         scopes: ['openid', 'groups', 'offline_access']
         response_types: ['code']
         grant_types: ['authorization_code', 'refresh_token']

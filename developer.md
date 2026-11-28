@@ -163,8 +163,9 @@ the bundled JavaScript directly.
 - `Portal.Web/ts` and `Portal.Web/css` are frontend sources; generated bundles
   belong in `Portal.Web/wwwroot/dist`.
 - `Portal.Web.Tests` contains the web application tests.
-- `Portal.Client` is a standalone Tauri v2 shell. It can check and save a
-  manually entered Portal URL but does not yet implement authentication.
+- `Portal.Client` is a standalone Tauri v2 client. It checks and saves a
+  manually entered Portal URL, signs in through the system browser, and shows
+  the cached, refreshed site list.
 
 ### Site status
 
@@ -203,8 +204,7 @@ discovery and uses the entered origin without following a redirect. Other errors
 including other redirects and invalid documents, are reported. The Rust host
 then sends one unauthenticated `GET /api/manifest` to the selected origin.
 Both requests use normal certificate validation, no redirects, and a ten-second
-timeout. A `401` bearer challenge means the Portal was found; sign-in is not
-implemented yet.
+timeout. A `401` bearer challenge means the Portal was found.
 The user must confirm before the origin is saved as `portal.json` in the
 application configuration directory. The saved origin is not treated as
 trusted or authenticated. Android currently validates certificates only
@@ -214,6 +214,26 @@ the Tauri-free `portal-onboarding` crate and is tested without WebKitGTK:
 ```bash
 cd Portal.Client/src-tauri
 cargo test --locked -p portal-onboarding
+```
+
+After the origin is saved, the client signs in with the system browser using
+the public `portal-native` OIDC client (authorization code with PKCE). Desktop
+builds receive the callback on `http://127.0.0.1:49152/oidc-callback`; Android uses
+`digital-fortress:/oidc-callback`. Both must be registered with the provider
+(see `docs/deployment.md`). The refresh token and a random cache key are kept
+in the OS credential store (Secret Service, Windows Credential Manager, or the
+Android keystore); the manifest is cached encrypted in the app data directory
+so the site list appears immediately on the next launch while a refresh runs.
+The site list groups cards by category and opens a details view with apps for
+the current platform and sanitized usage instructions. Session, token, and
+cache logic lives in the Tauri-free `portal-session` crate, and the UI
+helpers have Node unit tests:
+
+```bash
+cd Portal.Client/src-tauri
+cargo test --locked -p portal-session
+cd ..
+node --test tests/onboarding.test.js tests/sites.test.js
 ```
 
 Release builds require HTTPS. To check a local HTTP Portal on a loopback

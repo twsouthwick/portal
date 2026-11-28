@@ -1,5 +1,5 @@
 [workspace]
-members = [".", "onboarding"]
+members = [".", "onboarding", "session"]
 
 [package]
 name = "portalclient"
@@ -26,7 +26,23 @@ dev-http-loopback = []
 [dependencies]
 tauri = { version = "2", features = [] }
 portal-onboarding = { path = "onboarding" }
+portal-session = { path = "session" }
 serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tauri-plugin-opener = "2"
+tokio = { version = "1", features = ["macros", "sync", "time"] }
+url = "2"
+keyring-core = "1.1"
+
+[target.'cfg(target_os = "linux")'.dependencies]
+zbus-secret-service-keyring-store = { version = "1", features = ["crypto-rust"] }
+
+[target.'cfg(target_os = "windows")'.dependencies]
+windows-native-keyring-store = "1"
+
+[target.'cfg(target_os = "android")'.dependencies]
+android-native-keyring-store = "1"
+tauri-plugin-deep-link = "2"
 
 # Read the optimization guideline for more details: https://tauri.app/concept/size/#cargo-configuration
 [profile.release]
@@ -35,3 +51,7 @@ lto = true
 opt-level = 3
 panic = "abort"
 strip = true
+
+# Test-only RSA key generation (portal-session) is very slow unoptimized.
+[profile.dev.package.num-bigint-dig]
+opt-level = 3

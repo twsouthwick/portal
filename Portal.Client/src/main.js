@@ -1,4 +1,4 @@
-// @spec CLIENT-011 CLIENT-012 CLIENT-013 CLIENT-025 CLIENT-026 CLIENT-028 CLIENT-030 CLIENT-032 CLIENT-033
+// @spec CLIENT-001 CLIENT-011 CLIENT-012 CLIENT-013 CLIENT-025 CLIENT-026 CLIENT-028 CLIENT-030 CLIENT-032 CLIENT-033
 const invoke = window.__TAURI__?.core?.invoke;
 
 const form = document.getElementById('portal-url-form');
@@ -13,7 +13,7 @@ const websiteVersion = document.getElementById('website-version');
 let checkedOrigin = null;
 
 const outcomeMessages = {
-  signInRequired: origin => `Found a Digital Fortress sign-in endpoint at ${origin}. Sign-in is not available in this client yet.`,
+  signInRequired: origin => `Found a Digital Fortress at ${origin}. Save it to sign in.`,
   reachable: origin => `Reached the Digital Fortress manifest endpoint at ${origin}.`,
   tls: origin => `Could not establish a secure connection to ${origin}. Check that its certificate is valid and trusted by this device.`,
   network: origin => `Could not reach ${origin}. Check the address and your network connection.`,
@@ -88,8 +88,10 @@ input.addEventListener('input', () => {
 save.addEventListener('click', async () => {
   if (!checkedOrigin) return;
   try {
-    showSaved(await invoke('save_portal_url', { origin: checkedOrigin }));
+    const origin = await invoke('save_portal_url', { origin: checkedOrigin });
+    showSaved(origin);
     showStatus('');
+    window.portalApp?.showPortal(origin);
   } catch (error) {
     showStatus(String(error), 'error');
   }

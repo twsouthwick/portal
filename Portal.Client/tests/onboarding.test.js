@@ -66,7 +66,7 @@ it('distinguishes checking and success, then clears the result when the address 
   await pending;
   assert.equal(status.dataset.state, 'success');
   assert.match(status.textContent, /Digital Fortress/);
-  assert.match(status.textContent, /Sign-in is not available/);
+  assert.match(status.textContent, /Save it to sign in/);
   assert.equal(confirmation.hidden, false);
 
   input.value = 'other.example.com';
