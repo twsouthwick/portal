@@ -37,6 +37,11 @@ export function configureAndroidGradleSigning(source) {
   if (source.includes('portalRelease') || source.includes('keystore.properties')) {
     throw new Error('Android signing configuration is already present');
   }
+  const aliasImport = 'import java.util.Properties as PortalSigningProperties';
+  const aliasImports = [...source.matchAll(/^import[ \t]+([^\s;]+)[ \t]+as[ \t]+PortalSigningProperties[ \t]*;?[ \t]*$/gm)];
+  if (aliasImports.some((match) => match[1] !== 'java.util.Properties') || aliasImports.length > 1) {
+    throw new Error('PortalSigningProperties import alias is already in use');
+  }
 
   const buildIndent = buildTypes[0][1];
   const releaseIndent = releaseBuildTypes[0][1];
@@ -44,11 +49,11 @@ export function configureAndroidGradleSigning(source) {
     `${buildIndent}signingConfigs {`,
     `${buildIndent}    create("portalRelease") {`,
     `${buildIndent}        val keystorePropertiesFile = rootProject.file("keystore.properties")`,
-    `${buildIndent}        val keystoreProperties = java.util.Properties()`,
+    `${buildIndent}        val keystoreProperties = PortalSigningProperties()`,
     `${buildIndent}        if (!keystorePropertiesFile.exists()) {`,
     `${buildIndent}            throw GradleException("Missing Android release keystore properties")`,
     `${buildIndent}        }`,
-    `${buildIndent}        keystoreProperties.load(java.io.FileInputStream(keystorePropertiesFile))`,
+    `${buildIndent}        keystorePropertiesFile.inputStream().use { keystoreProperties.load(it) }`,
     `${buildIndent}        keyAlias = keystoreProperties["keyAlias"] as String`,
     `${buildIndent}        keyPassword = keystoreProperties["password"] as String`,
     `${buildIndent}        storeFile = file(keystoreProperties["storeFile"] as String)`,
@@ -63,6 +68,7 @@ export function configureAndroidGradleSigning(source) {
     releaseBuildTypes[0][0],
     `${releaseIndent}getByName("release") {\n${releaseIndent}    signingConfig = signingConfigs.getByName("portalRelease")`,
   );
+  if (aliasImports.length === 0) configured = `${aliasImport}\n${configured}`;
   return configured;
 }
 

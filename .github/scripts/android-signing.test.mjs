@@ -18,9 +18,9 @@ android {
 // @spec DELIVERY-012 DELIVERY-019 CLIENT-006
 test('Android generated Gradle config loads the distribution keystore for release APKs', () => {
   const configured = configureAndroidGradleSigning(generatedGradle);
-  assert.doesNotMatch(configured, /^import /m);
-  assert.match(configured, /val keystoreProperties = java\.util\.Properties\(\)/);
-  assert.match(configured, /keystoreProperties\.load\(java\.io\.FileInputStream\(keystorePropertiesFile\)\)/);
+  assert.match(configured, /^import java\.util\.Properties as PortalSigningProperties$/m);
+  assert.match(configured, /val keystoreProperties = PortalSigningProperties\(\)/);
+  assert.match(configured, /keystorePropertiesFile\.inputStream\(\)\.use \{ keystoreProperties\.load\(it\) \}/);
   assert.match(configured, /keystore\.properties/);
   assert.match(configured, /signingConfig = signingConfigs\.getByName\("portalRelease"\)/);
 });
@@ -33,11 +33,23 @@ test('Android signing preserves Java imports already present in generated Gradle
   ]) {
     const source = imports + generatedGradle;
     const configured = configureAndroidGradleSigning(source);
-    assert.equal(configured.slice(0, configured.indexOf('plugins {')), imports);
-    assert.match(configured, /val keystoreProperties = java\.util\.Properties\(\)/);
-    assert.match(configured, /keystoreProperties\.load\(java\.io\.FileInputStream\(keystorePropertiesFile\)\)/);
+    assert.ok(configured.includes(imports));
+    assert.equal((configured.match(/^import java\.util\.Properties as PortalSigningProperties$/gm) ?? []).length, 1);
+    assert.match(configured, /val keystoreProperties = PortalSigningProperties\(\)/);
+    assert.match(configured, /keystorePropertiesFile\.inputStream\(\)\.use \{ keystoreProperties\.load\(it\) \}/);
     assert.match(configured, /signingConfig = signingConfigs\.getByName\("portalRelease"\)/);
   }
+});
+
+// @spec DELIVERY-019
+test('Android signing reuses its existing alias and rejects an incompatible alias', () => {
+  const existing = 'import java.util.Properties as PortalSigningProperties\n';
+  const configured = configureAndroidGradleSigning(existing + generatedGradle);
+  assert.equal((configured.match(/^import java\.util\.Properties as PortalSigningProperties$/gm) ?? []).length, 1);
+  assert.throws(
+    () => configureAndroidGradleSigning('import example.Other as PortalSigningProperties\n' + generatedGradle),
+    /PortalSigningProperties import alias is already in use/,
+  );
 });
 
 // @spec CLIENT-006

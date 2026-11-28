@@ -59,13 +59,15 @@ releases; devcontainer toolchain.
 |---|---|---:|---:|---:|
 | Web build, CI, client checks, publishing, devcontainer | DELIVERY-001, DELIVERY-002, DELIVERY-003, DELIVERY-004, DELIVERY-005, DELIVERY-006, DELIVERY-007 | 7 | 0 | 0 known configuration gaps |
 | Approved release channels and packaging | DELIVERY-008, DELIVERY-009, DELIVERY-010, DELIVERY-011, DELIVERY-012, DELIVERY-013, DELIVERY-014, DELIVERY-015, DELIVERY-016, DELIVERY-017, DELIVERY-018 | 11 | 0 | Hosted publishing remains unverified |
-| Generated Android signing compatibility | DELIVERY-019 | 1 | 0 | Hosted APK build remains unverified |
+| Generated Android signing compatibility | DELIVERY-019 | 0 | 1 | Hosted APK build remains unverified |
 
 **Traceability:** Release policy, publisher, workflow, Android signing, and
 Helm default tests cite their EARS IDs. Hosted GHCR, GitHub Release, and
 Android signing execution remain unverified.
 The signing adapter and regression tests cite DELIVERY-019 and cover generated
-scripts with and without pre-existing Java imports.
+scripts with and without pre-existing Java imports. The tests inspect generated
+source rather than compiling it; a representative Gradle fixture has also
+been compiled locally with the `java` accessor in scope.
 
 ## Key Findings
 

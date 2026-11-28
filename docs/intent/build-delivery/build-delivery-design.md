@@ -84,11 +84,11 @@ All OCI tags omit the leading `v` and use the exact version computed by MinVer.
 - Desktop binaries remain unsigned. Their existing Windows WebView2 and Linux
   runtime/AppImage limitations remain documented.
 
-The Android signing adapter preserves the imports emitted by Tauri and uses
-fully qualified Java types in its injected signing block. This avoids Kotlin
-script compilation failures when the generated template already imports
-`java.util.Properties` or `java.io.FileInputStream`, without changing the
-signing credentials, Android toolchain, or APK targets.
+The Android signing adapter preserves the imports emitted by Tauri, imports
+`java.util.Properties` under a distinct alias, and reads the properties file
+with Kotlin's file input stream. This avoids duplicate imports and the Gradle
+`java` DSL accessor shadowing Java package references within the Android
+block, without changing signing credentials, toolchain, or APK targets.
 
 The rolling release publisher must serialize updates and must not replace
 `dev` with an older successful main run. It first uploads and verifies new

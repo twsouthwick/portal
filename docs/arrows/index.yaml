@@ -90,4 +90,4 @@ arrows:
     blockedBy: []
     detail: build-delivery.md
     next: Verify owner-approved release channels on hosted main and stable-tag runs, then audit spec and test traceability.
-    drift: Release workflows and local tests are implemented; duplicate Android signing imports are corrected with regression coverage, but hosted GHCR, GitHub Release, and Android signing runs remain unverified.
+    drift: Android signing compiles in a representative Gradle fixture; hosted GHCR, GitHub Release, and signed APK runs remain unverified.
