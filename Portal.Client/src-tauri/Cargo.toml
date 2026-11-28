@@ -1,5 +1,5 @@
 [workspace]
-members = [".", "onboarding"]
+members = [".", "onboarding", "session"]
 
 [package]
 name = "portalclient"
@@ -35,3 +35,7 @@ lto = true
 opt-level = 3
 panic = "abort"
 strip = true
+
+# Test-only RSA key generation (portal-session) is very slow unoptimized.
+[profile.dev.package.num-bigint-dig]
+opt-level = 3
