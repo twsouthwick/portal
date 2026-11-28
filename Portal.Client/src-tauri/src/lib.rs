@@ -26,6 +26,7 @@ const ORIGIN_POLICY: OriginPolicy = if cfg!(all(debug_assertions, feature = "dev
 struct CheckResult {
     origin: String,
     outcome: ProbeOutcome,
+    portal_version: Option<String>,
 }
 
 fn config_path(app: &AppHandle) -> Result<PathBuf, String> {
@@ -35,7 +36,7 @@ fn config_path(app: &AppHandle) -> Result<PathBuf, String> {
         .map_err(|error| format!("Could not locate the configuration directory: {error}"))
 }
 
-/// @spec CLIENT-008 CLIENT-009 CLIENT-010 CLIENT-011 CLIENT-012 CLIENT-023 CLIENT-024 CLIENT-025 CLIENT-026
+/// @spec CLIENT-008 CLIENT-009 CLIENT-010 CLIENT-011 CLIENT-012 CLIENT-023 CLIENT-024 CLIENT-025 CLIENT-026 CLIENT-031
 #[tauri::command]
 async fn check_portal_url(
     input: String,
@@ -45,13 +46,14 @@ async fn check_portal_url(
     let origin = PortalOrigin::parse(&input, ORIGIN_POLICY).map_err(|error| error.to_string())?;
     let client =
         portal_onboarding::probe_client(PROBE_TIMEOUT).map_err(|error| error.to_string())?;
-    let (origin, outcome) = portal_onboarding::check_portal(&client, &origin, ORIGIN_POLICY).await;
-    if outcome.found_portal() {
-        pending.publish_if_current(generation, origin.clone());
+    let checked = portal_onboarding::check_portal(&client, &origin, ORIGIN_POLICY).await;
+    if checked.outcome.found_portal() {
+        pending.publish_if_current(generation, checked.origin.clone());
     }
     Ok(CheckResult {
-        origin: origin.to_string(),
-        outcome,
+        origin: checked.origin.to_string(),
+        outcome: checked.outcome,
+        portal_version: checked.portal_version,
     })
 }
 
@@ -89,7 +91,7 @@ struct SignInSlot {
 }
 
 /// Selects the platform credential store; without one the session is kept in memory only.
-/// @spec CLIENT-022 CLIENT-034
+/// @spec CLIENT-022 CLIENT-038
 fn credential_store() -> Arc<dyn CredentialStore> {
     #[cfg(target_os = "linux")]
     let store = zbus_secret_service_keyring_store::Store::new().map(|s| s as Arc<keyring_core::CredentialStore>);
@@ -111,20 +113,20 @@ fn credential_store() -> Arc<dyn CredentialStore> {
         .unwrap_or_else(|| Arc::new(MemoryCredentialStore::unavailable()))
 }
 
-/// @spec CLIENT-018 CLIENT-035
+/// @spec CLIENT-018 CLIENT-039
 #[tauri::command]
 async fn session_startup(app: AppHandle, session: State<'_, SessionManager>) -> Result<SessionView, String> {
     Ok(session.startup(&saved_origin(&app)?).await)
 }
 
-/// @spec CLIENT-016 CLIENT-018 CLIENT-019 CLIENT-020 CLIENT-036
+/// @spec CLIENT-016 CLIENT-018 CLIENT-019 CLIENT-020 CLIENT-040
 #[tauri::command]
 async fn refresh_manifest(app: AppHandle, session: State<'_, SessionManager>) -> Result<SessionView, String> {
     Ok(session.refresh(&saved_origin(&app)?).await)
 }
 
 /// Opens the system browser and waits for the redirect, cancellation, or timeout.
-/// @spec CLIENT-014 CLIENT-015 CLIENT-030 CLIENT-031 CLIENT-032
+/// @spec CLIENT-014 CLIENT-015 CLIENT-034 CLIENT-035 CLIENT-036
 #[tauri::command]
 async fn sign_in(
     app: AppHandle,
@@ -171,7 +173,7 @@ async fn sign_in(
     }
 }
 
-/// @spec CLIENT-032
+/// @spec CLIENT-036
 #[tauri::command]
 async fn cancel_sign_in(session: State<'_, SessionManager>, slot: State<'_, SignInSlot>) -> Result<(), String> {
     if let Some(cancel) = slot.cancel.lock().unwrap().take() {
@@ -187,17 +189,38 @@ async fn sign_out(session: State<'_, SessionManager>) -> Result<SessionView, Str
     Ok(session.sign_out().await)
 }
 
-/// @spec CLIENT-040 CLIENT-041 CLIENT-042
+/// @spec CLIENT-044 CLIENT-045 CLIENT-046
 #[tauri::command]
 fn open_external(app: AppHandle, url: String, kind: ExternalKind) -> Result<(), String> {
     let url = portal_session::validate_external(&url, kind).ok_or("This link can't be opened.")?;
     app.opener().open_url(url.as_str(), None::<&str>).map_err(|error| error.to_string())
 }
 
-/// @spec CLIENT-041
+/// @spec CLIENT-045
 #[tauri::command]
 fn platform() -> &'static str {
     std::env::consts::OS
+}
+
+/// @spec CLIENT-030
+#[tauri::command]
+fn app_version(app: AppHandle) -> String {
+    app.package_info().version.to_string()
+}
+
+/// Probes the saved origin without discovery; failures yield no version.
+/// @spec CLIENT-033
+#[tauri::command]
+async fn saved_portal_version(app: AppHandle) -> Result<Option<String>, String> {
+    let Some(origin) = portal_onboarding::load_origin(&config_path(&app)?, ORIGIN_POLICY)
+        .map_err(|error| error.to_string())?
+    else {
+        return Ok(None);
+    };
+    let client =
+        portal_onboarding::probe_client(PROBE_TIMEOUT).map_err(|error| error.to_string())?;
+    let (outcome, version) = portal_onboarding::probe_portal(&client, &origin).await;
+    Ok(version.filter(|_| outcome.found_portal()))
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -213,7 +236,7 @@ pub fn run() {
             let http = portal_session::http_client()?;
             app.manage(SessionManager::new(http, ORIGIN_POLICY, data_dir, credential_store()));
 
-            // @spec CLIENT-031
+            // @spec CLIENT-035
             #[cfg(target_os = "android")]
             {
                 use tauri_plugin_deep_link::DeepLinkExt;
@@ -244,7 +267,9 @@ pub fn run() {
             cancel_sign_in,
             sign_out,
             open_external,
-            platform
+            platform,
+            app_version,
+            saved_portal_version
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

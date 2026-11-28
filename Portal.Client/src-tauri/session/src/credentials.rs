@@ -77,7 +77,7 @@ impl fmt::Debug for StoredSession {
 pub struct CredentialError(pub String);
 
 /// Platform credential store holding at most one [`StoredSession`].
-/// @spec CLIENT-022 CLIENT-034
+/// @spec CLIENT-022 CLIENT-038
 pub trait CredentialStore: Send + Sync {
     fn load(&self) -> Result<Option<StoredSession>, CredentialError>;
     fn save(&self, session: &StoredSession) -> Result<(), CredentialError>;
@@ -165,7 +165,7 @@ impl CredentialStore for KeyringCredentialStore {
 mod tests {
     use super::*;
 
-    // @spec CLIENT-022 CLIENT-034
+    // @spec CLIENT-022 CLIENT-038
     #[test]
     fn keyring_store_keeps_one_entry() {
         keyring_core::set_default_store(keyring_core::mock::Store::new().unwrap());
@@ -183,7 +183,7 @@ mod tests {
         assert!(store.load().unwrap().is_none());
     }
 
-    // @spec CLIENT-034
+    // @spec CLIENT-038
     #[test]
     fn stored_session_round_trips_without_debug_secrets() {
         let session = StoredSession {

@@ -12,6 +12,8 @@ pub const PROBE_PATH: &str = "/api/manifest";
 pub const PROBE_TIMEOUT: Duration = Duration::from_secs(10);
 const DISCOVERY_PATH: &str = "/.well-known/digital-fortress/manifest.json";
 const DISCOVERY_MAX_BYTES: usize = 8 * 1024;
+const PORTAL_VERSION_HEADER: &str = "portal-version";
+const PORTAL_VERSION_MAX_LEN: usize = 64;
 
 /// Result of checking an origin. Reaching the endpoint does not establish
 /// Portal identity or trust.
@@ -57,17 +59,45 @@ pub fn probe_client(timeout: Duration) -> reqwest::Result<Client> {
 
 /// @spec CLIENT-010 CLIENT-011 CLIENT-012
 pub async fn probe(client: &Client, origin: &PortalOrigin) -> ProbeOutcome {
+    probe_portal(client, origin).await.0
+}
+
+/// Probes the manifest endpoint and returns the untrusted, validated
+/// `Portal-Version` header value when present.
+/// @spec CLIENT-010 CLIENT-011 CLIENT-012 CLIENT-031
+pub async fn probe_portal(
+    client: &Client,
+    origin: &PortalOrigin,
+) -> (ProbeOutcome, Option<String>) {
     let response = client
         .get(origin.join(PROBE_PATH))
         .header(ACCEPT, "application/json")
         .send()
         .await;
     match response {
-        Ok(response) => {
-            classify_response(response.status(), response.headers().get(WWW_AUTHENTICATE))
-        }
-        Err(error) => classify_error(&error),
+        Ok(response) => (
+            classify_response(response.status(), response.headers().get(WWW_AUTHENTICATE)),
+            portal_version(response.headers().get(PORTAL_VERSION_HEADER)),
+        ),
+        Err(error) => (classify_error(&error), None),
     }
+}
+
+fn portal_version(value: Option<&reqwest::header::HeaderValue>) -> Option<String> {
+    let value = value?.to_str().ok()?;
+    let valid = (1..=PORTAL_VERSION_MAX_LEN).contains(&value.len())
+        && value
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'.' | b'+' | b'-'));
+    valid.then(|| value.to_owned())
+}
+
+/// Result of checking an entered origin.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PortalCheck {
+    pub origin: PortalOrigin,
+    pub outcome: ProbeOutcome,
+    pub portal_version: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -75,18 +105,26 @@ struct DiscoveryDocument {
     origin: String,
 }
 
-/// @spec CLIENT-023 CLIENT-024 CLIENT-025 CLIENT-026
+/// @spec CLIENT-023 CLIENT-024 CLIENT-025 CLIENT-026 CLIENT-031
 pub async fn check_portal(
     client: &Client,
     origin: &PortalOrigin,
     policy: OriginPolicy,
-) -> (PortalOrigin, ProbeOutcome) {
+) -> PortalCheck {
     match discover_origin(client, origin, policy).await {
         Ok(selected) => {
-            let outcome = probe(client, &selected).await;
-            (selected, outcome)
+            let (outcome, portal_version) = probe_portal(client, &selected).await;
+            PortalCheck {
+                origin: selected,
+                outcome,
+                portal_version,
+            }
         }
-        Err(outcome) => (origin.clone(), outcome),
+        Err(outcome) => PortalCheck {
+            origin: origin.clone(),
+            outcome,
+            portal_version: None,
+        },
     }
 }
 
@@ -299,12 +337,13 @@ mod tests {
     }
 
     async fn check_discovery(server: &ScriptedServer) -> (PortalOrigin, ProbeOutcome) {
-        check_portal(
+        let checked = check_portal(
             &probe_client(PROBE_TIMEOUT).unwrap(),
             &origin(&server.origin),
             OriginPolicy::AllowHttpLoopback,
         )
-        .await
+        .await;
+        (checked.origin, checked.outcome)
     }
 
     // @spec CLIENT-023 CLIENT-024 CLIENT-026
@@ -424,14 +463,14 @@ mod tests {
         let server = serve(None).await;
         let client = probe_client(Duration::from_millis(100)).unwrap();
 
-        let (_, outcome) = check_portal(
+        let checked = check_portal(
             &client,
             &origin(&server.origin),
             OriginPolicy::AllowHttpLoopback,
         )
         .await;
 
-        assert_eq!(outcome, ProbeOutcome::Timeout);
+        assert_eq!(checked.outcome, ProbeOutcome::Timeout);
         assert_eq!(server.requests.load(Ordering::SeqCst), 1);
     }
 
@@ -560,5 +599,72 @@ mod tests {
             probe(&client, &origin(&server.origin)).await,
             ProbeOutcome::Timeout
         );
+    }
+
+    fn portal_401_with_version(version: &str) -> String {
+        format!(
+            "HTTP/1.1 401 Unauthorized\r\nWWW-Authenticate: Bearer\r\nPortal-Version: {version}\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
+        )
+    }
+
+    // @spec CLIENT-031
+    #[tokio::test]
+    async fn probe_returns_a_valid_portal_version_header() {
+        let server = serve_scripted(vec![portal_401_with_version("1.4.1-alpha.0.3+abc")]).await;
+        let (outcome, version) = probe_portal(
+            &probe_client(PROBE_TIMEOUT).unwrap(),
+            &origin(&server.origin),
+        )
+        .await;
+        assert_eq!(outcome, ProbeOutcome::SignInRequired);
+        assert_eq!(version.as_deref(), Some("1.4.1-alpha.0.3+abc"));
+    }
+
+    // @spec CLIENT-031
+    #[tokio::test]
+    async fn probe_ignores_missing_or_invalid_portal_version_headers() {
+        let too_long = "1".repeat(65);
+        for response in [
+            PORTAL_401.to_string(),
+            portal_401_with_version(""),
+            portal_401_with_version("1.0 beta"),
+            portal_401_with_version("<script>"),
+            portal_401_with_version(&too_long),
+        ] {
+            let server = serve_scripted(vec![response]).await;
+            let (outcome, version) = probe_portal(
+                &probe_client(PROBE_TIMEOUT).unwrap(),
+                &origin(&server.origin),
+            )
+            .await;
+            assert_eq!(outcome, ProbeOutcome::SignInRequired);
+            assert_eq!(version, None);
+        }
+        let max = "1".repeat(64);
+        let server = serve_scripted(vec![portal_401_with_version(&max)]).await;
+        let (_, version) = probe_portal(
+            &probe_client(PROBE_TIMEOUT).unwrap(),
+            &origin(&server.origin),
+        )
+        .await;
+        assert_eq!(version, Some(max));
+    }
+
+    // @spec CLIENT-031 CLIENT-032
+    #[tokio::test]
+    async fn check_reports_the_selected_portal_version() {
+        let server = serve_scripted(vec![
+            response("404 Not Found", ""),
+            portal_401_with_version("2.0.0"),
+        ])
+        .await;
+        let checked = check_portal(
+            &probe_client(PROBE_TIMEOUT).unwrap(),
+            &origin(&server.origin),
+            OriginPolicy::AllowHttpLoopback,
+        )
+        .await;
+        assert_eq!(checked.outcome, ProbeOutcome::SignInRequired);
+        assert_eq!(checked.portal_version.as_deref(), Some("2.0.0"));
     }
 }

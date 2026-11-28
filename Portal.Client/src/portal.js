@@ -59,7 +59,7 @@ function showBanner(message, { state = 'info', cancellable = false } = {}) {
   bannerCancel.hidden = !cancellable;
 }
 
-/** @spec CLIENT-042 */
+/** @spec CLIENT-046 */
 async function openExternal(url, kind) {
   try {
     await invoke('open_external', { url, kind });
@@ -68,7 +68,7 @@ async function openExternal(url, kind) {
   }
 }
 
-/** @spec CLIENT-036 */
+/** @spec CLIENT-040 */
 function renderHeader() {
   const manifest = view.manifest;
   manifestName.textContent = manifest?.name || 'Your Digital Fortress';
@@ -82,7 +82,7 @@ function renderHeader() {
   headerSignin.disabled = signingIn;
 }
 
-/** @spec CLIENT-037 CLIENT-038 */
+/** @spec CLIENT-041 CLIENT-042 */
 function renderGrid() {
   const manifest = view.manifest;
   if (!manifest) {
@@ -107,7 +107,7 @@ function renderGrid() {
   ));
 }
 
-/** @spec CLIENT-040 */
+/** @spec CLIENT-044 */
 function instructions(markdown) {
   const container = h('div', { class: 'instructions' });
   container.innerHTML = DOMPurify.sanitize(marked.parse(markdown, { async: false }));
@@ -121,7 +121,7 @@ function instructions(markdown) {
   return container;
 }
 
-/** @spec CLIENT-039 CLIENT-040 CLIENT-041 */
+/** @spec CLIENT-043 CLIENT-044 CLIENT-045 */
 function renderDetails() {
   const site = view.manifest?.sites.find(candidate => candidate.id === openSiteId);
   if (!site) {
@@ -177,7 +177,7 @@ function hideDetails() {
   card?.focus();
 }
 
-/** @spec CLIENT-032 */
+/** @spec CLIENT-036 */
 function render() {
   const showSignin = view.status === 'signedOut' || (!view.manifest && view.status === 'signInRequired');
   signinPanel.hidden = !showSignin;
@@ -206,7 +206,7 @@ async function refresh() {
   render();
 }
 
-/** @spec CLIENT-015 CLIENT-030 CLIENT-031 CLIENT-032 */
+/** @spec CLIENT-015 CLIENT-034 CLIENT-035 CLIENT-036 */
 async function signIn() {
   signingIn = true;
   render();

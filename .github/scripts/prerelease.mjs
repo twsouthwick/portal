@@ -6,7 +6,11 @@ import { join, basename } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { isNewerRun, releaseChannel } from './release-policy.mjs';
 
-const workflows = ['build.yaml', 'android.yaml', 'native-release.yaml'];
+const workflows = [
+  { file: 'build.yaml', name: 'Build and publish' },
+  { file: 'android.yaml', name: 'Android debug smoke' },
+  { file: 'native-release.yaml', name: 'Native client release builds' },
+];
 const targets = [
   { os: 'linux', arch: 'x86_64', runner: 'Linux-x86_64', extension: '.AppImage' },
   { os: 'linux', arch: 'arm64', runner: 'Linux-arm64', extension: '.AppImage' },
@@ -81,7 +85,7 @@ function runNumberFromBody(body) {
   return match ? Number(match[1]) : null;
 }
 
-// @spec DELIVERY-008 DELIVERY-009 DELIVERY-010 DELIVERY-011 DELIVERY-012 DELIVERY-017 DELIVERY-018 DELIVERY-020
+// @spec DELIVERY-008 DELIVERY-009 DELIVERY-010 DELIVERY-011 DELIVERY-012 DELIVERY-017 DELIVERY-018 DELIVERY-020 DELIVERY-021 DELIVERY-022
 export async function publish({ event, repository, repositoryId, apiUrl, token, publisherRunId, request = fetch, download = execFileSync, tempRoot = tmpdir() }) {
   const trigger = event.workflow_run;
   const sha = trigger.head_sha;
@@ -107,7 +111,7 @@ export async function publish({ event, repository, repositoryId, apiUrl, token, 
     for (const workflow of workflows) {
       const runs = [];
       for (let page = 1; ; page++) {
-        const result = await api(`/actions/workflows/${workflow}/runs?event=push&head_sha=${sha}&per_page=100&page=${page}`);
+        const result = await api(`/actions/workflows/${workflow.file}/runs?event=push&head_sha=${sha}&per_page=100&page=${page}`);
         runs.push(...result.workflow_runs);
         if (result.workflow_runs.length < 100) break;
       }
@@ -135,6 +139,7 @@ export async function publish({ event, repository, repositoryId, apiUrl, token, 
   const runId = String(native.id);
   const attempt = String(native.run_attempt);
   if (!Number.isSafeInteger(native.run_number) || native.run_number < 1) throw new Error('Missing native workflow run number');
+  if (!Number.isSafeInteger(native.run_attempt) || native.run_attempt < 1) throw new Error('Missing native workflow attempt');
   const runNumber = String(native.run_number);
   const tag = channel === 'dev' ? 'dev' : trigger.head_branch;
   const marker = `<!-- native-run:${runId}-attempt:${attempt}-run-number:${runNumber} -->`;
@@ -161,8 +166,7 @@ export async function publish({ event, repository, repositoryId, apiUrl, token, 
 
   const root = join(tempRoot, `portal-release-${publisherRunId}`);
   await mkdir(root, { recursive: true });
-  const assets = [];
-  const provenance = [];
+  const downloaded = [];
   for (const target of targets) {
     const artifact = `portal-client-${target.os}-${target.arch}-${sha}-attempt-${attempt}`;
     const directory = join(root, artifact);
@@ -182,12 +186,24 @@ export async function publish({ event, repository, repositoryId, apiUrl, token, 
     const details = provenanceValues(originalProvenance);
     const hash = validateArtifact({ sha, run: runId, attempt, runner: target.runner, abi: target.abi, version: details.version, name }, contents,
       await readFile(join(directory, 'SHA256SUMS'), 'utf8'), originalProvenance);
-    const assetName = `portal-client-${target.os}-${target.arch}-${sha}-run-${runId}-attempt-${attempt}${target.extension}`;
-    assets.push({ name: assetName, contents, hash });
-    provenance.push({ asset: assetName, originalName: name, artifact, version: details.version, details: originalProvenance.trim() });
+    downloaded.push({ target, name, artifact, contents, hash, version: details.version, details: originalProvenance.trim() });
   }
-  const sumsName = `SHA256SUMS-${sha}-run-${runId}-attempt-${attempt}`;
-  const provenanceName = `provenance-${sha}-run-${runId}-attempt-${attempt}.json`;
+  const versions = new Set(downloaded.map(item => item.version));
+  if (versions.size !== 1) throw new Error('Native artifacts have different application versions');
+  const version = versions.values().next().value;
+  if (!/^[A-Za-z0-9][A-Za-z0-9.-]*$/.test(version)) throw new Error('Invalid native artifact version');
+  if (channel === 'stable' && version !== trigger.head_branch.slice(1)) throw new Error('Native version does not match stable tag');
+  if (channel === 'dev' && !version.includes('-')) throw new Error('Development artifacts must use a MinVer prerelease version');
+  const suffix = `${version}-b${runNumber}.${attempt}`;
+  const assets = [];
+  const provenance = [];
+  for (const item of downloaded) {
+    const assetName = `portal-client-${item.target.os}-${item.target.arch}-${suffix}${item.target.extension}`;
+    assets.push({ name: assetName, contents: item.contents, hash: item.hash });
+    provenance.push({ asset: assetName, originalName: item.name, artifact: item.artifact, version: item.version, details: item.details });
+  }
+  const sumsName = `SHA256SUMS-${suffix}`;
+  const provenanceName = `provenance-${suffix}.json`;
   const sums = assets.map(asset => `${asset.hash}  ${asset.name}`).join('\n') + '\n';
   assets.push({ name: sumsName, contents: Buffer.from(sums) });
   assets.push({ name: provenanceName, contents: Buffer.from(JSON.stringify({
@@ -195,20 +211,21 @@ export async function publish({ event, repository, repositoryId, apiUrl, token, 
     artifacts: provenance,
   }, null, 2) + '\n') });
   for (const asset of assets) asset.hash = createHash('sha256').update(asset.contents).digest('hex');
-  const versions = new Set(provenance.map(item => item.version));
-  if (versions.size !== 1) throw new Error('Native artifacts have different application versions');
-  const version = versions.values().next().value;
-  if (channel === 'stable' && version !== trigger.head_branch.slice(1)) throw new Error('Native version does not match stable tag');
-  if (channel === 'dev' && !version.includes('-')) throw new Error('Development artifacts must use a MinVer prerelease version');
   const body = [
     marker, channel === 'stable' ? `Stable release ${trigger.head_branch} for commit ${sha}.` : `Development build for commit ${sha}.`, '',
-    ...runs.map(run => `- Verification: ${run.html_url} (attempt ${run.run_attempt})`), '',
-    'Linux AppImages and Windows executables are unsigned; Windows requires the WebView2 runtime.',
-    'Linux requires compatible system libraries and AppImage/FUSE support (or extraction).',
-    `The signed Android APK includes arm64-v8a and x86_64; only x86_64 is emulator-tested. arm64 has not been device-tested.`,
-    'The native client is a placeholder and does not connect to Portal.', '',
-    `Verify ${sumsName} before use. Build details are in ${provenanceName}.`,
-    `Artifact version: ${version}.`,
+    'The native client can check and save a Portal address. Sign-in and the site catalog are not available yet.', '',
+    '## Downloads',
+    '- **Linux:** Choose `x86_64` (Intel/AMD) or `arm64`. AppImages are unsigned and require compatible system libraries and AppImage/FUSE support (or extraction).',
+    '- **Windows:** Choose `x86_64` (Intel/AMD) or `arm64`. Executables are unsigned, have no installer, and require the WebView2 runtime.',
+    '- **Android:** The signed `multiabi` APK supports arm64-v8a and x86_64. Only x86_64 is emulator-tested; arm64 has not been device-tested.', '',
+    `\`b${runNumber}.${attempt}\` identifies native build ${runNumber}, attempt ${attempt}.`, '',
+    '## Verify your download',
+    `Download \`${sumsName}\` and compare your file's SHA-256 hash with its entry:`,
+    `- Linux: Run \`sha256sum --check --ignore-missing ${sumsName}\` in the same directory as the download.`,
+    '- Windows: Run `(Get-FileHash -Algorithm SHA256 "PATH_TO_FILE").Hash.ToLowerInvariant()` in PowerShell, replacing `PATH_TO_FILE` with your download, and compare it with the matching line.',
+    `- Build details: \`${provenanceName}\`. Checksums and provenance are generated by CI, not independently signed.`, '',
+    '## Verification',
+    ...runs.map((run, index) => `- [${workflows[index].name}](${run.html_url}) (attempt ${run.run_attempt})`),
   ].join('\n');
 
   if (disposition === 'create') {

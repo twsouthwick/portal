@@ -95,6 +95,26 @@ provide readable status announcements. The screen uses local assets and system
 fonts and does not introduce authentication or change the URL-checking and
 storage behavior.
 
+### Version footer (owner-approved 2026-11-28)
+
+The onboarding footer shows the native app version, read from the Tauri
+package version through a host command (MinVer in release builds per
+CLIENT-007; `0.1.0` in local builds). It also shows the website version.
+
+The Rust host reads the website version from the `Portal-Version` header
+(AUTH-023) of the existing `/api/manifest` probe, so no additional request is
+made during a check. The header is untrusted: the host accepts it only if it
+is 1–64 characters drawn from ASCII letters, digits, `.`, `+`, and `-`, and
+otherwise treats it as absent. The website version is shown only after a
+check finds the Portal; editing the address or a failed check clears it.
+
+On startup with a saved origin, the host probes that saved origin's
+`/api/manifest` once with the CLIENT-010 rules and without well-known
+discovery. If the probe finds the Portal, the footer shows its version;
+otherwise the footer silently omits the website version and the saved origin,
+status message, and confirmation state are unchanged. The startup probe does
+not authenticate or establish trust.
+
 ## Well-known Portal Discovery (issue #16)
 
 **[owner-approved design; issue #16]** Each entered address remains an
@@ -413,6 +433,7 @@ goes through the Rust host's opener, never WebView navigation.
 | Cache protection | XChaCha20-Poly1305 file encrypted with a per-account key held in the platform credential store. **[owner-selected 2026-11-28]** | Owner-only file permissions. | Uses the credential store's protection on every target and makes sign-out cryptographically discard the cache. |
 | Site list presentation | Category-grouped card grid with Private/Internal badges and a details view rendering sanitized Markdown and current-platform apps. **[owner-selected 2026-11-28]** | Flat grid with filters; compact list; direct launch; hiding private sites. | Mirrors the web portal's catalog while keeping launch decisions explicit. |
 | Manual Portal URL check | Rust host optionally resolves an externally supplied well-known document, then probes `/api/manifest` without credentials or redirects; the confirmed origin is saved untrusted. **[issues #15 and #16]** | Probe from the WebView; follow redirects; save on entry. | Keeps the network policy out of the WebView CSP, avoids leaking requests to redirect targets, and preserves confirmation and no-trust criteria. |
+| Website version source | `Portal-Version` header on the existing manifest probe; startup re-probes the saved origin. **[owner-selected 2026-11-28]** | Anonymous `/api/version` endpoint; field in the well-known document. | No extra request during a check; works without a well-known document. |
 | UI verification | Shared Node E2E assertions use platform adapters. **[inferred]** | Separate assertions for each platform. | `Portal.Client/tests/client.test.js` shares assertions and adapters. |
 
 ## Open Questions & Future Decisions

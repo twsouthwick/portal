@@ -24,7 +24,7 @@ coverage remains pending. The owner selected the public-client authentication de
 - `docs/intent/native-client/native-client-design.md`
 
 ### EARS
-- `docs/intent/native-client/native-client-specs.md` — 43 specs
+- `docs/intent/native-client/native-client-specs.md` — 47 specs
 
 ### Tests
 - `Portal.Client/tests/client.test.js`
@@ -73,25 +73,28 @@ smoke scripts.
 | Shell and configured verification | CLIENT-001, CLIENT-002, CLIENT-003, CLIENT-004, CLIENT-005 | 5 | 0 | Updated native UI E2E assertions remain unverified |
 | Approved release packaging | CLIENT-006, CLIENT-007 | 2 | 0 | Hosted signing and platform builds remain unverified |
 | Manual Portal URL onboarding | CLIENT-008 to CLIENT-013 | 6 | 0 | UI flow lacks E2E coverage; Android private-CA trust unsupported |
-| Authenticated startup and manifest cache | CLIENT-014 to CLIENT-022, CLIENT-043 | 10 | 0 | Unit-tested against a mock IdP; Authelia and platform credential stores remain unverified |
+| Authenticated startup and manifest cache | CLIENT-014 to CLIENT-022, CLIENT-047 | 10 | 0 | Unit-tested against a mock IdP; Authelia and platform credential stores remain unverified |
 | Optional well-known discovery | CLIENT-023 to CLIENT-026 | 4 | 0 | Native UI flow lacks end-to-end coverage |
 | Onboarding presentation | CLIENT-027 to CLIENT-029 | 3 | 0 | Automated viewport, native UI, and screen-reader verification remain unverified |
-| Sign-in, encrypted cache, and site list | CLIENT-030 to CLIENT-042 | 13 | 0 | Real Authelia, Android deep link/keystore, and native UI E2E remain unverified |
+| Version footer | CLIENT-030 to CLIENT-033 | 4 | 0 | Native UI E2E coverage of the app and website versions is missing |
+| Sign-in, encrypted cache, and site list | CLIENT-034 to CLIENT-046 | 13 | 0 | Real Authelia, Android deep link/keystore, and native UI E2E remain unverified |
 
 **Traceability:** Android signing, ABI, versioning, and release workflow tests
-cite the approved EARS IDs. CLIENT-014 to CLIENT-022, CLIENT-030 to CLIENT-035,
-and CLIENT-043 are cited by `portal-session` unit tests (mock IdP, mock keyring)
-and the Tauri commands; CLIENT-036 to CLIENT-042 are cited by `sites.test.js`,
+cite the approved EARS IDs. CLIENT-014 to CLIENT-022, CLIENT-034 to CLIENT-039,
+and CLIENT-047 are cited by `portal-session` unit tests (mock IdP, mock keyring)
+and the Tauri commands; CLIENT-040 to CLIENT-046 are cited by `sites.test.js`,
 `portal.js`, and `external.rs`. They remain `[ ]` until validated against
 Authelia and on native targets. Onboarding unit tests cite CLIENT-008 to CLIENT-013,
-CLIENT-023 to CLIENT-026, and CLIENT-028 to CLIENT-029; the Tauri commands
+CLIENT-023 to CLIENT-026, CLIENT-028 to CLIENT-029, and CLIENT-031 to
+CLIENT-032; UI tests cite CLIENT-030, CLIENT-032, and CLIENT-033; the Tauri commands
 and UI cite the applicable IDs at entry points. CLIENT-027 has been checked at
 320 and 800 CSS pixels in a browser but has no automated viewport test.
 
 ## Key Findings
 
 1. The Rust host registers onboarding commands plus session startup, refresh,
-   sign-in/cancel, sign-out, and validated external opening
+   sign-in/cancel, sign-out, validated external opening, and app-version and
+   saved-Portal-version commands
    (`Portal.Client/src-tauri/src/lib.rs`).
 2. The Digital Fortress onboarding page presents the address check, its
    outcome, and explicit save confirmation (`Portal.Client/index.html`,

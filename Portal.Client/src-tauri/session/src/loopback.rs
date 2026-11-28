@@ -20,7 +20,7 @@ pub struct CallbackListener {
 }
 
 impl CallbackListener {
-    /// @spec CLIENT-030
+    /// @spec CLIENT-034
     pub async fn bind() -> Result<Self, SignInError> {
         Self::bind_port(LOOPBACK_PORT).await
     }
@@ -39,7 +39,7 @@ impl CallbackListener {
     /// Waits for `GET /oidc-callback`, answering other requests with an error, and
     /// returns the callback as a URL on `127.0.0.1`. The listener closes when
     /// this returns or the future is dropped.
-    /// @spec CLIENT-030
+    /// @spec CLIENT-034
     pub async fn accept_callback(self) -> Url {
         loop {
             let Ok((mut socket, _)) = self.listener.accept().await else {
@@ -89,7 +89,7 @@ Cache-Control: no-store\r\nConnection: close\r\n\r\n{body}",
 mod tests {
     use super::*;
 
-    // @spec CLIENT-030
+    // @spec CLIENT-034
     #[tokio::test]
     async fn accepts_only_get_callback_on_loopback() {
         let listener = CallbackListener::bind_port(0).await.unwrap();
@@ -112,7 +112,7 @@ mod tests {
         assert!(http.get(format!("{base}/oidc-callback")).send().await.is_err());
     }
 
-    // @spec CLIENT-030
+    // @spec CLIENT-034
     #[tokio::test]
     async fn reports_an_unavailable_port() {
         let held = CallbackListener::bind_port(0).await.unwrap();

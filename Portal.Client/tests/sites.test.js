@@ -4,7 +4,7 @@ import { appsFor, badges, groupSites, iconClass, isWebUrl, statusLine } from '..
 
 const site = (id, categories = [], extra = {}) => ({ id, name: id, categories, apps: [], ...extra });
 
-// @spec CLIENT-037
+// @spec CLIENT-041
 it('groups sites by category in order of first appearance with Other last', () => {
   const groups = groupSites([
     site('jellyfin', ['media']),
@@ -19,7 +19,7 @@ it('groups sites by category in order of first appearance with Other last', () =
   ]);
 });
 
-// @spec CLIENT-038
+// @spec CLIENT-042
 it('accepts only bootstrap icon classes and falls back to bi-globe', () => {
   assert.equal(iconClass('bi bi-headphones'), 'bi bi-headphones');
   assert.equal(iconClass('bi-film'), 'bi bi-film');
@@ -28,13 +28,13 @@ it('accepts only bootstrap icon classes and falls back to bi-globe', () => {
   }
 });
 
-// @spec CLIENT-038
+// @spec CLIENT-042
 it('labels private and internal sites', () => {
   assert.deepEqual(badges(site('a', [], { isPrivate: true, isInternal: true })), ['Private', 'Internal']);
   assert.deepEqual(badges(site('a')), []);
 });
 
-// @spec CLIENT-039 CLIENT-040
+// @spec CLIENT-043 CLIENT-044
 it('treats only http and https as web links', () => {
   assert.equal(isWebUrl('https://media.example'), true);
   assert.equal(isWebUrl('http://media.example/x'), true);
@@ -43,7 +43,7 @@ it('treats only http and https as web links', () => {
   }
 });
 
-// @spec CLIENT-041
+// @spec CLIENT-045
 it('lists only apps for the current platform with safe actions', () => {
   const apps = [
     { name: 'Droid', scheme: 'abs://', store: 'Google', storeId: 'https://play.google.com/x' },
@@ -61,7 +61,7 @@ it('lists only apps for the current platform with safe actions', () => {
   assert.deepEqual(appsFor(apps, 'macos'), []);
 });
 
-// @spec CLIENT-036
+// @spec CLIENT-040
 it('describes each refresh status', () => {
   const now = 1_000_000;
   assert.deepEqual(statusLine({ status: 'refreshing' }, now), { state: 'refreshing', text: 'Refreshing…' });

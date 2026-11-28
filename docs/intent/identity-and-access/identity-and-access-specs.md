@@ -29,6 +29,7 @@ metadata merged in PR #54.
 - [x] **AUTH-017** When Portal.Web runs in Development, it shall expose a generated OpenAPI document requiring an authenticated application session and describing the manifest endpoint, including its bearer security scheme, response status codes, and the issue #6 DTO schema.
 - [x] **AUTH-018** When Portal.Web runs outside Development, it shall not map the OpenAPI document endpoint.
 - [D] **AUTH-019** Issue #7 shall not add a Swagger or Scalar UI.
+- [x] **AUTH-023** When the manifest endpoint sends any response, including a `401` bearer challenge, `304`, or `503`, it shall include a `Portal-Version` header whose value equals the version shown by the portal footer (UX-012).
 
 ## Native OIDC configuration discovery (issue #12)
 

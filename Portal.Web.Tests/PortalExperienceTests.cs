@@ -55,6 +55,38 @@ public sealed class PortalExperienceTests
         Assert.DoesNotContain("typo=\"Typography.", html);
     }
 
+    // @spec UX-012
+    [Theory]
+    [InlineData("1.4.1-alpha.0.3+0123456789abcdef", "1.4.1-alpha.0.3")]
+    [InlineData("2.0.0", "2.0.0")]
+    public void PortalVersion_RemovesBuildMetadata(string informationalVersion, string expected)
+    {
+        Assert.Equal(expected, new PortalVersion(informationalVersion).Value);
+    }
+
+    // @spec UX-012
+    [Fact]
+    public async Task SignedOutLayout_RendersVersionFooter()
+    {
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddSingleton(new PortalVersion("1.4.1-alpha.0.3+abc"));
+        await using var provider = services.BuildServiceProvider();
+        await using var renderer = new HtmlRenderer(provider, provider.GetRequiredService<Microsoft.Extensions.Logging.ILoggerFactory>());
+
+        var html = await renderer.Dispatcher.InvokeAsync(async () =>
+        {
+            var result = await renderer.RenderComponentAsync<Portal.Web.Components.Layout.SignedOutLayout>(ParameterView.FromDictionary(
+                new Dictionary<string, object?>
+                {
+                    [nameof(LayoutComponentBase.Body)] = (RenderFragment)(builder => builder.AddContent(0, "Signed out"))
+                }));
+            return result.ToHtmlString();
+        });
+
+        Assert.Matches("<footer[^>]*class=\"version-footer\"[^>]*>Version 1\\.4\\.1-alpha\\.0\\.3</footer>", html);
+    }
+
     private sealed class TestNavigationManager : NavigationManager
     {
         public TestNavigationManager() => Initialize("https://portal.test/", "https://portal.test/");

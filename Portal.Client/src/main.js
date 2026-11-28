@@ -1,4 +1,4 @@
-// @spec CLIENT-001 CLIENT-011 CLIENT-012 CLIENT-013 CLIENT-025 CLIENT-026 CLIENT-028
+// @spec CLIENT-001 CLIENT-011 CLIENT-012 CLIENT-013 CLIENT-025 CLIENT-026 CLIENT-028 CLIENT-030 CLIENT-032 CLIENT-033
 const invoke = window.__TAURI__?.core?.invoke;
 
 const form = document.getElementById('portal-url-form');
@@ -7,6 +7,8 @@ const status = document.getElementById('portal-status');
 const confirm = document.getElementById('portal-confirm');
 const save = document.getElementById('portal-save');
 const saved = document.getElementById('portal-saved');
+const appVersion = document.getElementById('app-version');
+const websiteVersion = document.getElementById('website-version');
 
 let checkedOrigin = null;
 
@@ -29,6 +31,11 @@ function showSaved(origin) {
   saved.textContent = origin ? `Saved Digital Fortress URL: ${origin} (not signed in or verified).` : '';
 }
 
+function showWebsiteVersion(version) {
+  websiteVersion.hidden = !version;
+  websiteVersion.textContent = version ? `Website ${version}` : '';
+}
+
 function showStatus(message, state) {
   status.textContent = message;
   if (state) {
@@ -49,15 +56,17 @@ form.addEventListener('submit', async event => {
   event.preventDefault();
   const generation = ++checkGeneration;
   resetConfirmation();
+  showWebsiteVersion(null);
   if (!invoke) {
     showStatus('Digital Fortress connection checks are available only in the native app.', 'error');
     return;
   }
   showStatus('Checking…', 'checking');
   try {
-    const { origin, outcome } = await invoke('check_portal_url', { input: input.value });
+    const { origin, outcome, portalVersion } = await invoke('check_portal_url', { input: input.value });
     if (generation !== checkGeneration) return;
     const succeeded = outcome.kind === 'signInRequired' || outcome.kind === 'reachable';
+    showWebsiteVersion(succeeded ? portalVersion : null);
     showStatus(outcomeMessages[outcome.kind](origin, outcome), succeeded ? 'success' : 'error');
     if (succeeded) {
       checkedOrigin = origin;
@@ -72,6 +81,7 @@ form.addEventListener('submit', async event => {
 input.addEventListener('input', () => {
   ++checkGeneration;
   resetConfirmation();
+  showWebsiteVersion(null);
   showStatus('');
 });
 
@@ -92,4 +102,11 @@ if (invoke) {
   invoke('saved_portal_url').then(showSaved, error => {
     showStatus(String(error), 'error');
   });
+  invoke('app_version').then(version => {
+    appVersion.textContent = `App ${version}`;
+  }, () => {});
+  const startupGeneration = checkGeneration;
+  invoke('saved_portal_version').then(version => {
+    if (startupGeneration === checkGeneration) showWebsiteVersion(version);
+  }, () => {});
 }

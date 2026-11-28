@@ -2,7 +2,7 @@
 
 const OTHER = 'Other';
 
-/** @spec CLIENT-037 */
+/** @spec CLIENT-041 */
 export function groupSites(sites) {
   const groups = new Map();
   const add = (category, site) => {
@@ -19,13 +19,13 @@ export function groupSites(sites) {
   return [...groups].map(([category, sites]) => ({ category, sites }));
 }
 
-/** @spec CLIENT-038 */
+/** @spec CLIENT-042 */
 export function iconClass(icon) {
   const token = String(icon ?? '').split(/\s+/).find(part => part.startsWith('bi-'));
   return /^bi-[a-z0-9-]+$/.test(token ?? '') ? `bi ${token}` : 'bi bi-globe';
 }
 
-/** @spec CLIENT-038 */
+/** @spec CLIENT-042 */
 export function badges(site) {
   return [site.isPrivate && 'Private', site.isInternal && 'Internal'].filter(Boolean);
 }
@@ -35,7 +35,7 @@ function scheme(url) {
   return match ? match[1].toLowerCase() : null;
 }
 
-/** @spec CLIENT-039 CLIENT-040 */
+/** @spec CLIENT-043 CLIENT-044 */
 export function isWebUrl(url) {
   const value = scheme(url);
   return (value === 'http' || value === 'https') && /^https?:\/\/[^/]/i.test(String(url).trim());
@@ -48,7 +48,7 @@ const PLATFORM_STORES = {
 };
 const BLOCKED_LAUNCH_SCHEMES = ['javascript', 'data', 'file', 'vbscript'];
 
-/** @spec CLIENT-041 */
+/** @spec CLIENT-045 */
 export function appsFor(apps, platform) {
   const stores = PLATFORM_STORES[platform] ?? [];
   return (apps ?? [])
@@ -73,7 +73,7 @@ function ago(refreshedAt, now) {
   return 'updated just now';
 }
 
-/** @spec CLIENT-036 */
+/** @spec CLIENT-040 */
 export function statusLine(view, now = Math.floor(Date.now() / 1000)) {
   const when = view.refreshedAt ? ` · ${ago(view.refreshedAt, now)}` : '';
   switch (view.status) {

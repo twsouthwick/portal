@@ -156,6 +156,43 @@ public sealed class ClientManifestEndpointTests
         Assert.Equal(503, body.RootElement.GetProperty("status").GetInt32());
     }
 
+    // @spec AUTH-023 UX-012
+    [Fact]
+    public async Task Manifest_ReportsPortalVersionOnEveryResponse()
+    {
+        using var provider = new MutablePortalProvider(PortalDetails());
+        using var factory = CreateFactory(provider);
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false
+        });
+        var expected = factory.Services.GetRequiredService<PortalVersion>().Value;
+        Assert.False(string.IsNullOrWhiteSpace(expected));
+        Assert.DoesNotContain('+', expected);
+
+        var unauthorized = await client.GetAsync("/api/manifest");
+        using var okRequest = AuthorizedRequest(CreateToken("media"));
+        var ok = await client.SendAsync(okRequest);
+        using var notModifiedRequest = AuthorizedRequest(CreateToken("media"));
+        notModifiedRequest.Headers.IfNoneMatch.Add(ok.Headers.ETag!);
+        var notModified = await client.SendAsync(notModifiedRequest);
+        provider.Failure = new InvalidOperationException("provider unavailable");
+        using var failedRequest = AuthorizedRequest(CreateToken("media"));
+        var failed = await client.SendAsync(failedRequest);
+
+        foreach (var (response, status) in new[]
+        {
+            (unauthorized, HttpStatusCode.Unauthorized),
+            (ok, HttpStatusCode.OK),
+            (notModified, HttpStatusCode.NotModified),
+            (failed, HttpStatusCode.ServiceUnavailable)
+        })
+        {
+            Assert.Equal(status, response.StatusCode);
+            Assert.Equal([expected], response.Headers.GetValues("Portal-Version"));
+        }
+    }
+
     // @spec AUTH-020 AUTH-022
     [Fact]
     public async Task NativeOidcMetadata_ExposesConfiguredPublicSettingsWithoutAuthentication()
@@ -379,7 +416,7 @@ public sealed class ClientManifestEndpointTests
 
         public PortalDetails Details { get; set; } = details;
 
-        public Exception? Failure { get; init; }
+        public Exception? Failure { get; set; }
 
         public int Calls => Volatile.Read(ref _calls);
 

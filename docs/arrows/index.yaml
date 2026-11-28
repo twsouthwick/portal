@@ -46,7 +46,7 @@ arrows:
     blockedBy: []
     detail: portal-experience.md
     next: Confirm intended filtering and launch behavior for private and internal sites.
-    drift: UX-009–011 have implementation citations and UX-009/UX-011 have rendering regression coverage; other UX requirements and automated viewport layout coverage remain unverified.
+    drift: UX-009–012 have implementation citations and UX-009/UX-011/UX-012 have rendering regression coverage; the main-layout version footer is not rendered by a test; other UX requirements and automated viewport layout coverage remain unverified.
   native-client:
     status: MAPPED
     parent: null
@@ -57,7 +57,7 @@ arrows:
     blockedBy: []
     detail: native-client.md
     next: Validate sign-in against Authelia on desktop and Android, and verify discovery, onboarding, and the site list on native targets.
-    drift: CLIENT-014–022, CLIENT-030–043 are implemented and unit-tested but unverified against a real provider, platform credential stores, and native UI E2E; onboarding lacks automated viewport coverage.
+    drift: CLIENT-014–022, CLIENT-034–047 are implemented and unit-tested but unverified against a real provider, platform credential stores, and native UI E2E; onboarding and the version footer lack native UI and automated viewport coverage.
   runtime-services:
     status: MAPPED
     parent: null
@@ -90,4 +90,4 @@ arrows:
     blockedBy: []
     detail: build-delivery.md
     next: Verify owner-approved release channels on hosted main and stable-tag runs, then audit spec and test traceability.
-    drift: Release workflows and local tests cover semantic-version titles and Android signing imports, but hosted GHCR, GitHub Release, and Android signing runs remain unverified.
+    drift: Local tests cover release titles, filenames, notes, and Android signing imports; updated hosted release presentation, GHCR, and signing details remain unverified.

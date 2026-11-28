@@ -136,7 +136,7 @@ impl OidcProvider {
     }
 
     /// Builds the authorization URL and its pending transaction.
-    /// @spec CLIENT-015 CLIENT-032
+    /// @spec CLIENT-015 CLIENT-036
     pub fn begin(&self, redirect_uri: &str) -> Result<(PendingSignIn, Url), SignInError> {
         let redirect_uri = Url::parse(redirect_uri).map_err(|_| SignInError::Discovery)?;
         let client = self.client(&redirect_uri)?;
@@ -166,7 +166,7 @@ impl OidcProvider {
     }
 
     /// Validates the callback and exchanges its code.
-    /// @spec CLIENT-015 CLIENT-032 CLIENT-033
+    /// @spec CLIENT-015 CLIENT-036 CLIENT-037
     pub async fn complete(
         &self,
         http: &Client,
@@ -433,7 +433,7 @@ pub(crate) mod tests {
             .unwrap()
     }
 
-    // @spec CLIENT-015 CLIENT-030 CLIENT-032
+    // @spec CLIENT-015 CLIENT-034 CLIENT-036
     #[tokio::test]
     async fn authorization_url_uses_pkce_state_nonce_scopes_and_audience() {
         let idp = mock_idp().await;
@@ -450,7 +450,7 @@ pub(crate) mod tests {
         assert!(!query.contains_key("client_secret"));
     }
 
-    // @spec CLIENT-015 CLIENT-033
+    // @spec CLIENT-015 CLIENT-037
     #[tokio::test]
     async fn completes_sign_in_with_validated_id_token() {
         let idp = mock_idp().await;
@@ -466,7 +466,7 @@ pub(crate) mod tests {
         assert!(!format!("{tokens:?}").contains("access-1"));
     }
 
-    // @spec CLIENT-032
+    // @spec CLIENT-036
     #[tokio::test]
     async fn rejects_mismatched_state_expired_transaction_and_provider_error() {
         let idp = mock_idp().await;
@@ -492,7 +492,7 @@ pub(crate) mod tests {
         assert!(idp.token_requests().is_empty());
     }
 
-    // @spec CLIENT-033
+    // @spec CLIENT-037
     #[tokio::test]
     async fn rejects_id_token_with_wrong_nonce_or_audience() {
         let idp = mock_idp().await;

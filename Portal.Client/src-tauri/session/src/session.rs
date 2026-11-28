@@ -125,7 +125,7 @@ impl SessionManager {
     }
 
     /// Shows the cached manifest for the saved account, if any, before refresh.
-    /// @spec CLIENT-018 CLIENT-035
+    /// @spec CLIENT-018 CLIENT-039
     pub async fn startup(&self, origin: &PortalOrigin) -> SessionView {
         let mut state = self.state.lock().await;
         self.load(&mut state);
@@ -204,7 +204,7 @@ impl SessionManager {
         Ok(Some(tokens.access_token))
     }
 
-    /// @spec CLIENT-016 CLIENT-018 CLIENT-019 CLIENT-020 CLIENT-043
+    /// @spec CLIENT-016 CLIENT-018 CLIENT-019 CLIENT-020 CLIENT-047
     pub async fn refresh(&self, origin: &PortalOrigin) -> SessionView {
         let mut state = self.state.lock().await;
         self.load(&mut state);
@@ -300,7 +300,7 @@ impl SessionManager {
 
     /// Starts the single sign-in transaction and returns the URL to open in
     /// the system browser.
-    /// @spec CLIENT-014 CLIENT-032
+    /// @spec CLIENT-014 CLIENT-036
     pub async fn begin_sign_in(&self, origin: &PortalOrigin, redirect_uri: &str) -> Result<Url, SignInError> {
         let mut state = self.state.lock().await;
         state.pending = None;
@@ -315,7 +315,7 @@ impl SessionManager {
         Ok(url)
     }
 
-    /// @spec CLIENT-032
+    /// @spec CLIENT-036
     pub async fn cancel_sign_in(&self) {
         let mut state = self.state.lock().await;
         state.pending = None;
@@ -324,7 +324,7 @@ impl SessionManager {
 
     /// Completes sign-in from the callback, persists the session, and loads
     /// the manifest.
-    /// @spec CLIENT-015 CLIENT-032 CLIENT-033 CLIENT-034
+    /// @spec CLIENT-015 CLIENT-036 CLIENT-037 CLIENT-038
     pub async fn complete_sign_in(&self, origin: &PortalOrigin, callback: &Url) -> Result<SessionView, SignInError> {
         let (transaction_id, pending, expires_at, provider) = {
             let mut state = self.state.lock().await;
@@ -554,7 +554,7 @@ mod tests {
         manager.complete_sign_in(origin, &callback).await.unwrap()
     }
 
-    // @spec CLIENT-016 CLIENT-034 CLIENT-035
+    // @spec CLIENT-016 CLIENT-038 CLIENT-039
     #[tokio::test]
     async fn signs_in_fetches_manifest_and_persists_session() {
         let idp = mock_idp().await;
@@ -603,7 +603,7 @@ mod tests {
         assert_eq!(requests[1].header("authorization"), Some("Bearer access-2"));
     }
 
-    // @spec CLIENT-043
+    // @spec CLIENT-047
     #[tokio::test]
     async fn restart_does_not_send_refresh_token_to_a_changed_issuer() {
         let original_idp = mock_idp().await;
@@ -683,7 +683,7 @@ mod tests {
         assert_eq!(manager.refresh(&offline_origin).await.status, SessionStatus::SignedOut);
     }
 
-    // @spec CLIENT-021 CLIENT-035
+    // @spec CLIENT-021 CLIENT-039
     #[tokio::test]
     async fn sign_out_clears_cache_and_credentials() {
         let idp = mock_idp().await;
@@ -701,7 +701,7 @@ mod tests {
         assert_eq!(manager.startup(&origin).await.status, SessionStatus::SignedOut);
     }
 
-    // @spec CLIENT-022 CLIENT-034
+    // @spec CLIENT-022 CLIENT-038
     #[tokio::test]
     async fn unavailable_credential_store_keeps_session_in_memory_only() {
         let idp = mock_idp().await;
@@ -749,7 +749,7 @@ mod tests {
         assert_eq!(portal.manifest_requests()[2].header("if-none-match"), Some("\"v2\""));
     }
 
-    // @spec CLIENT-034
+    // @spec CLIENT-038
     #[tokio::test]
     async fn failed_account_save_invalidates_previous_persisted_session() {
         let idp = mock_idp().await;
@@ -774,7 +774,7 @@ mod tests {
         assert_eq!(restarted.startup(&origin_b).await.status, SessionStatus::SignedOut);
     }
 
-    // @spec CLIENT-034
+    // @spec CLIENT-038
     #[tokio::test]
     async fn failed_credential_invalidation_rejects_account_switch() {
         let idp = mock_idp().await;
@@ -801,7 +801,7 @@ mod tests {
         assert_eq!(session.startup(&origin_b).await.status, SessionStatus::SignedOut);
     }
 
-    // @spec CLIENT-032
+    // @spec CLIENT-036
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn cancellation_during_token_exchange_prevents_session_commit() {
         let idp = mock_idp().await;
@@ -826,7 +826,7 @@ mod tests {
         assert!(store.load().unwrap().is_none());
     }
 
-    // @spec CLIENT-032
+    // @spec CLIENT-036
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn expiry_during_token_exchange_prevents_session_commit() {
         let idp = mock_idp().await;
@@ -854,7 +854,7 @@ mod tests {
         assert!(store.load().unwrap().is_none());
     }
 
-    // @spec CLIENT-032
+    // @spec CLIENT-036
     #[tokio::test]
     async fn cancelled_sign_in_rejects_the_callback() {
         let idp = mock_idp().await;

@@ -32,7 +32,7 @@ pub enum CacheError {
     Crypto,
 }
 
-/// @spec CLIENT-035
+/// @spec CLIENT-039
 pub fn cache_file_name(account: &Account) -> String {
     let mut hasher = Sha256::new();
     for part in [&account.origin, &account.issuer, &account.subject] {
@@ -46,7 +46,7 @@ pub fn cache_path(data_dir: &Path, account: &Account) -> PathBuf {
     data_dir.join(CACHE_DIR).join(cache_file_name(account))
 }
 
-/// @spec CLIENT-017 CLIENT-022 CLIENT-035
+/// @spec CLIENT-017 CLIENT-022 CLIENT-039
 pub fn write_cache(data_dir: &Path, key: &CacheKey, cached: &CachedManifest) -> Result<(), CacheError> {
     write_encrypted(data_dir, key, &cached.account, cached)
 }
@@ -84,7 +84,7 @@ fn write_encrypted(
 }
 
 /// Returns the cache only if it decrypts under `key` and belongs to `account`.
-/// @spec CLIENT-018 CLIENT-035
+/// @spec CLIENT-018 CLIENT-039
 pub fn read_cache(data_dir: &Path, key: &CacheKey, account: &Account) -> Option<CachedManifest> {
     let name = cache_file_name(account);
     let bytes = fs::read(cache_path(data_dir, account)).ok()?;
@@ -135,7 +135,7 @@ mod tests {
         }
     }
 
-    // @spec CLIENT-017 CLIENT-035
+    // @spec CLIENT-017 CLIENT-039
     #[test]
     fn round_trips_encrypted_cache_for_the_same_account() {
         let dir = tempfile::tempdir().unwrap();
@@ -151,7 +151,7 @@ mod tests {
         }));
     }
 
-    // @spec CLIENT-018 CLIENT-021 CLIENT-035
+    // @spec CLIENT-018 CLIENT-021 CLIENT-039
     #[test]
     fn does_not_display_cache_with_another_key_or_account() {
         let dir = tempfile::tempdir().unwrap();
@@ -179,7 +179,7 @@ mod tests {
         delete_cache(dir.path(), &alice.account).unwrap();
     }
 
-    // @spec CLIENT-035
+    // @spec CLIENT-039
     #[test]
     fn scopes_file_name_by_origin_issuer_and_subject() {
         let base = account("alice");

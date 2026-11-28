@@ -14,7 +14,7 @@ pub enum ExternalKind {
 const BLOCKED_APP_SCHEMES: [&str; 4] = ["javascript", "data", "file", "vbscript"];
 
 /// Returns the URL to hand to the system opener, or `None` when it must stay inert.
-/// @spec CLIENT-039 CLIENT-040 CLIENT-041 CLIENT-042
+/// @spec CLIENT-043 CLIENT-044 CLIENT-045 CLIENT-046
 pub fn validate_external(input: &str, kind: ExternalKind) -> Option<Url> {
     let url = Url::parse(input.trim()).ok()?;
     let allowed = match kind {
@@ -28,7 +28,7 @@ pub fn validate_external(input: &str, kind: ExternalKind) -> Option<Url> {
 mod tests {
     use super::*;
 
-    // @spec CLIENT-039 CLIENT-040 CLIENT-042
+    // @spec CLIENT-043 CLIENT-044 CLIENT-046
     #[test]
     fn web_accepts_only_http_and_https() {
         assert!(validate_external("https://media.example/", ExternalKind::Web).is_some());
@@ -38,7 +38,7 @@ mod tests {
         }
     }
 
-    // @spec CLIENT-041
+    // @spec CLIENT-045
     #[test]
     fn app_rejects_dangerous_schemes() {
         assert!(validate_external("plex://open", ExternalKind::App).is_some());

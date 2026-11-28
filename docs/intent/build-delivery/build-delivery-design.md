@@ -45,6 +45,23 @@ Release assets include four desktop binaries and one signed dual-ABI Android
 APK from a single successful native workflow run and attempt, with
 architecture-qualified names, checksums, and build/run provenance.
 
+**Owner-approved release presentation:** Asset filenames include the verified
+MinVer version and a compact `b<run-number>.<attempt>` suffix instead of the
+full commit and GitHub run ID. For example,
+`portal-client-linux-x86_64-0.0.0-alpha.0.158-b67.1.AppImage` identifies
+the Linux x86_64 build from native workflow run number 67, attempt 1. The
+checksum and provenance filenames use the same version and suffix. The full
+commit, run ID, run number, attempt, original artifacts, and toolchains remain
+in the provenance; the release notes retain the full source commit and link
+each verification workflow by name.
+
+Release notes explain which download matches each platform, the signing and
+runtime prerequisites, the build suffix, and the Android test limitation.
+They describe the client's current ability to check and save a Portal address
+without implying that sign-in or the site catalog is implemented. They also
+explain how to compare a downloaded file with the CI-generated checksums and
+identify the provenance file.
+
 Publishing uses a draft until every asset is uploaded. An interrupted draft
 may be retried only with the same native run and attempt; a draft belonging to
 another run must be inspected and removed manually before retrying. Native
@@ -98,12 +115,14 @@ Android toolchain, and APK targets are unchanged.
 
 The rolling release publisher must serialize updates and must not replace
 `dev` with an older successful main run. It first uploads and verifies new
-commit-qualified assets alongside the current assets, then switches the `dev`
-release manifest to the new asset set and removes stale assets. If upload or
-verification fails, the previous manifest and assets remain usable; if
-stale-asset cleanup fails after the switch, the manifest still identifies the
-current set and a retry can finish cleanup. Stable releases are immutable and
-must never be modified by a development publication.
+version/run/attempt-qualified assets alongside the current assets, then
+switches the `dev` release manifest to the new asset set and removes stale
+assets. The run-number and attempt suffix distinguishes reruns even when their
+MinVer versions match. If upload or verification fails, the previous manifest
+and assets remain usable; if stale-asset cleanup fails after the switch, the
+manifest still identifies the current set and a retry can finish cleanup.
+Stable releases are immutable and must never be modified by a development
+publication.
 
 ## Decisions & Alternatives
 
