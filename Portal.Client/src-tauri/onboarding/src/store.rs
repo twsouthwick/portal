@@ -129,4 +129,12 @@ mod tests {
         assert!(error.to_string().contains("Digital Fortress"));
         fs::remove_dir_all(dir).unwrap();
     }
+
+    // @spec CLIENT-029
+    #[test]
+    fn storage_error_keeps_the_cause_and_product_name() {
+        let error = StoreError::Io(io::Error::other("disk unavailable")).to_string();
+        assert!(error.contains("Digital Fortress"));
+        assert!(error.contains("disk unavailable"));
+    }
 }

@@ -4,11 +4,13 @@ Tauri desktop/mobile shell and its platform-adapted smoke and UI verification.
 
 ## Status
 
-**MAPPED** — first reconstructed 2026-11-27. The current shell is a tested
-placeholder; portal integration is not implemented. Approved MinVer versioning
-and signed multi-ABI Android packaging are implemented; hosted-run verification
-remains pending. Manual Portal URL onboarding (issue #15) checks and saves an
-untrusted origin without authenticating. The owner selected the public-client authentication design on
+**MAPPED** — first reconstructed 2026-11-27. The native shell checks and saves
+an untrusted origin without authenticating; authenticated portal integration
+is not implemented. Its onboarding screen uses the Digital Fortress name.
+Approved MinVer versioning and signed multi-ABI Android packaging are
+implemented; hosted-run verification remains pending. Optional well-known
+discovery (issue #16) is implemented in the Rust host; native UI end-to-end
+coverage remains pending. The owner selected the public-client authentication design on
 2026-11-27; real-provider and platform validation remain.
 
 ## References
@@ -20,10 +22,11 @@ untrusted origin without authenticating. The owner selected the public-client au
 - `docs/intent/native-client/native-client-design.md`
 
 ### EARS
-- `docs/intent/native-client/native-client-specs.md` — 22 specs
+- `docs/intent/native-client/native-client-specs.md` — 29 specs
 
 ### Tests
 - `Portal.Client/tests/client.test.js`
+- `Portal.Client/tests/onboarding.test.js`
 - `Portal.Client/tests/android-uiautomator2.test.js`
 - `Portal.Client/tests/android-webview.test.js`
 - `Portal.Client/smoke-linux.sh`
@@ -35,6 +38,7 @@ untrusted origin without authenticating. The owner selected the public-client au
 ### Code
 - `Portal.Client/index.html`
 - `Portal.Client/src/main.js`
+- `Portal.Client/src/style.css`
 - `Portal.Client/src-tauri/onboarding/`
 - `Portal.Client/vite.config.ts`
 - `Portal.Client/src-tauri/`
@@ -57,25 +61,30 @@ smoke scripts.
 
 | Category | Spec IDs | Implemented | Deferred | Gaps |
 |---|---|---:|---:|---:|
-| Shell and configured verification | CLIENT-001, CLIENT-002, CLIENT-003, CLIENT-004, CLIENT-005 | 5 | 0 | 0 known shell gaps |
+| Shell and configured verification | CLIENT-001, CLIENT-002, CLIENT-003, CLIENT-004, CLIENT-005 | 5 | 0 | Updated native UI E2E assertions remain unverified |
 | Approved release packaging | CLIENT-006, CLIENT-007 | 2 | 0 | Hosted signing and platform builds remain unverified |
 | Manual Portal URL onboarding | CLIENT-008 to CLIENT-013 | 6 | 0 | UI flow lacks E2E coverage; Android private-CA trust unsupported |
 | Authenticated startup and manifest cache (planned) | CLIENT-014 to CLIENT-022 | 0 | 9 | Native implementation and tests are absent; Authelia and platform validation remain unverified |
+| Optional well-known discovery | CLIENT-023 to CLIENT-026 | 4 | 0 | Native UI flow lacks end-to-end coverage |
+| Onboarding presentation | CLIENT-027 to CLIENT-029 | 3 | 0 | Automated viewport, native UI, and screen-reader verification remain unverified |
 
 **Traceability:** Android signing, ABI, versioning, and release workflow tests
-cite the approved EARS IDs. Portal connectivity and authentication are
-explicitly outside the present native-client implementation. CLIENT-014 to
+cite the approved EARS IDs. Authenticated portal connectivity is explicitly
+outside the present native-client implementation. CLIENT-014 to
 CLIENT-022 specify planned authenticated startup and cache behavior but have
 no native implementation or test coverage; Authelia and platform validation
-remain unverified. Onboarding unit tests cite CLIENT-008 to CLIENT-013; the
-Tauri commands and UI cite them at entry points.
+remain unverified. Onboarding unit tests cite CLIENT-008 to CLIENT-013,
+CLIENT-023 to CLIENT-026, and CLIENT-028 to CLIENT-029; the Tauri commands
+and UI cite the applicable IDs at entry points. CLIENT-027 has been checked at
+320 and 800 CSS pixels in a browser but has no automated viewport test.
 
 ## Key Findings
 
 1. The Rust host registers only the Portal URL check, save, and load commands
    (`Portal.Client/src-tauri/src/lib.rs`).
-2. The page shows the `Portal` heading, shell placeholder, and manual Portal
-   URL check (`Portal.Client/index.html`, `Portal.Client/src/main.js`).
+2. The Digital Fortress onboarding page presents the address check, its
+   outcome, and explicit save confirmation (`Portal.Client/index.html`,
+   `Portal.Client/src/main.js`, `Portal.Client/src/style.css`).
 3. The developer guide states that integration and authentication are not
    implemented (`developer.md`, Native client).
 
@@ -89,6 +98,10 @@ Tauri commands and UI cite them at entry points.
 1. Validate the selected public-client design against Authelia and the
    target platforms; the manifest API is implemented in identity-and-access
    (AUTH-008 to AUTH-016), but provider interoperability remains unvalidated.
+2. Verify optional well-known discovery through the native UI on target
+   platforms (CLIENT-023 to CLIENT-026).
+3. Verify the refreshed onboarding layout and keyboard/screen-reader behavior
+   on native targets (CLIENT-027 and CLIENT-028).
 
 ### Nice to Have
 1. Review release packaging behavior on additional physical devices after the

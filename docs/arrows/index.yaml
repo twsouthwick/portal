@@ -1,5 +1,5 @@
 schema_version: 2
-last_updated: 2026-11-27
+last_updated: 2026-11-28
 
 taxonomy:
   portal:
@@ -56,8 +56,8 @@ arrows:
     blocks: []
     blockedBy: []
     detail: native-client.md
-    next: Implement CLIENT-014–022, then validate the selected public-client authentication against Authelia and target platforms.
-    drift: Manual Portal URL onboarding is implemented without authentication; CLIENT-014–022 specify planned startup/cache behavior with no native implementation or tests, and provider/platform validation remains unverified.
+    next: Verify discovery and the Digital Fortress onboarding screen on native targets; implement CLIENT-014–022 and validate public-client authentication.
+    drift: Manual onboarding, well-known discovery, and the refreshed presentation lack native UI E2E and automated viewport coverage; CLIENT-014–022 startup/cache behavior and provider/platform validation remain unverified.
   runtime-services:
     status: MAPPED
     parent: null

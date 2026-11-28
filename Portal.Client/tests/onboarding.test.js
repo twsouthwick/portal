@@ -119,3 +119,38 @@ it('keeps saving explicit and labels the saved address as unverified', async () 
   assert.match(elements['portal-saved'].textContent, /^Saved Digital Fortress URL:/);
   assert.match(elements['portal-saved'].textContent, /not signed in or verified/);
 });
+
+// @spec CLIENT-013 CLIENT-026
+it('confirms and saves the discovered origin, not the entered alias', async () => {
+  const savedOrigins = [];
+  const elements = await page({
+    check: async () => ({
+      origin: 'https://portal.example.com',
+      outcome: { kind: 'signInRequired' },
+    }),
+    save: async origin => { savedOrigins.push(origin); return origin; },
+  });
+  elements['portal-url'].value = 'https://alias.example.com';
+  await elements['portal-url-form'].dispatch('submit');
+  assert.match(elements['portal-status'].textContent, /https:\/\/portal\.example\.com/);
+  assert.equal(elements['portal-confirm'].hidden, false);
+  await elements['portal-save'].dispatch('click');
+  assert.deepEqual(savedOrigins, ['https://portal.example.com']);
+});
+
+// @spec CLIENT-024 CLIENT-025 CLIENT-026 CLIENT-028
+it('discovery errors are visible and cannot be confirmed', async () => {
+  for (const [outcome, message] of [
+    [{ kind: 'discoveryInvalid' }, /invalid/],
+    [{ kind: 'discoveryTooLarge' }, /8 KiB/],
+    [{ kind: 'discoveryResponse', status: 403 }, /HTTP 403/],
+  ]) {
+    const elements = await page({
+      check: async () => ({ origin: 'https://alias.example.com', outcome }),
+    });
+    await elements['portal-url-form'].dispatch('submit');
+    assert.equal(elements['portal-status'].dataset.state, 'error');
+    assert.match(elements['portal-status'].textContent, message);
+    assert.equal(elements['portal-confirm'].hidden, true);
+  }
+});

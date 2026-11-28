@@ -6,7 +6,8 @@ People need a single authenticated entry point to discover and open the web
 services available to them. Administrators need to describe those services
 without rebuilding the portal, and deployments need both directory/ZIP and
 Kubernetes-backed catalog sources. The repository also contains a native
-desktop/mobile shell, but it does not yet connect to the portal.
+desktop/mobile shell that can check an address but cannot yet authenticate or
+load the catalog.
 
 This description is reconstructed from the repository's README, application
 composition, providers, chart, and client. It records current behavior, not a
@@ -32,8 +33,8 @@ reference a Deployment, StatefulSet, or ReplicaSet in its own namespace. The
 Kubernetes provider excludes the site when the workload is missing or its
 desired replica count is zero; Helm supplies the additional read permissions.
 
-The Tauri client is currently a placeholder shell. Its integration with the
-portal, authentication, and catalog is not implemented.
+The Tauri client can check and save an untrusted portal address, but
+authentication and catalog integration are not implemented.
 
 The owner has selected **Digital Fortress** as the name displayed in native
 client onboarding. This presentation name does not introduce a separate
@@ -47,6 +48,11 @@ The stable container channel owns `latest` and floating major/minor tags.
 **[planned]** The client manifest contract and schema metadata belong to
 issue #6. Issue #7 will expose the manifest and use ASP.NET Core's built-in
 OpenAPI support in development only, without adding a Swagger or Scalar UI.
+
+**[owner-approved design; issue #16]** Manual native-client onboarding first
+checks for an optional externally supplied, non-sensitive well-known
+discovery document. DNS-SD/mDNS LAN discovery is separate work (issues #14
+and #70).
 
 ## Target Users
 
@@ -75,8 +81,8 @@ approved as future product requirements.
 
 ## Non-Goals
 
-- The current Tauri shell does not implement portal connectivity or
-  authentication.
+- The current Tauri shell does not implement authenticated portal connectivity
+  or catalog integration.
 - The Digital Fortress name does not establish a separate deployment or
   runtime.
 - The mapping does not assert that every current implementation detail is an
@@ -110,7 +116,7 @@ flowchart LR
   Aspire --> Authelia[Development Authelia]
   Defaults[Portal.ServiceDefaults] --> Web
   Chart[Helm chart and CRD] --> Web
-  Client[Portal.Client Tauri shell] -. placeholder; no integration .-> User
+  Client[Portal.Client Tauri shell] -. address setup only .-> User
   CI[GitHub Actions] --> Web
   CI --> Client
 ```
