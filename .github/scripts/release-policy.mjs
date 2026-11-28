@@ -1,5 +1,9 @@
 const stableTagPattern = /^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
-const versionPattern = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-([0-9A-Za-z.-]+))?$/;
+const versionPattern = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*)(?:\.(?:0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*))*))?$/;
+
+export function isMinVerVersion(version) {
+  return typeof version === 'string' && versionPattern.test(version);
+}
 
 export function releaseChannel(run) {
   if (run?.event !== 'push') return null;
@@ -20,10 +24,4 @@ export function containerTags(version, channel) {
     return [version, 'dev'];
   }
   throw new Error(`Unknown release channel: ${channel}`);
-}
-
-export function isNewerRun(candidate, current) {
-  const candidateNumber = Number(candidate?.run_number);
-  const currentNumber = Number(current?.run_number);
-  return Number.isSafeInteger(candidateNumber) && candidateNumber > currentNumber;
 }

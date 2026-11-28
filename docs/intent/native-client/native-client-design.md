@@ -158,11 +158,11 @@ redirects are outside this design.
 ## Approved Release Packaging
 
 The client release follows the build-delivery channels: successful `main`
-builds update one rolling `dev` prerelease, while stable `vMAJOR.MINOR.PATCH`
-tags create immutable GitHub Releases. Each channel includes Linux and Windows
-executables for x86_64 and ARM64, plus one signed Android APK. The application
-version shown in release artifacts follows MinVer; stable tags use the
-corresponding stable version.
+builds create a prerelease for each MinVer version, while stable
+`vMAJOR.MINOR.PATCH` tags create immutable GitHub Releases. Each channel
+includes Linux and Windows executables for x86_64 and ARM64, plus one signed
+Android APK. The application version shown in release artifacts follows
+MinVer; stable tags use the corresponding stable version.
 
 The Android APK contains both `arm64-v8a` and `x86_64` native libraries and is
 signed with the repository's `ANDROID_KEYSTORE_BASE64`,

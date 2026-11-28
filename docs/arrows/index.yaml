@@ -89,5 +89,5 @@ arrows:
     blocks: []
     blockedBy: []
     detail: build-delivery.md
-    next: Verify owner-approved release channels on hosted main and stable-tag runs, then audit spec and test traceability.
-    drift: Local tests cover release titles, filenames, notes, and Android signing imports; updated hosted release presentation, GHCR, and signing details remain unverified.
+    next: Verify versioned prereleases on hosted main and stable-tag releases, then audit spec and test traceability.
+    drift: Local tests cover versioned prereleases, immutable reruns, collisions, release presentation, and Android signing imports; hosted versioned publication, GHCR, and signing details remain unverified.

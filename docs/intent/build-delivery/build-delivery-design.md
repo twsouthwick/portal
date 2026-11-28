@@ -36,11 +36,14 @@ image tag.
 
 The native publisher observes completion of the main build, Android debug,
 and native release workflows. All three must have succeeded for the same
-source revision before publication. Main pushes update one rolling
-prerelease tagged `dev`; stable version tags create immutable GitHub Releases.
+source revision before publication. Main pushes create an immutable prerelease
+for each MinVer version; stable version tags create immutable GitHub Releases.
 The release display name is exactly the MinVer semantic version shared by the
-verified native artifacts, including any prerelease suffix; the release tag
-and commit provenance remain unchanged.
+verified native artifacts, including any prerelease suffix. A prerelease uses
+the bare MinVer version as its Git tag, while a stable release uses its
+`vMAJOR.MINOR.PATCH` source tag. The bare prerelease tags do not match the
+project's `v` MinVer tag prefix and therefore do not change subsequent version
+calculations.
 Release assets include four desktop binaries and one signed dual-ABI Android
 APK from a single successful native workflow run and attempt, with
 architecture-qualified names, checksums, and build/run provenance.
@@ -66,15 +69,16 @@ Publishing uses a draft until every asset is uploaded. An interrupted draft
 may be retried only with the same native run and attempt; a draft belonging to
 another run must be inspected and removed manually before retrying. Native
 builds retried after failure must rerun all jobs so that the required desktop
-and Android artifacts come from the same attempt. Publisher runs are
-repository-wide serialized. Desktop binaries are unsigned and their platform
-prerequisites and limitations must be disclosed. The workflow implementation
-and local tests are present; hosted GHCR, signing, and release execution have
-not yet been verified.
+and Android artifacts come from the same attempt. Publisher runs for the same
+source revision and ref are serialized; distinct revisions may publish
+concurrently. Desktop binaries are unsigned and their platform prerequisites
+and limitations must be disclosed. The workflow implementation and local
+tests are present; hosted GHCR, signing, and release execution have not yet
+been verified.
 
 ## Approved Release Policy
 
-The proposal separates rolling development artifacts from stable releases.
+The policy separates development artifacts from stable releases.
 All OCI tags omit the leading `v` and use the exact version computed by MinVer.
 
 - A successful push to `main` publishes the versioned MinVer prerelease image
@@ -87,12 +91,13 @@ All OCI tags omit the leading `v` and use the exact version computed by MinVer.
   stable aliases. The intended first stable tag is `v0.1.0`.
 - The image is published as one OCI multi-platform manifest for `linux/amd64`
   and `linux/arm64`, for both stable and development channels.
-- Main pushes update one rolling native prerelease tagged `dev`; the update
-  includes the four desktop artifacts and a signed Android APK. A stable tag
-  creates an immutable GitHub Release with the same artifact set. Both paths
-  require the build, Android debug, and native release workflows to succeed
-  for the same source revision before publishing. Release assets include
-  checksums and provenance.
+- Main pushes create one native prerelease per MinVer version, tagged with the
+  bare version and containing the four desktop artifacts and a signed Android
+  APK. A stable tag creates an immutable GitHub Release with the same artifact
+  set. Both paths require the build, Android debug, and native release
+  workflows to succeed for the same source revision before publishing.
+  Release assets include checksums and provenance. Pull requests, manual
+  runs, and pushes to other branches do not publish native releases.
 - Android release builds use the repository secrets
   `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, and
   `ANDROID_KEY_ALIAS`. The key password is the same as the keystore password.
@@ -113,16 +118,16 @@ inside the Android Gradle plugin's `android {}` block, where `java` resolves
 to a Gradle extension rather than the package. The signing credentials,
 Android toolchain, and APK targets are unchanged.
 
-The rolling release publisher must serialize updates and must not replace
-`dev` with an older successful main run. It first uploads and verifies new
-version/run/attempt-qualified assets alongside the current assets, then
-switches the `dev` release manifest to the new asset set and removes stale
-assets. The run-number and attempt suffix distinguishes reruns even when their
-MinVer versions match. If upload or verification fails, the previous manifest
-and assets remain usable; if stale-asset cleanup fails after the switch, the
-manifest still identifies the current set and a retry can finish cleanup.
-Stable releases are immutable and must never be modified by a development
-publication.
+The publisher serializes attempts for the same source revision and ref,
+uploads and verifies all assets on a draft, and only then publishes it.
+Different revisions may publish concurrently so GitHub's concurrency queue
+cannot replace a pending release for another commit. A published release is
+never replaced: rebuilding the same MinVer version for the same commit leaves
+its release unchanged. A version tag pointing to another commit, a release
+with a conflicting channel, or an interrupted draft from a different native
+run or attempt fails closed. Older and newer successful main runs have
+separate tags and cannot overwrite each other's releases. Existing releases,
+including the legacy rolling `dev` release, remain untouched.
 
 ## Decisions & Alternatives
 
@@ -131,7 +136,7 @@ publication.
 | Web frontend build | npm typecheck/Webpack runs as part of the .NET web build. **[inferred]** | Independent frontend build or committed generated output. | `Portal.Web.csproj` owns npm build targets and generated output is ignored. |
 | Client verification | Platform-specific smoke and WebDriver/UI adapters share assertions. **[inferred]** | One platform or fully separate test suites. | CI and `Portal.Client/tests/` configure adapters across targets. |
 | Publishing trigger | Publish only on successful pushes to branch/tag triggers. **[inferred]** | Publish PR artifacts or manual-only releases. | Workflow conditions gate GHCR writes to pushes. |
-| Release channels | **Owner-approved:** main publishes a rolling `dev` channel; stable SemVer tags publish immutable versioned artifacts and stable container aliases. | Point `latest` at main; retain each main prerelease. | Separates deployable stable versions from CI output while keeping one discoverable development build. |
+| Release channels | **Owner-approved:** main publishes an immutable native prerelease for each MinVer version and a rolling `dev` container image; stable SemVer tags publish immutable versioned artifacts and stable container aliases. | Point `latest` at main; retain one rolling native prerelease. | Separates deployable stable versions from CI output while making development releases individually discoverable. |
 
 ## Open Questions & Future Decisions
 
