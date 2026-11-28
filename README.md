@@ -12,6 +12,9 @@ access control.
 - **Markdown usage guides** for subsites
 - **App protocol launching** with app-store fallbacks
 - **Private mode detection** to show private sites only in incognito mode
+- **Category-first browsing** in native apps and the web portal: select a
+  category to see its sites, then return with Back to categories
+- **Always-visible version footer** while page content scrolls
 
 ## Getting started
 

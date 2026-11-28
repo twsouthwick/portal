@@ -1,6 +1,4 @@
-@inject ISiteClickTracker ClickTracker
-@inject ILocalStorageProvider LocalStorage
-
+@* @spec UX-013 *@
 <FluentStack Orientation="Orientation.Horizontal" HorizontalGap="8">
     <FluentLabel Typo="Typography.Body">View by:</FluentLabel>
     <FluentSelect Id="viewmode-selector"
@@ -30,7 +28,6 @@
             if (field != value)
             {
                 field = value;
-                LocalStorage.SetItemAsync<SiteViewMode>("sortBy", value);
                 CurrentModeChanged.InvokeAsync(value);
             }
         }
@@ -38,15 +35,6 @@
 
     [Parameter]
     public EventCallback<SiteViewMode> CurrentModeChanged { get; set; }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            var mode = await LocalStorage.GetItemAsync<SiteViewMode>("sortBy");
-            CurrentMode = mode is SiteViewMode.None ? SiteViewMode.Categories : mode;
-        }
-    }
 
     private string selectedValue
     {

@@ -18,6 +18,20 @@ group/order sites by the available categories and usage frequency. Cards
 display site metadata and may open usage instructions in a Markdown modal.
 Main layout provides the portal header and logout action.
 
+### Category-first navigation (owner-approved 2026-11-28)
+
+Initial catalog browsing shows category buttons and site counts instead of
+all site cards. Selecting a category shows only that category's sites, with
+a Back to categories action. Categories keep the web portal's alphabetical
+ordering; uncategorized sites use the visible name `Other`. A site belonging
+to multiple categories remains available in each. Search continues to filter
+the catalog and counts; a category removed by filtering returns navigation to
+the category chooser. Keyboard focus follows navigation and returns to the
+activating category. Existing card launch and usage-modal behavior is unchanged.
+
+Categories is the initial view, regardless of a previously saved view mode.
+The existing Most Used view remains available as an explicit user choice.
+
 ### Owner-approved layout restoration
 
 The Fluent UI v5 migration preserves the existing responsive grid and its
@@ -42,6 +56,12 @@ commit SHA appended by the .NET SDK) removed. A single `PortalVersion`
 service supplies the value so the footer and the manifest `Portal-Version`
 header (AUTH-023) always agree. Local unversioned builds show MinVer's
 default pre-release version rather than hiding the footer.
+
+**[owner-approved 2026-11-28]** Both layouts reserve a non-scrolling footer
+row inside a viewport-height shell. The main content scrolls independently,
+so the version remains visible even with a large catalog or long signed-out
+content. The footer can wrap and respects mobile safe-area insets without
+covering the content.
 
 ## Browser-Aware Presentation and Launch
 

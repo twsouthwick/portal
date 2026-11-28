@@ -1,9 +1,24 @@
+/* @spec UX-012 */
+.portal-layout {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
+}
+
+.portal-content {
+    min-height: 0;
+    overflow-y: auto;
+    scrollbar-gutter: stable;
+}
+
 /* Main container centering */
 .centered-container {
     max-width: 90%;
     width: 100%;
     margin: 0 auto;
-    padding-top: 2rem;
+    padding: 2rem 0;
 }
 
 /* Header flexbox layout for title and view mode selector */
@@ -13,6 +28,9 @@
     padding: 0.5rem 1rem;
     overflow: hidden;
     --header-height: auto;
+    padding-top: max(0.5rem, env(safe-area-inset-top, 0px));
+    padding-left: max(1rem, env(safe-area-inset-left, 0px));
+    padding-right: max(1rem, env(safe-area-inset-right, 0px));
 }
 
 .header-content {
@@ -73,6 +91,9 @@
 @media (max-width: 768px) {
     .portal-header {
         padding: 0.5rem;
+        padding-top: max(0.5rem, env(safe-area-inset-top, 0px));
+        padding-left: max(0.5rem, env(safe-area-inset-left, 0px));
+        padding-right: max(0.5rem, env(safe-area-inset-right, 0px));
         --header-height: auto;
     }
 

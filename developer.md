@@ -224,8 +224,12 @@ builds receive the callback on `http://127.0.0.1:49152/oidc-callback`; Android u
 in the OS credential store (Secret Service, Windows Credential Manager, or the
 Android keystore); the manifest is cached encrypted in the app data directory
 so the site list appears immediately on the next launch while a refresh runs.
-The site list groups cards by category and opens a details view with apps for
-the current platform and sanitized usage instructions. Session, token, and
+The site list starts with category buttons and site counts, then shows only
+the selected category's cards. Details return to that category; Back to
+categories returns to the chooser. The version footer stays outside the
+scrolling content on onboarding, sign-in, category lists, and details.
+The details view includes apps for the current platform and sanitized usage
+instructions. Session, token, and
 cache logic lives in the Tauri-free `portal-session` crate, and the UI
 helpers have Node unit tests:
 

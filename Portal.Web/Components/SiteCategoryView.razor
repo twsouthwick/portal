@@ -1,43 +1,96 @@
-@* Displays sites grouped by their categories *@
+@inject ILogger<SiteCategoryView> Logger
 
-@foreach (var category in GetCategorizedSites().Keys.OrderBy(k => k))
+@* @spec UX-013 *@
+@if (selectedCategory is not null)
 {
-    <SiteGrid Category="@category" Sites="@GetCategorizedSites()[category]" />
+    <button @ref="backButton" class="category-back" type="button" @onclick="ShowCategories">
+        <i class="bi bi-arrow-left" aria-hidden="true"></i> Back to categories
+    </button>
+    <SiteGrid Category="@selectedCategory" Sites="@categorizedSites[selectedCategory]" />
+}
+else
+{
+    <FluentText As="TextTag.H2" Size="TextSize.Size600" Weight="TextWeight.Semibold">Categories</FluentText>
+    <FluentGrid Spacing="3" Style="width: 100%;">
+        @foreach (var category in categorizedSites.Keys.OrderBy(k => k))
+        {
+            <FluentGridItem xs="12" sm="6" md="4" lg="3" @key="category">
+                <button @ref="categoryButtons[category]" class="category-card" type="button"
+                        data-category="@category" @onclick="() => SelectCategory(category)">
+                    <i class="bi bi-folder" aria-hidden="true"></i>
+                    <span class="category-name">@category</span>
+                    <span class="category-count">@categorizedSites[category].Count @(categorizedSites[category].Count == 1 ? "site" : "sites")</span>
+                </button>
+            </FluentGridItem>
+        }
+    </FluentGrid>
 }
 
 @code {
     [Parameter, EditorRequired]
     public IEnumerable<SiteInfo> Sites { get; set; } = [];
 
-    private Dictionary<string, List<SiteInfo>> GetCategorizedSites()
+    private Dictionary<string, List<SiteInfo>> categorizedSites = [];
+    private readonly Dictionary<string, ElementReference> categoryButtons = [];
+    private ElementReference backButton;
+    private string? selectedCategory;
+    private string? focusCategory;
+    private bool focusBack;
+
+    protected override void OnParametersSet()
     {
-        var categorizedSites = new Dictionary<string, List<SiteInfo>>();
+        categorizedSites = [];
+        categoryButtons.Clear();
 
         foreach (var site in Sites)
         {
-            // If site has no categories, add it to the empty/uncategorized group
-            if (site.Categories.Count == 0)
+            var categories = site.Categories.Count == 0 ? ["Other"] : site.Categories;
+            foreach (var category in categories.Distinct())
             {
-                if (!categorizedSites.ContainsKey(string.Empty))
+                if (!categorizedSites.TryGetValue(category, out var group))
                 {
-                    categorizedSites[string.Empty] = new List<SiteInfo>();
+                    group = [];
+                    categorizedSites.Add(category, group);
                 }
-                categorizedSites[string.Empty].Add(site);
-            }
-            else
-            {
-                // Add the site to each of its categories
-                foreach (var category in site.Categories)
-                {
-                    if (!categorizedSites.ContainsKey(category))
-                    {
-                        categorizedSites[category] = new List<SiteInfo>();
-                    }
-                    categorizedSites[category].Add(site);
-                }
+                group.Add(site);
             }
         }
 
-        return categorizedSites;
+        if (selectedCategory is not null && !categorizedSites.ContainsKey(selectedCategory))
+        {
+            selectedCategory = null;
+            focusCategory = categorizedSites.Keys.OrderBy(k => k).FirstOrDefault();
+        }
+    }
+
+    private void SelectCategory(string category)
+    {
+        selectedCategory = category;
+        focusBack = true;
+    }
+
+    private void ShowCategories()
+    {
+        focusCategory = selectedCategory;
+        selectedCategory = null;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        ElementReference? target = focusBack ? backButton
+            : focusCategory is not null && categoryButtons.TryGetValue(focusCategory, out var button) ? button : null;
+        focusBack = false;
+        focusCategory = null;
+        if (target is { } element)
+        {
+            try
+            {
+                await element.FocusAsync();
+            }
+            catch (JSException exception)
+            {
+                Logger.LogWarning(exception, "Could not focus category navigation.");
+            }
+        }
     }
 }

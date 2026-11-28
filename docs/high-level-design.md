@@ -57,6 +57,13 @@ and #70).
 
 ## Target Users
 
+**Owner-approved UI direction (2026-11-28):** Native apps and the web portal
+start catalog browsing with categories, then show only the selected category's
+sites. Version footers remain visible outside scrolling content on every
+screen, with mobile safe-area spacing. Existing authorization and launch
+behavior are unchanged. The portal-experience and native-client LLDs own the
+navigation and layout details.
+
 - **Portal users** need to find and open the sites available to their identity,
   browser, and device.
 - **Portal operators** configure OIDC, site manifests or Kubernetes resources,

@@ -101,6 +101,12 @@ The onboarding footer shows the native app version, read from the Tauri
 package version through a host command (MinVer in release builds per
 CLIENT-007; `0.1.0` in local builds). It also shows the website version.
 
+**[owner-approved 2026-11-28]** The footer stays visible on onboarding,
+sign-in, category selection, category lists, and site details. A
+viewport-height shell reserves a non-scrolling footer row; only the content
+region scrolls. Footer spacing respects Android safe-area insets, and wrapped
+version text grows the reserved row rather than overlapping content.
+
 The Rust host reads the website version from the `Portal-Version` header
 (AUTH-023) of the existing `/api/manifest` probe, so no additional request is
 made during a check. The header is untrusted: the host accepts it only if it
@@ -407,11 +413,20 @@ blue-violet accents. Onboarding's sign-in notice is replaced by a Sign in
 action once an address is saved. The header shows the manifest name and description, a
 refresh status, and a Sign out action. The status is one of: refreshing; up
 to date with the refresh time; offline or failed, showing saved sites from
-the refresh time; or sign-in required. Sites form a responsive card grid
-(`repeat(auto-fill, minmax(16rem, 1fr))`, one column on narrow screens),
-grouped under category headings in order of first appearance. A site with
-several categories appears in each group. Sites with no categories appear
-under "Other". Each card shows the site's icon, name, description, and
+the refresh time; or sign-in required.
+
+**[owner-approved 2026-11-28]** Catalog browsing starts with a responsive grid
+of category buttons showing category names and site counts, not site cards.
+Categories retain first-appearance ordering; uncategorized sites belong to
+"Other". Selecting a category displays only its sites as a responsive card
+grid, with a Back to categories action. A site with several categories belongs
+to each category. Site details return to the selected category; another Back
+returns to categories. Keyboard focus follows navigation and returns to the
+activating card/category. Refresh retains a selected category or site only
+while it still exists in the refreshed catalog; otherwise navigation returns
+to the nearest valid parent. Signing out resets category selection.
+
+Each site card shows the site's icon, name, description, and
 `Private` and `Internal` badges. Badges only describe a site; they neither
 hide it nor grant access. Private toggles and home-network detection remain
 planned (issue #53). The icon is a Bootstrap Icons class from the bundled
