@@ -30,9 +30,10 @@ local development and contribution instructions, see the
 
 Successful `main` builds update the rolling `dev` prerelease on the
 [GitHub Releases page](https://github.com/twsouthwick/portal/releases).
-Stable `vMAJOR.MINOR.PATCH` tags create immutable releases. Both channels
-include Linux and Windows AppImages/executables for x86_64 and ARM64 plus a
-signed Android APK containing `arm64-v8a` and `x86_64`; checksums and build
+Stable `vMAJOR.MINOR.PATCH` tags create immutable releases. New release titles
+are the exact MinVer semantic version. Both channels include Linux and Windows
+AppImages/executables for x86_64 and ARM64 plus a signed Android APK containing
+`arm64-v8a` and `x86_64`; checksums and build
 provenance accompany the assets. The Android APK is smoke-tested on an x86_64
 emulator, while the ARM64 libraries are inspected but not device-tested.
 

@@ -81,7 +81,7 @@ function runNumberFromBody(body) {
   return match ? Number(match[1]) : null;
 }
 
-// @spec DELIVERY-008 DELIVERY-009 DELIVERY-010 DELIVERY-011 DELIVERY-012 DELIVERY-017 DELIVERY-018
+// @spec DELIVERY-008 DELIVERY-009 DELIVERY-010 DELIVERY-011 DELIVERY-012 DELIVERY-017 DELIVERY-018 DELIVERY-020
 export async function publish({ event, repository, repositoryId, apiUrl, token, publisherRunId, request = fetch, download = execFileSync, tempRoot = tmpdir() }) {
   const trigger = event.workflow_run;
   const sha = trigger.head_sha;
@@ -219,7 +219,7 @@ export async function publish({ event, repository, repositoryId, apiUrl, token, 
       if (await tagCommitSha(ref) !== sha) throw new Error('Created tag does not point at the source commit');
     }
     release = await api('/releases', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tag_name: tag, target_commitish: trigger.head_branch, name: channel === 'stable' ? `Portal ${trigger.head_branch}` : 'Portal development build', body, draft: true, prerelease: channel === 'dev', make_latest: 'false' }) });
+      body: JSON.stringify({ tag_name: tag, target_commitish: trigger.head_branch, name: version, body, draft: true, prerelease: channel === 'dev', make_latest: 'false' }) });
   }
   const uploadUrl = new URL(release.upload_url.replace(/\{.*$/, ''));
   if (uploadUrl.protocol !== 'https:' || uploadUrl.hostname !== 'uploads.github.com') throw new Error('Unexpected release upload host');
@@ -265,9 +265,9 @@ export async function publish({ event, repository, repositoryId, apiUrl, token, 
   if (assets.some(asset => !finalRelease.assets.some(uploaded => uploaded.name === asset.name && uploaded.digest === `sha256:${asset.hash}`))) {
     throw new Error('Release is missing a verified asset');
   }
-  if (finalRelease.body !== body || finalRelease.draft || finalRelease.prerelease !== (channel === 'dev')) {
+  if (finalRelease.name !== version || finalRelease.body !== body || finalRelease.draft || finalRelease.prerelease !== (channel === 'dev')) {
     await api(`/releases/${release.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ body, draft: false, prerelease: channel === 'dev', make_latest: channel === 'stable' ? 'true' : 'false' }) });
+      body: JSON.stringify({ name: version, body, draft: false, prerelease: channel === 'dev', make_latest: channel === 'stable' ? 'true' : 'false' }) });
   }
   if (channel === 'dev' && finalTagSha !== sha) {
     await api(`/git/refs/tags/${tag}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' },

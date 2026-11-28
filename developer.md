@@ -420,7 +420,10 @@ matching runs for the same commit have succeeded. Pull requests, manual runs,
 and non-stable tags do not publish. Only the publisher receives release-write
 permissions.
 
-The [Releases page](https://github.com/twsouthwick/portal/releases) has one
+New release titles exactly match the verified artifacts' MinVer version,
+including any prerelease suffix. Tags remain `dev` or `vMAJOR.MINOR.PATCH`;
+older prereleases may retain `dev-<commit>` tags. The
+[Releases page](https://github.com/twsouthwick/portal/releases) contains the
 mutable `dev` prerelease and immutable stable releases. Release notes link to
 the verification runs; run-qualified provenance identifies the native run,
 attempt, original artifacts, and toolchain details. `SHA256SUMS` covers all
