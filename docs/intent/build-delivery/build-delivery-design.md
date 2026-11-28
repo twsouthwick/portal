@@ -38,6 +38,9 @@ The native publisher observes completion of the main build, Android debug,
 and native release workflows. All three must have succeeded for the same
 source revision before publication. Main pushes update one rolling
 prerelease tagged `dev`; stable version tags create immutable GitHub Releases.
+The release display name is exactly the MinVer semantic version shared by the
+verified native artifacts, including any prerelease suffix; the release tag
+and commit provenance remain unchanged.
 Release assets include four desktop binaries and one signed dual-ABI Android
 APK from a single successful native workflow run and attempt, with
 architecture-qualified names, checksums, and build/run provenance.

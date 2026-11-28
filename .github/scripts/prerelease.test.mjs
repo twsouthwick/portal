@@ -114,7 +114,7 @@ test('a stable release is immutable and an older main run cannot replace dev', a
   const stableSha = 'b'.repeat(40);
   const calls = [];
   const result = (data, status = 200) => new Response(data === null ? null : JSON.stringify(data), { status });
-  const stableRelease = { id: 2, tag_name: 'v0.1.0', draft: false, prerelease: false, body: 'stable', assets: [] };
+  const stableRelease = { id: 2, tag_name: 'v0.1.0', name: 'Portal v0.1.0', draft: false, prerelease: false, body: 'stable', assets: [] };
   const devRelease = {
     id: 3, tag_name: 'dev', draft: false, prerelease: true,
     body: '<!-- native-run:99-attempt:1-run-number:13 -->', assets: [],
@@ -155,11 +155,12 @@ test('a stable release is immutable and an older main run cannot replace dev', a
   assert.deepEqual(calls.filter(call => !call.startsWith('GET ')), []);
 });
 
-// @spec DELIVERY-008 DELIVERY-010 DELIVERY-011 DELIVERY-012
-test('publication stays draft after verification reruns and retries the same native attempt', async () => {
+async function publicationFixture({ channel = 'dev', rerunOnRecheck = false } = {}) {
   const dir = await mkdtemp(join(tmpdir(), 'portal-prerelease-test-'));
-  let ref = { object: { type: 'commit', sha: 'c'.repeat(40) } };
-  let release = null;
+  const tag = channel === 'dev' ? 'dev' : 'v0.1.0';
+  const branch = channel === 'dev' ? 'main' : tag;
+  const version = channel === 'dev' ? '0.1.1-alpha.0.4' : '0.1.0';
+  const state = { ref: { object: { type: 'commit', sha: channel === 'dev' ? 'c'.repeat(40) : sha } }, release: null };
   const mutations = [];
   const workflowRequests = new Map();
   const result = (data, status = 200) => new Response(data === null ? null : JSON.stringify(data), { status });
@@ -171,40 +172,40 @@ test('publication stays draft after verification reruns and retries the same nat
       const workflow = path.match(/\/actions\/workflows\/([^/]+)\/runs/)[1];
       const count = (workflowRequests.get(workflow) ?? 0) + 1;
       workflowRequests.set(workflow, count);
-      const rerun = workflow !== 'native-release.yaml' && count >= 2;
+      const rerun = rerunOnRecheck && workflow !== 'native-release.yaml' && count >= 2;
       const rerunId = workflow === 'build.yaml' ? 22 : 23;
       const run = rerun
-        ? { ...push, id: rerunId, run_attempt: 2, html_url: `https://github.com/o/r/actions/runs/${rerunId}` }
-        : { ...push, html_url: `https://github.com/o/r/actions/runs/${push.id}` };
+        ? { ...push, head_branch: branch, id: rerunId, run_attempt: 2, html_url: `https://github.com/o/r/actions/runs/${rerunId}` }
+        : { ...push, head_branch: branch, html_url: `https://github.com/o/r/actions/runs/${push.id}` };
       return result({ workflow_runs: [run] });
     }
-    if (path.startsWith('/git/ref/tags/')) return ref ? result(ref) : result(null, 404);
-    if (path === '/releases' && method === 'GET') return result(release ? [release] : []);
+    if (path === `/git/ref/tags/${tag}`) return state.ref ? result(state.ref) : result(null, 404);
+    if (path === '/releases' && method === 'GET') return result(state.release ? [state.release] : []);
     if (method !== 'GET') mutations.push(`${method} ${path}`);
-    if (path === '/git/refs/tags/dev' && method === 'PATCH') {
-      ref = { object: { type: 'commit', sha: body.sha } };
-      return result(ref);
+    if (path === `/git/refs/tags/${tag}` && method === 'PATCH') {
+      state.ref = { object: { type: 'commit', sha: body.sha } };
+      return result(state.ref);
     }
-    if (path === '/git/refs' && method === 'POST') return result(ref = { object: { type: 'commit', sha: body.sha } });
+    if (path === '/git/refs' && method === 'POST') return result(state.ref = { object: { type: 'commit', sha: body.sha } });
     if (path === '/releases' && method === 'POST') {
-      release = { ...body, id: 1, assets: [], upload_url: 'https://uploads.github.com/repos/o/r/releases/1/assets{?name,label}' };
-      return result(release);
+      state.release = { ...body, id: 1, assets: [], upload_url: 'https://uploads.github.com/repos/o/r/releases/1/assets{?name,label}' };
+      return result(state.release);
     }
     if (path === '/releases/1/assets' && method === 'POST') {
       const name = new URL(url).searchParams.get('name');
-      const asset = { id: release.assets.length + 1, name, state: 'uploaded',
+      const asset = { id: state.release.assets.length + 1, name, state: 'uploaded',
         digest: `sha256:${createHash('sha256').update(options.body).digest('hex')}` };
-      release.assets.push(asset);
+      state.release.assets.push(asset);
       return result(asset);
     }
     if (path.startsWith('/releases/assets/') && method === 'DELETE') {
-      release.assets = release.assets.filter(asset => asset.id !== Number(path.split('/').pop()));
+      state.release.assets = state.release.assets.filter(asset => asset.id !== Number(path.split('/').pop()));
       return result(null, 204);
     }
-    if (path === '/releases/1' && method === 'GET') return result(release);
+    if (path === '/releases/1' && method === 'GET') return result(state.release);
     if (path === '/releases/1' && method === 'PATCH') {
-      Object.assign(release, body);
-      return result(release);
+      Object.assign(state.release, body);
+      return result(state.release);
     }
     throw new Error(`Unexpected request: ${method} ${url}`);
   };
@@ -221,38 +222,90 @@ test('publication stays draft after verification reruns and retries the same nat
     await writeFile(join(directory, name), contents);
     await writeFile(join(directory, 'SHA256SUMS'), `${hash}  ${name}\n`);
     await writeFile(join(directory, 'provenance.txt'),
-      `commit=${sha}\nrun=12\nattempt=1\nrunner=${android ? 'Linux-Android' : `${windows ? 'Windows' : 'Linux'}-${arch}`}\n${android ? 'abi=arm64-v8a,x86_64\n' : ''}version=0.1.1-alpha.0.4\nrust=rustc\nnode=v24\n`);
+      `commit=${sha}\nrun=12\nattempt=1\nrunner=${android ? 'Linux-Android' : `${windows ? 'Windows' : 'Linux'}-${arch}`}\n${android ? 'abi=arm64-v8a,x86_64\n' : ''}version=${version}\nrust=rustc\nnode=v24\n`);
   };
-  const options = { event: { workflow_run: { ...push, head_repository: { id: 123 } } }, repository: 'o/r', repositoryId: '123',
+  const options = { event: { workflow_run: { ...push, head_branch: branch, head_repository: { id: 123 } } }, repository: 'o/r', repositoryId: '123',
     apiUrl: 'https://api.github.com', token: 'test', publisherRunId: '1', request, download, tempRoot: dir };
-  try {
-    await assert.rejects(publish(options), /Verification changed during publication/);
-    assert.equal(release.draft, true);
-    assert.equal(release.assets.length, 7);
-    const provenanceDigest = release.assets.find(asset => asset.name.startsWith('provenance-')).digest;
-    const originalDigest = release.assets[0].digest;
-    release.assets[0].digest = 'sha256:incorrect';
-    await assert.rejects(publish({ ...options, publisherRunId: 'mismatch' }), /Mismatched release asset/);
-    release.assets[0].digest = originalDigest;
-    await publish({ ...options, publisherRunId: '2' });
-    assert.equal(ref.object.sha, sha);
-    assert.equal(release.assets.find(asset => asset.name.startsWith('provenance-')).digest, provenanceDigest);
-    assert.equal(release.draft, false);
-    assert.equal(release.prerelease, true);
-    assert.deepEqual(release.assets.map(a => a.name).sort(), [
-      `SHA256SUMS-${sha}-run-12-attempt-1`,
-      `portal-client-android-multiabi-${sha}-run-12-attempt-1.apk`,
-      `portal-client-linux-arm64-${sha}-run-12-attempt-1.AppImage`,
-      `portal-client-linux-x86_64-${sha}-run-12-attempt-1.AppImage`,
-      `portal-client-windows-arm64-${sha}-run-12-attempt-1.exe`,
-      `portal-client-windows-x86_64-${sha}-run-12-attempt-1.exe`,
-      `provenance-${sha}-run-12-attempt-1.json`,
-    ].sort());
-    assert.equal(mutations.some(mutation => mutation.startsWith('DELETE ')), false);
-    const before = mutations.length;
-    await publish({ ...options, publisherRunId: '3' });
-    assert.equal(mutations.length, before);
-  } finally {
-    await rm(dir, { recursive: true, force: true });
-  }
+  return { options, state, mutations, version, tag, cleanup: () => rm(dir, { recursive: true, force: true }) };
+}
+
+// @spec DELIVERY-008 DELIVERY-010 DELIVERY-011 DELIVERY-012
+test('publication stays draft after verification reruns and retries the same native attempt', async (t) => {
+  const { options, state, mutations, cleanup } = await publicationFixture({ rerunOnRecheck: true });
+  t.after(cleanup);
+  await assert.rejects(publish(options), /Verification changed during publication/);
+  assert.equal(state.release.draft, true);
+  assert.equal(state.release.assets.length, 7);
+  const provenanceDigest = state.release.assets.find(asset => asset.name.startsWith('provenance-')).digest;
+  const originalDigest = state.release.assets[0].digest;
+  state.release.assets[0].digest = 'sha256:incorrect';
+  await assert.rejects(publish({ ...options, publisherRunId: 'mismatch' }), /Mismatched release asset/);
+  state.release.assets[0].digest = originalDigest;
+  await publish({ ...options, publisherRunId: '2' });
+  assert.equal(state.ref.object.sha, sha);
+  assert.equal(state.release.assets.find(asset => asset.name.startsWith('provenance-')).digest, provenanceDigest);
+  assert.equal(state.release.draft, false);
+  assert.equal(state.release.prerelease, true);
+  assert.deepEqual(state.release.assets.map(a => a.name).sort(), [
+    `SHA256SUMS-${sha}-run-12-attempt-1`,
+    `portal-client-android-multiabi-${sha}-run-12-attempt-1.apk`,
+    `portal-client-linux-arm64-${sha}-run-12-attempt-1.AppImage`,
+    `portal-client-linux-x86_64-${sha}-run-12-attempt-1.AppImage`,
+    `portal-client-windows-arm64-${sha}-run-12-attempt-1.exe`,
+    `portal-client-windows-x86_64-${sha}-run-12-attempt-1.exe`,
+    `provenance-${sha}-run-12-attempt-1.json`,
+  ].sort());
+  assert.equal(mutations.some(mutation => mutation.startsWith('DELETE ')), false);
+  const before = mutations.length;
+  await publish({ ...options, publisherRunId: '3' });
+  assert.equal(mutations.length, before);
+});
+
+for (const channel of ['dev', 'stable']) {
+  // @spec DELIVERY-020
+  test(`new ${channel} release is named exactly for its native artifact version`, async (t) => {
+    const { options, state, version, tag, cleanup } = await publicationFixture({ channel });
+    t.after(cleanup);
+    await publish(options);
+    assert.equal(state.release.name, version);
+    assert.equal(state.release.tag_name, tag);
+    assert.equal(state.release.prerelease, channel === 'dev');
+    assert.equal(state.release.draft, false);
+    assert.ok(state.release.body.includes(`Artifact version: ${version}.`));
+  });
+}
+
+// @spec DELIVERY-011 DELIVERY-020
+test('rolling release title changes only after the new assets are verified and repairs a stale name', async (t) => {
+  const { options, state, mutations, version, cleanup } = await publicationFixture();
+  t.after(cleanup);
+  const oldBody = '<!-- native-run:11-attempt:1-run-number:11 -->\nPrevious development build.';
+  state.release = {
+    id: 1, tag_name: 'dev', name: 'Portal development build', draft: false, prerelease: true, body: oldBody,
+    assets: [{ id: 100, name: 'previous.AppImage', state: 'uploaded', digest: 'sha256:old' }],
+    upload_url: 'https://uploads.github.com/repos/o/r/releases/1/assets{?name,label}',
+  };
+  const request = async (url, init) => {
+    if (new URL(url).hostname === 'uploads.github.com') throw new Error('Upload failed');
+    return options.request(url, init);
+  };
+  await assert.rejects(publish({ ...options, publisherRunId: 'failed', request }), /Upload failed/);
+  assert.equal(state.release.name, 'Portal development build');
+  assert.equal(state.release.body, oldBody);
+  assert.equal(state.release.assets.length, 1);
+
+  await publish({ ...options, publisherRunId: 'update' });
+  assert.equal(state.release.name, version);
+  assert.equal(state.ref.object.sha, sha);
+  assert.equal(state.release.assets.some(asset => asset.name === 'previous.AppImage'), false);
+
+  state.release.name = 'Portal development build';
+  const before = mutations.length;
+  await publish({ ...options, publisherRunId: 'name-only' });
+  assert.equal(state.release.name, version);
+  assert.deepEqual(mutations.slice(before), ['PATCH /releases/1']);
+
+  const after = mutations.length;
+  await publish({ ...options, publisherRunId: 'unchanged' });
+  assert.equal(mutations.length, after);
 });
