@@ -56,8 +56,8 @@ path-concatenated spec IDs and every citation atomically.
   project files and test directory show .NET 11 and an xUnit test project.
 - Root README examples refer to `Portal.Web/TypeScript/`, while current sources
   are in `Portal.Web/ts/`.
-- The broader product intent behind the label “Digital Fortress” is not
-  represented in the inspected repository; no implementation is claimed.
+- The owner selected “Digital Fortress” for native onboarding; the broader
+  product scope behind that name is not established by this map.
 
 These discrepancies are recorded for later reconciliation; their intended
 resolution is not inferred by this map.

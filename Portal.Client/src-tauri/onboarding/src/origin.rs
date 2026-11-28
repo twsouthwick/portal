@@ -27,18 +27,19 @@ pub enum OriginError {
     NotAnOrigin,
 }
 
+// @spec CLIENT-029
 impl fmt::Display for OriginError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(match self {
-            Self::Empty => "Enter the Portal URL.",
-            Self::Invalid => "The Portal URL is not valid.",
-            Self::UnsupportedScheme => "The Portal URL must use https.",
-            Self::InsecureScheme => "The Portal URL must use https.",
+            Self::Empty => "Enter your Digital Fortress address.",
+            Self::Invalid => "The Digital Fortress address is not valid.",
+            Self::UnsupportedScheme => "The Digital Fortress address must use https.",
+            Self::InsecureScheme => "The Digital Fortress address must use https.",
             Self::CredentialsNotAllowed => {
-                "The Portal URL must not contain a user name or password."
+                "The Digital Fortress address must not contain a user name or password."
             }
             Self::NotAnOrigin => {
-                "Enter only the Portal address, without a path, query, or fragment."
+                "Enter only your Digital Fortress address, without a path, query, or fragment."
             }
         })
     }
@@ -177,6 +178,23 @@ mod tests {
             https("file:///etc/passwd"),
             Err(OriginError::UnsupportedScheme)
         );
+    }
+
+    // @spec CLIENT-029
+    #[test]
+    fn validation_errors_use_the_product_name_and_keep_guidance() {
+        for (input, guidance) in [
+            ("", "address"),
+            ("http://example.com", "https"),
+            ("https://user:pw@example.com", "password"),
+            ("https://example.com/sites", "path"),
+        ] {
+            let message = PortalOrigin::parse(input, OriginPolicy::HttpsOnly)
+                .unwrap_err()
+                .to_string();
+            assert!(message.contains("Digital Fortress"), "{message}");
+            assert!(message.contains(guidance), "{message}");
+        }
     }
 
     // @spec CLIENT-009

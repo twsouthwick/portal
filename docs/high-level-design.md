@@ -35,6 +35,10 @@ desired replica count is zero; Helm supplies the additional read permissions.
 The Tauri client is currently a placeholder shell. Its integration with the
 portal, authentication, and catalog is not implemented.
 
+The owner has selected **Digital Fortress** as the name displayed in native
+client onboarding. This presentation name does not introduce a separate
+runtime or change the existing Portal service interfaces.
+
 The owner-approved release policy separates development builds from stable versions:
 pushes to `main` publish mutable `dev` artifacts, while stable releases are
 created from `vMAJOR.MINOR.PATCH` tags using the corresponding MinVer version.
@@ -73,8 +77,8 @@ approved as future product requirements.
 
 - The current Tauri shell does not implement portal connectivity or
   authentication.
-- The repository does not establish a separate deployment or runtime for
-  Digital Fortress; no such references were found in the inspected files.
+- The Digital Fortress name does not establish a separate deployment or
+  runtime.
 - The mapping does not assert that every current implementation detail is an
   intended invariant. Unexplained or inconsistent behavior is recorded as an
   open question in the relevant design.

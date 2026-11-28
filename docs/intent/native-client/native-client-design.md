@@ -72,6 +72,28 @@ below, which has not been validated against Authelia or the target platforms.
 This change therefore performs no sign-in, sends no tokens, and does not claim
 a verified connection. Sign-in is added once that validation is complete.
 
+### Onboarding presentation
+
+**[owner-approved 2026-11-28]** Replace the placeholder page with a responsive, branded
+onboarding screen. A dark, high-contrast palette, blue-violet accents, and a
+decorative portal motif give the page a distinct identity. On wider screens,
+the introduction and connection form sit beside one another; on narrow
+screens, they stack without horizontal scrolling.
+
+**[owner-selected 2026-11-28]** The screen uses Digital Fortress as its
+user-facing name. This changes presentation copy, not the Portal service
+interfaces or the native package identity. Native validation and saved-address
+errors use the same name while retaining actionable error details.
+
+The form keeps the labeled Portal URL, connection check, outcome messages,
+explicit save confirmation, and saved-address status. It explains that a
+reachable endpoint is not a verified identity and that saving does not sign
+the user in. Editing the address clears the previous result and hides its
+confirmation. Controls remain keyboard accessible, have visible focus, and
+provide readable status announcements. The screen uses local assets and system
+fonts and does not introduce authentication or change the URL-checking and
+storage behavior.
+
 ## Approved Release Packaging
 
 The client release follows the build-delivery channels: successful `main`

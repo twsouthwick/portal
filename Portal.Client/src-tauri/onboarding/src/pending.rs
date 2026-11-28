@@ -30,6 +30,7 @@ impl PendingOrigin {
         true
     }
 
+    /// @spec CLIENT-013 CLIENT-029
     pub fn save_if_confirmed(
         &self,
         path: &Path,
@@ -38,7 +39,7 @@ impl PendingOrigin {
         let mut pending = self.0.lock().unwrap();
         let confirmed = match pending.origin.as_ref() {
             Some(checked) if checked.as_str() == expected_origin => checked.clone(),
-            _ => return Err("Check this Portal URL before saving it.".into()),
+            _ => return Err("Check this Digital Fortress address before saving it.".into()),
         };
         save_origin(path, &confirmed).map_err(|error| error.to_string())?;
         pending.origin = None;
@@ -77,5 +78,16 @@ mod tests {
         assert!(pending.publish_if_current(current_generation, current_origin.clone()));
         assert!(!pending.publish_if_current(stale_generation, origin("https://first.example.com")));
         assert_eq!(pending.0.lock().unwrap().origin, Some(current_origin));
+    }
+
+    // @spec CLIENT-013 CLIENT-029
+    #[test]
+    fn unchecked_address_has_branded_confirmation_guidance() {
+        let pending = PendingOrigin::default();
+        let error = pending
+            .save_if_confirmed(Path::new("unused"), "https://example.com")
+            .unwrap_err();
+        assert!(error.contains("Digital Fortress"));
+        assert!(error.contains("Check"));
     }
 }
