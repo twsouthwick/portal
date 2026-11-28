@@ -17,15 +17,24 @@ function element() {
   };
 }
 
-async function page({ check, save = async origin => origin }) {
+async function page({
+  check,
+  save = async origin => origin,
+  appVersion = async () => '1.2.3',
+  savedVersion = async () => null,
+}) {
   const elements = Object.fromEntries([
     'portal-url-form', 'portal-url', 'portal-status', 'portal-confirm', 'portal-save', 'portal-saved',
+    'app-version', 'website-version',
   ].map(id => [id, element()]));
   elements['portal-confirm'].hidden = true;
   elements['portal-saved'].hidden = true;
+  elements['website-version'].hidden = true;
 
   const invoke = async (command, args) => {
     if (command === 'saved_portal_url') return null;
+    if (command === 'app_version') return appVersion();
+    if (command === 'saved_portal_version') return savedVersion();
     if (command === 'check_portal_url') return check(args.input);
     if (command === 'save_portal_url') return save(args.origin);
     throw new Error(`Unexpected command: ${command}`);
@@ -34,7 +43,7 @@ async function page({ check, save = async origin => origin }) {
     document: { getElementById: id => elements[id] },
     window: { __TAURI__: { core: { invoke } } },
   });
-  await Promise.resolve();
+  await new Promise(resolve => setTimeout(resolve));
   return elements;
 }
 
@@ -153,4 +162,55 @@ it('discovery errors are visible and cannot be confirmed', async () => {
     assert.match(elements['portal-status'].textContent, message);
     assert.equal(elements['portal-confirm'].hidden, true);
   }
+});
+
+// @spec CLIENT-030 CLIENT-033
+it('shows the app version and the saved Portal website version at startup', async () => {
+  const elements = await page({ check: async () => null, savedVersion: async () => '1.4.0' });
+  assert.equal(elements['app-version'].textContent, 'App 1.2.3');
+  assert.equal(elements['website-version'].hidden, false);
+  assert.equal(elements['website-version'].textContent, 'Website 1.4.0');
+});
+
+// @spec CLIENT-033
+it('omits the website version silently when the startup probe fails', async () => {
+  const elements = await page({ check: async () => null, savedVersion: async () => { throw new Error('offline'); } });
+  assert.equal(elements['website-version'].hidden, true);
+  assert.equal(elements['website-version'].textContent, '');
+  assert.equal(elements['portal-status'].textContent, '');
+  assert.equal(elements['portal-status'].dataset.state, undefined);
+});
+
+// @spec CLIENT-032
+it('shows the checked website version and clears it on edit or a failed check', async () => {
+  let outcome = { kind: 'signInRequired' };
+  const elements = await page({
+    check: async () => ({ origin: 'https://portal.example.com', outcome, portalVersion: '1.5.0' }),
+    savedVersion: async () => '1.4.0',
+  });
+  const website = elements['website-version'];
+
+  await elements['portal-url-form'].dispatch('submit');
+  assert.equal(website.hidden, false);
+  assert.equal(website.textContent, 'Website 1.5.0');
+
+  elements['portal-url'].dispatch('input');
+  assert.equal(website.hidden, true);
+  assert.equal(website.textContent, '');
+
+  await elements['portal-url-form'].dispatch('submit');
+  assert.equal(website.textContent, 'Website 1.5.0');
+  outcome = { kind: 'network' };
+  await elements['portal-url-form'].dispatch('submit');
+  assert.equal(website.hidden, true);
+});
+
+// @spec CLIENT-032
+it('does not show a website version when a successful check returns none', async () => {
+  const elements = await page({
+    check: async () => ({ origin: 'https://portal.example.com', outcome: { kind: 'reachable' }, portalVersion: null }),
+    savedVersion: async () => '1.4.0',
+  });
+  await elements['portal-url-form'].dispatch('submit');
+  assert.equal(elements['website-version'].hidden, true);
 });

@@ -365,10 +365,28 @@ button:focus-visible {
   gap: .55rem;
 }
 
-.app-footer span {
+.app-footer .footer-dot {
   width: 1.25rem;
   height: 1px;
   background: #6b7594;
+}
+
+.app-footer {
+  flex-wrap: wrap;
+}
+
+.footer-version {
+  letter-spacing: .08em;
+}
+
+.footer-version::before {
+  content: "·";
+  margin-right: .55rem;
+}
+
+.footer-version:empty,
+.footer-version[hidden] {
+  display: none;
 }
 
 @media (max-width: 720px) {

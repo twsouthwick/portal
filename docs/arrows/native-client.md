@@ -22,7 +22,7 @@ coverage remains pending. The owner selected the public-client authentication de
 - `docs/intent/native-client/native-client-design.md`
 
 ### EARS
-- `docs/intent/native-client/native-client-specs.md` — 29 specs
+- `docs/intent/native-client/native-client-specs.md` — 33 specs
 
 ### Tests
 - `Portal.Client/tests/client.test.js`
@@ -67,6 +67,7 @@ smoke scripts.
 | Authenticated startup and manifest cache (planned) | CLIENT-014 to CLIENT-022 | 0 | 9 | Native implementation and tests are absent; Authelia and platform validation remain unverified |
 | Optional well-known discovery | CLIENT-023 to CLIENT-026 | 4 | 0 | Native UI flow lacks end-to-end coverage |
 | Onboarding presentation | CLIENT-027 to CLIENT-029 | 3 | 0 | Automated viewport, native UI, and screen-reader verification remain unverified |
+| Version footer | CLIENT-030 to CLIENT-033 | 4 | 0 | Native UI E2E coverage of the app and website versions is missing |
 
 **Traceability:** Android signing, ABI, versioning, and release workflow tests
 cite the approved EARS IDs. Authenticated portal connectivity is explicitly
@@ -74,13 +75,15 @@ outside the present native-client implementation. CLIENT-014 to
 CLIENT-022 specify planned authenticated startup and cache behavior but have
 no native implementation or test coverage; Authelia and platform validation
 remain unverified. Onboarding unit tests cite CLIENT-008 to CLIENT-013,
-CLIENT-023 to CLIENT-026, and CLIENT-028 to CLIENT-029; the Tauri commands
+CLIENT-023 to CLIENT-026, CLIENT-028 to CLIENT-029, and CLIENT-031 to
+CLIENT-032; UI tests cite CLIENT-030, CLIENT-032, and CLIENT-033; the Tauri commands
 and UI cite the applicable IDs at entry points. CLIENT-027 has been checked at
 320 and 800 CSS pixels in a browser but has no automated viewport test.
 
 ## Key Findings
 
-1. The Rust host registers only the Portal URL check, save, and load commands
+1. The Rust host registers the Portal URL check, save, and load commands plus
+   the app-version and saved-Portal-version commands
    (`Portal.Client/src-tauri/src/lib.rs`).
 2. The Digital Fortress onboarding page presents the address check, its
    outcome, and explicit save confirmation (`Portal.Client/index.html`,

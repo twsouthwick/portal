@@ -33,6 +33,16 @@ The deployed regression was confirmed in the browser: v5 cards use
 to a 44px row and the old label `Typo` parameter is no longer supported.
 Responsive column counts and the grid gap were working and are not changed.
 
+### Version footer (owner-approved 2026-11-28)
+
+Both the signed-in main layout and the signed-out layout end with a footer
+showing `Version {version}`. The version is Portal.Web's MinVer SemVer: the
+assembly informational version with any `+` build metadata (such as the
+commit SHA appended by the .NET SDK) removed. A single `PortalVersion`
+service supplies the value so the footer and the manifest `Portal-Version`
+header (AUTH-023) always agree. Local unversioned builds show MinVer's
+default pre-release version rather than hiding the footer.
+
 ## Browser-Aware Presentation and Launch
 
 `SiteProvider` obtains browser information after first render, filters private
@@ -53,6 +63,7 @@ are implemented in `Portal.Web/ts/` and called through `IClientBrowserSession`.
 |---|---|---|---|
 | Rendering model | Interactive Server Blazor components. **[inferred]** | Static pages or client-side SPA. | Configured in `Portal.Web/Program.cs` and component routes. |
 | Browser boundary | Components consume `IClientBrowserSession`; TypeScript is bundled separately. **[inferred]** | Direct JS calls from each component. | Existing interface isolates JS interop (`Portal.Web/Browser/`). |
+| Version display | Footer in every layout with MinVer SemVer, build metadata removed. **[owner-selected 2026-11-28]** | Signed-in layout only; SemVer plus commit SHA. | Owner chose SemVer only, shown on both main and signed-out pages. |
 | Private/internal visibility | Filter or disable in the UI based on browser state. **[inferred]** | Enforce only on the server or expose all sites. | Observed in `SiteProvider.razor` and `SiteCard.razor`; security implications remain open. |
 
 ## Open Questions & Future Decisions
