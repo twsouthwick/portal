@@ -3,13 +3,15 @@ use std::time::Duration;
 
 use reqwest::header::{ACCEPT, WWW_AUTHENTICATE};
 use reqwest::{Client, StatusCode, redirect};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
-use crate::PortalOrigin;
+use crate::{OriginPolicy, PortalOrigin};
 
 /// The documented, unauthenticated-safe Portal endpoint used for the check.
 pub const PROBE_PATH: &str = "/api/manifest";
 pub const PROBE_TIMEOUT: Duration = Duration::from_secs(10);
+const DISCOVERY_PATH: &str = "/.well-known/digital-fortress/manifest.json";
+const DISCOVERY_MAX_BYTES: usize = 8 * 1024;
 
 /// Result of checking an origin. Reaching the endpoint does not establish
 /// Portal identity or trust.
@@ -30,6 +32,11 @@ pub enum ProbeOutcome {
         status: u16,
     },
     UnexpectedResponse {
+        status: u16,
+    },
+    DiscoveryInvalid,
+    DiscoveryTooLarge,
+    DiscoveryResponse {
         status: u16,
     },
 }
@@ -61,6 +68,74 @@ pub async fn probe(client: &Client, origin: &PortalOrigin) -> ProbeOutcome {
         }
         Err(error) => classify_error(&error),
     }
+}
+
+#[derive(Deserialize)]
+struct DiscoveryDocument {
+    origin: String,
+}
+
+/// @spec CLIENT-014 CLIENT-015 CLIENT-016 CLIENT-017
+pub async fn check_portal(
+    client: &Client,
+    origin: &PortalOrigin,
+    policy: OriginPolicy,
+) -> (PortalOrigin, ProbeOutcome) {
+    match discover_origin(client, origin, policy).await {
+        Ok(selected) => {
+            let outcome = probe(client, &selected).await;
+            (selected, outcome)
+        }
+        Err(outcome) => (origin.clone(), outcome),
+    }
+}
+
+async fn discover_origin(
+    client: &Client,
+    origin: &PortalOrigin,
+    policy: OriginPolicy,
+) -> Result<PortalOrigin, ProbeOutcome> {
+    let mut response = client
+        .get(origin.join(DISCOVERY_PATH))
+        .header(ACCEPT, "application/json")
+        .send()
+        .await
+        .map_err(|error| classify_error(&error))?;
+
+    match response.status() {
+        StatusCode::NOT_FOUND | StatusCode::FOUND => return Ok(origin.clone()),
+        StatusCode::OK => {}
+        status => {
+            return Err(ProbeOutcome::DiscoveryResponse {
+                status: status.as_u16(),
+            });
+        }
+    }
+
+    if response
+        .content_length()
+        .is_some_and(|length| length > DISCOVERY_MAX_BYTES as u64)
+    {
+        return Err(ProbeOutcome::DiscoveryTooLarge);
+    }
+    let mut body = Vec::new();
+    while let Some(chunk) = response
+        .chunk()
+        .await
+        .map_err(|error| classify_error(&error))?
+    {
+        if chunk.len() > DISCOVERY_MAX_BYTES - body.len() {
+            return Err(ProbeOutcome::DiscoveryTooLarge);
+        }
+        body.extend_from_slice(&chunk);
+    }
+
+    let document: DiscoveryDocument =
+        serde_json::from_slice(&body).map_err(|_| ProbeOutcome::DiscoveryInvalid)?;
+    if !document.origin.contains("://") {
+        return Err(ProbeOutcome::DiscoveryInvalid);
+    }
+    PortalOrigin::parse(&document.origin, policy).map_err(|_| ProbeOutcome::DiscoveryInvalid)
 }
 
 fn classify_response(
@@ -179,6 +254,200 @@ mod tests {
 
     async fn check(value: &str) -> ProbeOutcome {
         probe(&probe_client(PROBE_TIMEOUT).unwrap(), &origin(value)).await
+    }
+
+    struct ScriptedServer {
+        origin: String,
+        requests: Arc<Mutex<Vec<String>>>,
+    }
+
+    async fn serve_scripted(responses: Vec<String>) -> ScriptedServer {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let port = listener.local_addr().unwrap().port();
+        let requests = Arc::new(Mutex::new(Vec::new()));
+        let recorded = requests.clone();
+        tokio::spawn(async move {
+            let mut responses = responses.into_iter();
+            loop {
+                let Ok((mut socket, _)) = listener.accept().await else {
+                    return;
+                };
+                let mut buffer = vec![0; 8192];
+                let read = socket.read(&mut buffer).await.unwrap_or(0);
+                recorded
+                    .lock()
+                    .await
+                    .push(String::from_utf8_lossy(&buffer[..read]).into_owned());
+                let response = responses.next().unwrap_or_else(|| {
+                    "HTTP/1.1 500 Internal Server Error\r\nContent-Length: 0\r\nConnection: close\r\n\r\n".into()
+                });
+                let _ = socket.write_all(response.as_bytes()).await;
+                let _ = socket.shutdown().await;
+            }
+        });
+        ScriptedServer {
+            origin: format!("http://127.0.0.1:{port}"),
+            requests,
+        }
+    }
+
+    fn response(status: &str, body: &str) -> String {
+        format!(
+            "HTTP/1.1 {status}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+            body.len()
+        )
+    }
+
+    async fn check_discovery(server: &ScriptedServer) -> (PortalOrigin, ProbeOutcome) {
+        check_portal(
+            &probe_client(PROBE_TIMEOUT).unwrap(),
+            &origin(&server.origin),
+            OriginPolicy::AllowHttpLoopback,
+        )
+        .await
+    }
+
+    // @spec CLIENT-014 CLIENT-015 CLIENT-017
+    #[tokio::test]
+    async fn discovery_checks_and_selects_the_document_origin_without_recursion() {
+        let target = serve_scripted(vec![PORTAL_401.into()]).await;
+        let document = serde_json::json!({"origin": target.origin, "extra": "ignored"});
+        let alias = serve_scripted(vec![response("200 OK", &document.to_string())]).await;
+
+        let (selected, outcome) = check_discovery(&alias).await;
+
+        assert_eq!(selected.to_string(), target.origin);
+        assert_eq!(outcome, ProbeOutcome::SignInRequired);
+        let alias_requests = alias.requests.lock().await;
+        let target_requests = target.requests.lock().await;
+        assert_eq!(alias_requests.len(), 1);
+        assert!(alias_requests[0].starts_with("GET /.well-known/digital-fortress/manifest.json "));
+        assert_eq!(target_requests.len(), 1);
+        assert!(target_requests[0].starts_with("GET /api/manifest "));
+        for request in [alias_requests[0].as_str(), target_requests[0].as_str()] {
+            let request = request.to_ascii_lowercase();
+            assert!(!request.contains("\r\nauthorization:"));
+            assert!(!request.contains("\r\ncookie:"));
+        }
+    }
+
+    // @spec CLIENT-014 CLIENT-016
+    #[tokio::test]
+    async fn missing_discovery_document_falls_back_to_entered_origin() {
+        let server = serve_scripted(vec![response("404 Not Found", ""), PORTAL_401.into()]).await;
+
+        let (selected, outcome) = check_discovery(&server).await;
+
+        assert_eq!(selected.to_string(), server.origin);
+        assert_eq!(outcome, ProbeOutcome::SignInRequired);
+        let requests = server.requests.lock().await;
+        assert_eq!(requests.len(), 2);
+        assert!(requests[0].starts_with("GET /.well-known/digital-fortress/manifest.json "));
+        assert!(requests[1].starts_with("GET /api/manifest "));
+    }
+
+    // @spec CLIENT-014 CLIENT-016
+    #[tokio::test]
+    async fn discovery_302_falls_back_without_following_the_redirect() {
+        let server = serve_scripted(vec![
+            "HTTP/1.1 302 Found\r\nLocation: https://other.example/login\r\nContent-Length: 0\r\nConnection: close\r\n\r\n".into(),
+            PORTAL_401.into(),
+        ])
+        .await;
+
+        let (selected, outcome) = check_discovery(&server).await;
+
+        assert_eq!(selected.to_string(), server.origin);
+        assert_eq!(outcome, ProbeOutcome::SignInRequired);
+        let requests = server.requests.lock().await;
+        assert_eq!(requests.len(), 2);
+        assert!(requests[0].starts_with("GET /.well-known/digital-fortress/manifest.json "));
+        assert!(requests[1].starts_with("GET /api/manifest "));
+    }
+
+    // @spec CLIENT-015 CLIENT-016
+    #[tokio::test]
+    async fn discovery_rejects_bad_documents_without_fallback() {
+        for body in [
+            "not json",
+            "{}",
+            r#"{"origin":42}"#,
+            r#"{"origin":"example.com"}"#,
+            r#"{"origin":"https://example.com/path"}"#,
+            r#"{"origin":"http://example.com"}"#,
+        ] {
+            let server = serve_scripted(vec![response("200 OK", body)]).await;
+            let (_, outcome) = check_discovery(&server).await;
+            assert_eq!(outcome, ProbeOutcome::DiscoveryInvalid, "{body}");
+            assert_eq!(server.requests.lock().await.len(), 1);
+        }
+    }
+
+    // @spec CLIENT-015
+    #[tokio::test]
+    async fn discovery_enforces_the_exact_body_size_limit() {
+        let prefix = r#"{"origin":"http://example.com","padding":""#;
+        let suffix = r#""}"#;
+        for (size, expected) in [
+            (8192, ProbeOutcome::DiscoveryInvalid),
+            (8193, ProbeOutcome::DiscoveryTooLarge),
+        ] {
+            let body = format!(
+                "{prefix}{}{suffix}",
+                "x".repeat(size - prefix.len() - suffix.len())
+            );
+            let server = serve_scripted(vec![response("200 OK", &body)]).await;
+            let (_, outcome) = check_discovery(&server).await;
+            assert_eq!(outcome, expected, "body size {size}");
+            assert_eq!(server.requests.lock().await.len(), 1);
+        }
+    }
+
+    // @spec CLIENT-015
+    #[tokio::test]
+    async fn discovery_limits_a_chunked_response_without_a_content_length() {
+        let body = format!(
+            "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\nConnection: close\r\n\r\n2000\r\n{}\r\n1\r\nx\r\n0\r\n\r\n",
+            "x".repeat(8192)
+        );
+        let server = serve_scripted(vec![body]).await;
+
+        let (_, outcome) = check_discovery(&server).await;
+
+        assert_eq!(outcome, ProbeOutcome::DiscoveryTooLarge);
+        assert_eq!(server.requests.lock().await.len(), 1);
+    }
+
+    // @spec CLIENT-014 CLIENT-016
+    #[tokio::test]
+    async fn discovery_timeout_does_not_fall_back() {
+        let server = serve(None).await;
+        let client = probe_client(Duration::from_millis(100)).unwrap();
+
+        let (_, outcome) = check_portal(
+            &client,
+            &origin(&server.origin),
+            OriginPolicy::AllowHttpLoopback,
+        )
+        .await;
+
+        assert_eq!(outcome, ProbeOutcome::Timeout);
+        assert_eq!(server.requests.load(Ordering::SeqCst), 1);
+    }
+
+    // @spec CLIENT-014 CLIENT-016
+    #[tokio::test]
+    async fn discovery_redirects_and_other_statuses_do_not_fall_back() {
+        for (response, status) in [
+            ("HTTP/1.1 301 Moved Permanently\r\nLocation: /login\r\nContent-Length: 0\r\nConnection: close\r\n\r\n".to_string(), 301),
+            (response("403 Forbidden", ""), 403),
+            (response("500 Internal Server Error", ""), 500),
+        ] {
+            let server = serve_scripted(vec![response]).await;
+            let (_, outcome) = check_discovery(&server).await;
+            assert_eq!(outcome, ProbeOutcome::DiscoveryResponse { status });
+            assert_eq!(server.requests.lock().await.len(), 1);
+        }
     }
 
     const PORTAL_401: &str = "HTTP/1.1 401 Unauthorized\r\nWWW-Authenticate: Bearer\r\nContent-Type: application/problem+json\r\nContent-Length: 2\r\nConnection: close\r\n\r\n{}";

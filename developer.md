@@ -185,9 +185,22 @@ defaults.
 ### Manual Portal URL onboarding
 
 The user enters the Portal's HTTPS address; the client normalizes it to an
-origin and the Rust host sends one unauthenticated `GET /api/manifest` with
-normal certificate validation, no redirects, and a ten-second timeout. A `401`
-bearer challenge means the Portal was found; sign-in is not implemented yet.
+origin and first checks for an optional externally supplied
+`/.well-known/digital-fortress/manifest.json` document:
+
+```json
+{"origin":"https://portal.example.com"}
+```
+
+The document names the Portal origin and must be served directly by the
+entered host; Portal.Web does not host it. If that host normally redirects,
+configure an exception for the discovery path. A `404` or `302` skips
+discovery and uses the entered origin without following a redirect. Other errors,
+including other redirects and invalid documents, are reported. The Rust host
+then sends one unauthenticated `GET /api/manifest` to the selected origin.
+Both requests use normal certificate validation, no redirects, and a ten-second
+timeout. A `401` bearer challenge means the Portal was found; sign-in is not
+implemented yet.
 The user must confirm before the origin is saved as `portal.json` in the
 application configuration directory. The saved origin is not treated as
 trusted or authenticated. Android currently validates certificates only

@@ -44,6 +44,11 @@ The stable container channel owns `latest` and floating major/minor tags.
 issue #6. Issue #7 will expose the manifest and use ASP.NET Core's built-in
 OpenAPI support in development only, without adding a Swagger or Scalar UI.
 
+**[owner-approved design; issue #16]** Manual native-client onboarding first
+checks for an optional externally supplied, non-sensitive well-known
+discovery document. DNS-SD/mDNS LAN discovery is separate work (issues #14
+and #70).
+
 ## Target Users
 
 - **Portal users** need to find and open the sites available to their identity,

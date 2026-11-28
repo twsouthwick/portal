@@ -1,4 +1,4 @@
-// @spec CLIENT-011 CLIENT-012 CLIENT-013
+// @spec CLIENT-011 CLIENT-012 CLIENT-013 CLIENT-016 CLIENT-017
 const invoke = window.__TAURI__?.core?.invoke;
 
 const form = document.getElementById('portal-url-form');
@@ -19,6 +19,9 @@ const outcomeMessages = {
   authentication: (origin, { status }) => `${origin} rejected the request before reaching Portal (HTTP ${status}). A proxy or gateway may require separate authentication.`,
   redirect: (origin, { status }) => `${origin} redirected the request (HTTP ${status}). Redirects are not followed; enter the Portal's own address.`,
   unexpectedResponse: (origin, { status }) => `${origin} did not respond like a Portal (HTTP ${status}).`,
+  discoveryInvalid: origin => `The discovery document at ${origin} is invalid or does not contain a valid Portal origin.`,
+  discoveryTooLarge: origin => `The discovery document at ${origin} exceeds the 8 KiB limit.`,
+  discoveryResponse: (origin, { status }) => `The discovery document at ${origin} returned HTTP ${status}. Redirects are not followed.`,
 };
 
 function showSaved(origin) {
