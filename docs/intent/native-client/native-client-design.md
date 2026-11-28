@@ -189,10 +189,11 @@ owner direction.
 
 The proposed transaction uses a fresh verifier, unpredictable state, and an
 OIDC nonce, with the pending transaction held in memory and consumed once.
-The candidate redirects are a verified HTTPS app link on Android and a
-loopback-only listener on Windows and Linux. Exact redirect and dynamic-port
-support remain to be verified against Authelia. Custom schemes can be claimed
-by other apps and cannot establish callback authenticity. Validation needs to
+The owner selected (2026-11-28) a fixed loopback listener on Windows and
+Linux and the custom scheme `digital-fortress:/oidc-callback` on Android; see
+[Implementation choices](#implementation-choices-issue-12). Custom schemes can
+be claimed by other apps and cannot establish callback authenticity; PKCE,
+state, and nonce bound the consequence to a failed sign-in. Validation needs to
 cover unexpected or malformed redirects, state, issuer and nonce, replay,
 expiry, cancellation, errors and restart; neither codes nor verifiers may be
 sent to an untrusted endpoint.
@@ -294,6 +295,90 @@ location. Authelia public-client issuance, platform callbacks, token refresh,
 and protected-storage behavior remain validation gates; this design is not
 evidence that those integrations work.
 
+#### Implementation choices (issue #12)
+
+**[owner-selected 2026-11-28]** These choices make the draft above concrete.
+
+**Metadata.** The Rust host fetches `/.well-known/portal-native-oidc` with
+the onboarding HTTP policy: no credentials, no redirects, normal certificate
+validation, and a ten-second timeout. It requires an `https` issuer, a
+non-empty client ID and API audience, and an `openid` scope. Standard
+discovery then comes from `{issuer}/.well-known/openid-configuration`, and its
+issuer must equal the Portal-provided issuer exactly.
+
+**Redirects.** Linux and Windows use the fixed loopback redirect
+`http://127.0.0.1:49152/callback`, matching the local Authelia registration.
+The host binds that port on `127.0.0.1` only for one sign-in. It accepts a
+single `GET /callback`, answers other paths with `404`, and reports an error
+if the port is unavailable. Android uses the custom scheme redirect
+`digital-fortress:/oidc-callback`, delivered by the Tauri deep-link plugin.
+Any Android app can register that scheme. The owner accepted this risk:
+PKCE, a single-use `state`, and the nonce prevent another app from redeeming
+an intercepted code or injecting an unsolicited callback, but cannot prevent
+a competing handler from blocking sign-in. A verified HTTPS app link was
+rejected because its domain must be fixed at build time, while each
+self-hosted Portal has its own domain. Sign-in times out after five minutes
+and can be cancelled; a callback for a cancelled, expired, or already used
+transaction is rejected.
+
+**Authorization.** The request uses `response_type=code`, PKCE S256, a fresh
+`state`, a nonce, and the metadata scopes. It also sends
+`audience={apiAudience}` because Authelia's explicit audience mode requires
+the client to request it. The system browser opens the URL. The host
+validates the ID token's signature against the issuer's JWKS, plus its
+issuer, audience, expiry, and nonce. The account key is that token's `iss`
+plus `sub`. The access token stays in memory.
+
+**Credentials.** One credential entry per signed-in account is kept in the
+platform credential store through `keyring-core` backends: Linux Secret
+Service, Windows Credential Manager, and Android Keystore-protected storage.
+The entry holds the Portal origin, issuer, subject, refresh token (when
+issued), and a random 256-bit cache key. It never enters WebView storage,
+logs, or diagnostics. If the store is unavailable, the client keeps that
+session in memory only and warns that it must sign in again next time.
+
+**Encrypted cache.** The cache for one `(origin, iss, sub)` account is
+`manifest-cache/{sha256(origin, iss, sub)}.bin` in the application data
+directory. It is XChaCha20-Poly1305 ciphertext under that account's cache
+key, with the file name as associated data. The plaintext holds the origin,
+issuer, subject, ETag, refresh timestamp, and validated manifest DTO. Writes
+use a temporary file followed by a rename. At startup, the client displays
+the cache only if decryption succeeds and every account field matches the
+credential entry. Sign-out deletes the credential entry and cache file;
+without the entry's key, a leftover file is unreadable. Including the origin
+in the account scope stops a different Portal that uses the same identity
+provider from displaying another Portal's sites.
+
+**Site list.** After sign-in, or when a cache is displayed, the manifest view
+replaces onboarding and reuses its Digital Fortress header, dark palette, and
+blue-violet accents. Onboarding's sign-in notice is replaced by a Sign in
+action once an address is saved. The header shows the manifest name and description, a
+refresh status, and a Sign out action. The status is one of: refreshing; up
+to date with the refresh time; offline or failed, showing saved sites from
+the refresh time; or sign-in required. Sites form a responsive card grid
+(`repeat(auto-fill, minmax(16rem, 1fr))`, one column on narrow screens),
+grouped under category headings in order of first appearance. A site with
+several categories appears in each group. Sites with no categories appear
+under "Other". Each card shows the site's icon, name, description, and
+`Private` and `Internal` badges. Badges only describe a site; they neither
+hide it nor grant access. Private toggles and home-network detection remain
+planned (issue #53). The icon is a Bootstrap Icons class from the bundled
+font. A class that is not `bi-` followed by lowercase letters, digits, and
+hyphens falls back to `bi-globe`.
+
+**Details.** Activating a card opens a details view with a Back action. It
+shows the icon, name, badges, and description. When the site has an
+`http(s)` URL, an Open site action opens it in the system browser. Usage
+instructions are rendered from Markdown with `marked` and sanitized with
+DOMPurify. Activating a rendered `http(s)` link opens it in the system
+browser; other link schemes are inert. The existing `default-src 'self'` CSP
+still blocks remote images. The apps section lists only apps for the current
+platform: `linux` on Linux, `windows` or `microsoft` on Windows, and `google`
+on Android. Each app has an Open action for its launch URI, rejecting
+`javascript`, `data`, `file`, and `vbscript` as the server does. When its
+store ID is an `https` URL, the app also has a Get app action. All opening
+goes through the Rust host's opener, never WebView navigation.
+
 ## Decisions & Alternatives
 
 | Decision | Current approach | Alternatives considered | Rationale |
@@ -303,6 +388,9 @@ evidence that those integrations work.
 | Native authentication | Separate public OIDC client with system-browser code flow and PKCE S256. **[owner-selected 2026-11-27; not validated]** | Portal-mediated session/API flow. | Avoids embedding the confidential web secret or assuming shared browser cookies; requires provider and API compatibility. |
 | Native OIDC configuration | Fetch non-secret issuer, public client ID, API audience, and scopes from the Portal's unauthenticated `/.well-known/portal-native-oidc` endpoint. **[owner-selected source; endpoint contract proposed]** | Manual issuer/client ID fields; build-time configuration. | Supports different Portal deployments while keeping the Portal URL as the user's sole endpoint selection. |
 | Manifest cache | Cache only the API's filtered DTO per validated `(iss, sub)`; show it as stale until successful refresh or sign-out. **[issue #12; owner-selected offline policy 2026-11-27]** | No offline cache; time-limited stale display; account-independent cache. | Preserves useful startup while preventing one authenticated account from displaying another account's manifest. |
+| Sign-in redirect | Fixed `http://127.0.0.1:49152/callback` on desktop; `digital-fortress:/oidc-callback` custom scheme on Android. **[owner-selected 2026-11-28]** | Ephemeral loopback port; verified HTTPS app link; loopback on Android. | Matches the Authelia registration; app links need a build-time domain that self-hosted Portals cannot share. |
+| Cache protection | XChaCha20-Poly1305 file encrypted with a per-account key held in the platform credential store. **[owner-selected 2026-11-28]** | Owner-only file permissions. | Uses the credential store's protection on every target and makes sign-out cryptographically discard the cache. |
+| Site list presentation | Category-grouped card grid with Private/Internal badges and a details view rendering sanitized Markdown and current-platform apps. **[owner-selected 2026-11-28]** | Flat grid with filters; compact list; direct launch; hiding private sites. | Mirrors the web portal's catalog while keeping launch decisions explicit. |
 | Manual Portal URL check | Rust host optionally resolves an externally supplied well-known document, then probes `/api/manifest` without credentials or redirects; the confirmed origin is saved untrusted. **[issues #15 and #16]** | Probe from the WebView; follow redirects; save on entry. | Keeps the network policy out of the WebView CSP, avoids leaking requests to redirect targets, and preserves confirmation and no-trust criteria. |
 | UI verification | Shared Node E2E assertions use platform adapters. **[inferred]** | Separate assertions for each platform. | `Portal.Client/tests/client.test.js` shares assertions and adapters. |
 
