@@ -124,9 +124,64 @@ impl CredentialStore for MemoryCredentialStore {
     }
 }
 
+/// Stores the session as one JSON secret in the platform credential store
+/// selected by `keyring_core::set_default_store`.
+pub struct KeyringCredentialStore {
+    entry: keyring_core::Entry,
+}
+
+impl KeyringCredentialStore {
+    pub fn new(service: &str, user: &str) -> Result<Self, CredentialError> {
+        keyring_core::Entry::new(service, user)
+            .map(|entry| Self { entry })
+            .map_err(|error| CredentialError(error.to_string()))
+    }
+}
+
+impl CredentialStore for KeyringCredentialStore {
+    fn load(&self) -> Result<Option<StoredSession>, CredentialError> {
+        match self.entry.get_password() {
+            // An unreadable entry is treated as signed out.
+            Ok(secret) => Ok(serde_json::from_str(&secret).ok()),
+            Err(keyring_core::Error::NoEntry) => Ok(None),
+            Err(error) => Err(CredentialError(error.to_string())),
+        }
+    }
+
+    fn save(&self, session: &StoredSession) -> Result<(), CredentialError> {
+        let secret = serde_json::to_string(session).map_err(|error| CredentialError(error.to_string()))?;
+        self.entry.set_password(&secret).map_err(|error| CredentialError(error.to_string()))
+    }
+
+    fn delete(&self) -> Result<(), CredentialError> {
+        match self.entry.delete_credential() {
+            Ok(()) | Err(keyring_core::Error::NoEntry) => Ok(()),
+            Err(error) => Err(CredentialError(error.to_string())),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // @spec CLIENT-022 CLIENT-034
+    #[test]
+    fn keyring_store_keeps_one_entry() {
+        keyring_core::set_default_store(keyring_core::mock::Store::new().unwrap());
+        let store = KeyringCredentialStore::new("app.swick.portal.client", "session").unwrap();
+        assert!(store.load().unwrap().is_none());
+        store.delete().unwrap();
+        let session = StoredSession {
+            account: Account { origin: "https://p".into(), issuer: "https://i".into(), subject: "s".into() },
+            refresh_token: Some("r".into()),
+            cache_key: CacheKey::generate().unwrap(),
+        };
+        store.save(&session).unwrap();
+        assert_eq!(store.load().unwrap(), Some(session));
+        store.delete().unwrap();
+        assert!(store.load().unwrap().is_none());
+    }
 
     // @spec CLIENT-034
     #[test]

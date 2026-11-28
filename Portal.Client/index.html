@@ -6,6 +6,7 @@
     <title>Digital Fortress</title>
     <link rel="stylesheet" href="/src/style.css" />
     <script type="module" src="/src/main.js"></script>
+    <script type="module" src="/src/portal.js"></script>
   </head>
   <body>
     <div class="app-shell">
@@ -27,7 +28,7 @@
       </header>
 
       <!-- @spec CLIENT-001 CLIENT-027 -->
-      <main class="onboarding">
+      <main id="onboarding-view" class="onboarding">
         <section class="intro" aria-label="Welcome to Digital Fortress">
           <div class="intro-copy">
             <p class="eyebrow"><span class="eyebrow-dot"></span> WELCOME TO DIGITAL FORTRESS</p>
@@ -108,8 +109,46 @@
               <path d="M12 3.5 19 6v5.5c0 4.2-2.8 7.3-7 9-4.2-1.7-7-4.8-7-9V6l7-2.5Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />
               <path d="M12 10.5v4m0-7h.01" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
             </svg>
-            <p><strong>Just an address check.</strong><br />Sign-in isn't available in the app yet.</p>
+            <p><strong>Your password stays with your Digital Fortress.</strong><br />After saving the address, you sign in with your browser.</p>
           </div>
+        </section>
+      </main>
+
+      <!-- @spec CLIENT-036 CLIENT-037 CLIENT-038 CLIENT-039 -->
+      <main id="portal-view" class="portal" hidden>
+        <div id="portal-banner" class="portal-banner" role="status" aria-live="polite" hidden>
+          <p id="portal-banner-text"></p>
+          <button id="portal-banner-cancel" class="text-button" type="button" hidden>Cancel</button>
+        </div>
+
+        <section id="signin-panel" class="connection-card signin-card" aria-labelledby="signin-title" hidden>
+          <p class="card-eyebrow">YOUR DIGITAL FORTRESS</p>
+          <h1 id="signin-title">Sign in to continue</h1>
+          <p class="card-description">Sign in with your browser to see your sites at <strong id="signin-origin"></strong>.</p>
+          <button id="signin-button" class="primary-button" type="button">
+            Sign in with browser <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i>
+          </button>
+          <button id="change-address" class="text-button" type="button">Use a different address</button>
+        </section>
+
+        <section id="sites-panel" class="sites" aria-labelledby="manifest-name" hidden>
+          <header class="sites-header">
+            <div class="sites-heading">
+              <p class="eyebrow"><span class="eyebrow-dot"></span> YOUR SITES</p>
+              <h1 id="manifest-name"></h1>
+              <p id="manifest-description" class="card-description"></p>
+            </div>
+            <div class="sites-actions">
+              <span id="refresh-status" class="refresh-status"></span>
+              <button id="refresh-button" class="icon-button" type="button" aria-label="Refresh sites" title="Refresh">
+                <i class="bi bi-arrow-clockwise" aria-hidden="true"></i>
+              </button>
+              <button id="header-signin" class="chip-button" type="button" hidden>Sign in</button>
+              <button id="signout-button" class="chip-button" type="button">Sign out</button>
+            </div>
+          </header>
+          <div id="site-groups"></div>
+          <section id="site-details" class="site-details" aria-labelledby="details-name" hidden></section>
         </section>
       </main>
 

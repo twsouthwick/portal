@@ -4,6 +4,7 @@
 
 pub mod cache;
 pub mod credentials;
+mod external;
 pub mod loopback;
 pub mod manifest;
 pub mod metadata;
@@ -12,7 +13,10 @@ pub mod session;
 #[cfg(test)]
 mod test_server;
 
-pub use credentials::{Account, CredentialError, CredentialStore, MemoryCredentialStore, StoredSession};
+pub use external::{ExternalKind, validate_external};
+pub use credentials::{
+    Account, CredentialError, CredentialStore, KeyringCredentialStore, MemoryCredentialStore, StoredSession,
+};
 pub use loopback::CallbackListener;
 pub use manifest::{Manifest, Site, SiteApp};
 pub use oidc::{ANDROID_REDIRECT_URI, DESKTOP_REDIRECT_URI, SIGN_IN_TIMEOUT, SignInError};

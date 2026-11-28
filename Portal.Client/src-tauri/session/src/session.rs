@@ -329,10 +329,10 @@ impl SessionManager {
         self.load(&mut state);
         state.pending = None;
         let mut warning = None;
-        if let Some(active) = state.active.take() {
-            if let Err(error) = delete_cache(&self.data_dir, &active.stored.account) {
-                warning = Some(error.to_string());
-            }
+        if let Some(active) = state.active.take()
+            && let Err(error) = delete_cache(&self.data_dir, &active.stored.account)
+        {
+            warning = Some(error.to_string());
         }
         if self.store.delete().is_err() {
             warning = Some("Could not remove saved sign-in from secure storage.".into());
@@ -352,13 +352,16 @@ mod tests {
 
     const MANIFEST: &str = r#"{"schemaVersion":1,"name":"Home","description":"Family","sites":[]}"#;
 
-    /// Portal script: (status, etag) per manifest request; metadata always served.
+    /// (status, etag) per manifest request.
+    type Script = Vec<(u16, Option<&'static str>)>;
+
+    /// Portal script per manifest request; metadata always served.
     struct Portal {
         server: TestServer,
-        script: Arc<StdMutex<Vec<(u16, Option<&'static str>)>>>,
+        script: Arc<StdMutex<Script>>,
     }
 
-    async fn portal(idp: &MockIdp, script: Vec<(u16, Option<&'static str>)>) -> Portal {
+    async fn portal(idp: &MockIdp, script: Script) -> Portal {
         let script = Arc::new(StdMutex::new(script));
         let native = serde_json::json!({
             "issuer": idp.issuer(), "clientId": "portal-native",

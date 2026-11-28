@@ -137,7 +137,7 @@ jobs:
 
       - name: Test Portal URL onboarding
         working-directory: Portal.Client/src-tauri
-        run: cargo test --locked -p portal-onboarding
+        run: cargo test --locked -p portal-onboarding -p portal-session
 
       - name: Build debug client and AppImage
         working-directory: Portal.Client

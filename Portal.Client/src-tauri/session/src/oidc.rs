@@ -345,7 +345,7 @@ pub(crate) mod tests {
                     let access = format!("access-{}", i.lock().unwrap().len() + 1);
                     match form.get("grant_type").map(String::as_str) {
                         Some("authorization_code") => {
-                            if form.get("code_verifier").is_none() {
+                            if !form.contains_key("code_verifier") {
                                 return json(400, r#"{"error":"invalid_grant"}"#);
                             }
                             let nonce = behavior

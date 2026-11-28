@@ -502,8 +502,9 @@ For a local reference, see `Portal.AppHost/Authelia/configuration.yml`.
 ### Native Authelia client
 
 A native app needs a separate public client; it must not use the confidential
-`portal` client's secret. For the Linux loopback flow, a client can be
-registered like this:
+`portal` client's secret. The native client signs in through
+`http://127.0.0.1:49152/callback` on Linux and Windows and through the
+`digital-fortress:/oidc-callback` deep link on Android, so register both:
 
 ```yaml
 identity_providers:
@@ -517,6 +518,7 @@ identity_providers:
         authorization_policy: 'one_factor'
         redirect_uris:
           - 'http://127.0.0.1:49152/callback'
+          - 'digital-fortress:/oidc-callback'
         scopes: ['openid', 'groups', 'offline_access']
         response_types: ['code']
         grant_types: ['authorization_code', 'refresh_token']

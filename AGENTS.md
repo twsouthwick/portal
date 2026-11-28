@@ -26,7 +26,7 @@
 - `Portal.Web/Services` owns portal/site loading, Markdown conversion, and click tracking. Providers combine an optional `SITE_PATH` directory or ZIP with Kubernetes `PortalSite` resources; file entries win duplicate IDs. Bundled sites are the fallback when no provider is configured. File manifests load at startup, while Kubernetes resources are read on subsequent portal loads.
 - `Portal.Web/Browser` owns browser and JavaScript interop. Razor components should use `IClientBrowserSession` instead of invoking the bundled JavaScript directly.
 - `Portal.Web/ts` and `Portal.Web/css` are frontend sources. Webpack emits the ES module and CSS into generated, gitignored `Portal.Web/wwwroot/dist`; do not edit or commit that output.
-- `Portal.Client` is a standalone Tauri shell with shared UI tests and platform-specific adapters; it can check and save a manually entered Portal URL (`src-tauri/onboarding`) but does not yet authenticate.
+- `Portal.Client` is a standalone Tauri shell with shared UI tests and platform-specific adapters; it can check and save a manually entered Portal URL (`src-tauri/onboarding`), sign in with OIDC, and show an encrypted-cached site list (`src-tauri/session`).
 
 ## Conventions and Pitfalls
 
