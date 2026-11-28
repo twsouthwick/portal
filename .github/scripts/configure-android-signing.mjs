@@ -27,6 +27,7 @@ export function escapeJavaPropertiesValue(value) {
   return escaped;
 }
 
+// @spec DELIVERY-012 DELIVERY-019
 export function configureAndroidGradleSigning(source) {
   const buildTypes = [...source.matchAll(/^([ \t]*)buildTypes\s*\{/gm)];
   const releaseBuildTypes = [...source.matchAll(/^([ \t]*)getByName\("release"\)\s*\{/gm)];
@@ -43,11 +44,11 @@ export function configureAndroidGradleSigning(source) {
     `${buildIndent}signingConfigs {`,
     `${buildIndent}    create("portalRelease") {`,
     `${buildIndent}        val keystorePropertiesFile = rootProject.file("keystore.properties")`,
-    `${buildIndent}        val keystoreProperties = Properties()`,
+    `${buildIndent}        val keystoreProperties = java.util.Properties()`,
     `${buildIndent}        if (!keystorePropertiesFile.exists()) {`,
     `${buildIndent}            throw GradleException("Missing Android release keystore properties")`,
     `${buildIndent}        }`,
-    `${buildIndent}        keystoreProperties.load(FileInputStream(keystorePropertiesFile))`,
+    `${buildIndent}        keystoreProperties.load(java.io.FileInputStream(keystorePropertiesFile))`,
     `${buildIndent}        keyAlias = keystoreProperties["keyAlias"] as String`,
     `${buildIndent}        keyPassword = keystoreProperties["password"] as String`,
     `${buildIndent}        storeFile = file(keystoreProperties["storeFile"] as String)`,
@@ -62,7 +63,7 @@ export function configureAndroidGradleSigning(source) {
     releaseBuildTypes[0][0],
     `${releaseIndent}getByName("release") {\n${releaseIndent}    signingConfig = signingConfigs.getByName("portalRelease")`,
   );
-  return `import java.io.FileInputStream\nimport java.util.Properties\n\n${configured}`;
+  return configured;
 }
 
 async function main() {
