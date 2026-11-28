@@ -28,6 +28,7 @@ async function writeDiagnostics(error) {
   );
 }
 
+// @spec CLIENT-001 CLIENT-003
 describe('Portal native client', { timeout: 180000 }, () => {
   before(async () => {
     await mkdir(artifactsDir, { recursive: true });
@@ -64,12 +65,12 @@ describe('Portal native client', { timeout: 180000 }, () => {
     }
   });
 
-  it('shows the visible Portal heading', async () => {
-    assert.equal(await adapter.isVisible({ role: 'heading', text: 'Portal' }), true);
+  it('shows the visible onboarding heading', async () => {
+    assert.equal(await adapter.isVisible({ role: 'heading', text: 'Add your Digital Fortress' }), true);
   });
 
-  it('shows the visible client shell text', async () => {
-    assert.equal(await adapter.isVisible({ text: 'Native client shell' }), true);
+  it('explains how to get started', async () => {
+    assert.equal(await adapter.isVisible({ text: 'Enter your Digital Fortress web address to get started.' }), true);
   });
 
   it('captures a screenshot of the running client', async () => {

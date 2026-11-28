@@ -3,26 +3,117 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Portal</title>
+    <title>Digital Fortress</title>
+    <link rel="stylesheet" href="/src/style.css" />
     <script type="module" src="/src/main.js"></script>
   </head>
   <body>
-    <main>
-      <h1>Portal</h1>
-      <p>Native client shell</p>
-      <form id="portal-url-form" novalidate>
-        <label for="portal-url">Portal URL</label>
-        <input id="portal-url" name="portal-url" type="text" inputmode="url"
-          autocomplete="url" autocapitalize="off" spellcheck="false"
-          placeholder="https://portal.example.com" required />
-        <button type="submit">Check connection</button>
-      </form>
-      <p id="portal-status" role="status" aria-live="polite"></p>
-      <div id="portal-confirm" hidden>
-        <p>Only save this address if you recognize it as your Portal. Saving does not sign you in or verify the server's identity.</p>
-        <button id="portal-save" type="button">Save this Portal URL</button>
-      </div>
-      <p id="portal-saved" hidden></p>
-    </main>
+    <div class="app-shell">
+      <header class="app-header">
+        <div class="brand">
+          <svg class="brand-mark" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+            <defs>
+              <linearGradient id="brand-gradient" x1="4" y1="4" x2="36" y2="36" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#C2B5FF" />
+                <stop offset="1" stop-color="#6E83F7" />
+              </linearGradient>
+            </defs>
+            <rect x="1" y="1" width="38" height="38" rx="13" fill="url(#brand-gradient)" />
+            <path d="M12 27V19a8 8 0 0 1 16 0v8M17 27v-8a3 3 0 0 1 6 0v8" stroke="#151630" stroke-width="2.5" stroke-linecap="round" />
+          </svg>
+          <span>Digital Fortress<span class="brand-period">.</span></span>
+        </div>
+        <span class="header-label">A LITTLE MORE CONNECTED</span>
+      </header>
+
+      <!-- @spec CLIENT-001 CLIENT-027 -->
+      <main class="onboarding">
+        <section class="intro" aria-label="Welcome to Digital Fortress">
+          <div class="intro-copy">
+            <p class="eyebrow"><span class="eyebrow-dot"></span> WELCOME TO DIGITAL FORTRESS</p>
+            <p class="intro-title">Your world.<br /><span>Your fortress.</span></p>
+            <p class="intro-description">Your digital space starts here.</p>
+          </div>
+
+          <svg class="portal-art" viewBox="0 0 360 250" fill="none" aria-hidden="true">
+            <defs>
+              <linearGradient id="portal-arch" x1="103" y1="42" x2="257" y2="218" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#C9B9FF" />
+                <stop offset=".52" stop-color="#8E8DF7" />
+                <stop offset="1" stop-color="#5C76D9" />
+              </linearGradient>
+              <linearGradient id="portal-opening" x1="180" y1="71" x2="180" y2="209" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#323763" />
+                <stop offset="1" stop-color="#141D36" />
+              </linearGradient>
+              <radialGradient id="portal-glow" cx="0" cy="0" r="1" gradientTransform="translate(180 146) rotate(90) scale(100 155)" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#A798FF" stop-opacity=".26" />
+                <stop offset="1" stop-color="#A798FF" stop-opacity="0" />
+              </radialGradient>
+            </defs>
+            <ellipse cx="180" cy="146" rx="155" ry="100" fill="url(#portal-glow)" />
+            <circle cx="180" cy="132" r="107" stroke="#A3AFFF" stroke-opacity=".14" />
+            <circle cx="180" cy="132" r="84" stroke="#A3AFFF" stroke-opacity=".12" stroke-dasharray="3 7" />
+            <ellipse cx="180" cy="214" rx="112" ry="14" fill="#8589F2" fill-opacity=".12" />
+            <path d="M109 207v-92a71 71 0 0 1 142 0v92c0 5-4 9-9 9H118c-5 0-9-4-9-9Z" fill="url(#portal-arch)" />
+            <path d="M123 208v-92a57 57 0 0 1 114 0v92H123Z" fill="url(#portal-opening)" />
+            <path d="M138 208v-91a42 42 0 0 1 84 0v91" stroke="#C1BAFF" stroke-opacity=".42" stroke-width="2" />
+            <circle cx="180" cy="131" r="15" fill="#B2A7FF" fill-opacity=".16" />
+            <path d="M180 119v24m-12-12h24" stroke="#D7D1FF" stroke-width="2" stroke-linecap="round" />
+            <rect x="59" y="87" width="45" height="45" rx="14" fill="#252D50" stroke="#A9B2FF" stroke-opacity=".3" />
+            <path d="M73 109h17m-8.5-8.5v17" stroke="#B9B7FF" stroke-width="2" stroke-linecap="round" />
+            <rect x="257" y="119" width="38" height="38" rx="12" fill="#252D50" stroke="#A9B2FF" stroke-opacity=".3" />
+            <circle cx="276" cy="138" r="6" stroke="#B9B7FF" stroke-width="2" />
+            <circle cx="79" cy="166" r="3" fill="#A8B5FF" />
+            <circle cx="278" cy="72" r="3" fill="#D1C5FF" />
+            <path d="M60 57v10m-5-5h10M301 184v10m-5-5h10" stroke="#B4B7FF" stroke-opacity=".7" stroke-width="2" stroke-linecap="round" />
+          </svg>
+        </section>
+
+        <section class="connection-card" aria-labelledby="onboarding-title">
+          <p class="card-eyebrow">LET'S GET STARTED</p>
+          <h1 id="onboarding-title">Add your Digital Fortress</h1>
+          <p class="card-description">Enter your Digital Fortress web address to get started.</p>
+
+          <form id="portal-url-form" novalidate>
+            <label for="portal-url">Digital Fortress address</label>
+            <div class="input-wrap">
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="1.5" />
+                <path d="M3.5 12h17M12 3.5c2.4 2.3 3.5 5.2 3.5 8.5s-1.1 6.2-3.5 8.5c-2.4-2.3-3.5-5.2-3.5-8.5S9.6 5.8 12 3.5Z" stroke="currentColor" stroke-width="1.5" />
+              </svg>
+              <input id="portal-url" name="portal-url" type="text" inputmode="url"
+                autocomplete="url" autocapitalize="off" spellcheck="false"
+                placeholder="https://fortress.example.com" aria-describedby="portal-url-hint" required />
+            </div>
+            <p id="portal-url-hint" class="input-hint">The address usually starts with https://</p>
+            <button class="primary-button" type="submit">
+              Check connection
+              <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                <path d="M4 10h11m-4-4 4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </button>
+          </form>
+
+          <p id="portal-status" class="connection-status" role="status" aria-live="polite" aria-atomic="true"></p>
+          <div id="portal-confirm" class="confirmation" hidden>
+            <p class="confirmation-title">Recognize this address?</p>
+            <p>Only save it if it belongs to your Digital Fortress. Saving does not sign you in or verify the server's identity.</p>
+            <button id="portal-save" class="save-button" type="button">Save this address</button>
+          </div>
+          <p id="portal-saved" class="saved-address" hidden></p>
+
+          <div class="notice">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M12 3.5 19 6v5.5c0 4.2-2.8 7.3-7 9-4.2-1.7-7-4.8-7-9V6l7-2.5Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />
+              <path d="M12 10.5v4m0-7h.01" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+            </svg>
+            <p><strong>Just an address check.</strong><br />Sign-in isn't available in the app yet.</p>
+          </div>
+        </section>
+      </main>
+
+      <footer class="app-footer"><span></span> YOUR DIGITAL FORTRESS</footer>
+    </div>
   </body>
 </html>

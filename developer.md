@@ -182,8 +182,9 @@ The abstraction does not change `SiteInfo` or the client manifest contract.
 
 The `Portal.Client` Tauri v2 shell is a scaffold. It can check and save a
 manually entered Portal URL, but it does not yet sign in, load the manifest,
-or change `Portal.Web` provider registration. The checked-in icons are scaffold
-defaults.
+or change `Portal.Web` provider registration. Its onboarding screen uses the
+Digital Fortress name; the native package identity remains Portal. The
+checked-in icons are scaffold defaults.
 
 ### Manual Portal URL onboarding
 

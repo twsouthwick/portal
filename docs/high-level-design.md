@@ -6,7 +6,8 @@ People need a single authenticated entry point to discover and open the web
 services available to them. Administrators need to describe those services
 without rebuilding the portal, and deployments need both directory/ZIP and
 Kubernetes-backed catalog sources. The repository also contains a native
-desktop/mobile shell, but it does not yet connect to the portal.
+desktop/mobile shell that can check an address but cannot yet authenticate or
+load the catalog.
 
 This description is reconstructed from the repository's README, application
 composition, providers, chart, and client. It records current behavior, not a
@@ -32,8 +33,12 @@ reference a Deployment, StatefulSet, or ReplicaSet in its own namespace. The
 Kubernetes provider excludes the site when the workload is missing or its
 desired replica count is zero; Helm supplies the additional read permissions.
 
-The Tauri client is currently a placeholder shell. Its integration with the
-portal, authentication, and catalog is not implemented.
+The Tauri client can check and save an untrusted portal address, but
+authentication and catalog integration are not implemented.
+
+The owner has selected **Digital Fortress** as the name displayed in native
+client onboarding. This presentation name does not introduce a separate
+runtime or change the existing Portal service interfaces.
 
 The owner-approved release policy separates development builds from stable versions:
 pushes to `main` publish mutable `dev` artifacts, while stable releases are
@@ -76,10 +81,10 @@ approved as future product requirements.
 
 ## Non-Goals
 
-- The current Tauri shell does not implement portal connectivity or
-  authentication.
-- The repository does not establish a separate deployment or runtime for
-  Digital Fortress; no such references were found in the inspected files.
+- The current Tauri shell does not implement authenticated portal connectivity
+  or catalog integration.
+- The Digital Fortress name does not establish a separate deployment or
+  runtime.
 - The mapping does not assert that every current implementation detail is an
   intended invariant. Unexplained or inconsistent behavior is recorded as an
   open question in the relevant design.
@@ -111,7 +116,7 @@ flowchart LR
   Aspire --> Authelia[Development Authelia]
   Defaults[Portal.ServiceDefaults] --> Web
   Chart[Helm chart and CRD] --> Web
-  Client[Portal.Client Tauri shell] -. placeholder; no integration .-> User
+  Client[Portal.Client Tauri shell] -. address setup only .-> User
   CI[GitHub Actions] --> Web
   CI --> Client
 ```

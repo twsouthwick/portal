@@ -20,12 +20,19 @@ pub enum StoreError {
     Origin(OriginError),
 }
 
+// @spec CLIENT-029
 impl std::fmt::Display for StoreError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Io(error) => write!(f, "Could not access the saved Portal URL: {error}"),
-            Self::Corrupt => f.write_str("The saved Portal URL file is not valid."),
-            Self::Origin(error) => write!(f, "The saved Portal URL is not valid: {error}"),
+            Self::Io(error) => write!(
+                f,
+                "Could not access the saved Digital Fortress address: {error}"
+            ),
+            Self::Corrupt => f.write_str("The saved Digital Fortress address file is not valid."),
+            Self::Origin(error) => write!(
+                f,
+                "The saved Digital Fortress address is not valid: {error}"
+            ),
         }
     }
 }
@@ -96,7 +103,7 @@ mod tests {
         fs::remove_dir_all(dir).unwrap();
     }
 
-    // @spec CLIENT-013
+    // @spec CLIENT-013 CLIENT-029
     #[test]
     fn revalidates_saved_origin_on_load() {
         let dir = temp_dir("revalidate");
@@ -104,20 +111,30 @@ mod tests {
         let path = dir.join("portal.json");
 
         fs::write(&path, r#"{ "origin": "http://localhost:5000" }"#).unwrap();
+        let error = load_origin(&path, OriginPolicy::HttpsOnly).unwrap_err();
         assert!(matches!(
-            load_origin(&path, OriginPolicy::HttpsOnly),
-            Err(StoreError::Origin(OriginError::InsecureScheme))
+            &error,
+            StoreError::Origin(OriginError::InsecureScheme)
         ));
+        assert!(error.to_string().contains("Digital Fortress"));
+        assert!(error.to_string().contains("https"));
 
         fs::write(
             &path,
             r#"{ "origin": "https://portal.example.com", "trusted": true }"#,
         )
         .unwrap();
-        assert!(matches!(
-            load_origin(&path, OriginPolicy::HttpsOnly),
-            Err(StoreError::Corrupt)
-        ));
+        let error = load_origin(&path, OriginPolicy::HttpsOnly).unwrap_err();
+        assert!(matches!(&error, StoreError::Corrupt));
+        assert!(error.to_string().contains("Digital Fortress"));
         fs::remove_dir_all(dir).unwrap();
+    }
+
+    // @spec CLIENT-029
+    #[test]
+    fn storage_error_keeps_the_cause_and_product_name() {
+        let error = StoreError::Io(io::Error::other("disk unavailable")).to_string();
+        assert!(error.contains("Digital Fortress"));
+        assert!(error.contains("disk unavailable"));
     }
 }

@@ -1,65 +1,155 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { test } from 'node:test';
 import { runInNewContext } from 'node:vm';
+import { it } from 'node:test';
 
-const source = await readFile(new URL('../src/main.js', import.meta.url), 'utf8');
+const script = await readFile(new URL('../src/main.js', import.meta.url), 'utf8');
 
-function setup(outcome) {
-  const ids = [
-    'portal-url-form', 'portal-url', 'portal-status',
-    'portal-confirm', 'portal-save', 'portal-saved',
-  ];
-  const elements = Object.fromEntries(ids.map(id => [id, {
-    hidden: true,
+function element() {
+  const listeners = {};
+  return {
+    dataset: {},
+    hidden: false,
     textContent: '',
     value: '',
-    handlers: {},
-    addEventListener(event, handler) {
-      this.handlers[event] = handler;
-    },
-  }]));
-  const calls = [];
-  const invoke = async (command, args) => {
-    calls.push({ command, args });
-    if (command === 'check_portal_url') return outcome;
-    if (command === 'save_portal_url') return args.origin;
-    if (command === 'saved_portal_url') return null;
-    throw new Error(`Unexpected command: ${command}`);
+    addEventListener(type, listener) { listeners[type] = listener; },
+    dispatch(type) { return listeners[type]({ preventDefault() {} }); },
   };
-  runInNewContext(source, {
-    window: { __TAURI__: { core: { invoke } } },
-    document: { getElementById: id => elements[id] },
-  });
-  return { elements, calls };
 }
 
-// @spec CLIENT-013 CLIENT-026
-test('confirms and saves the discovered origin, not the entered alias', async () => {
-  const { elements, calls } = setup({
-    origin: 'https://portal.example.com',
-    outcome: { kind: 'signInRequired' },
+async function page({ check, save = async origin => origin }) {
+  const elements = Object.fromEntries([
+    'portal-url-form', 'portal-url', 'portal-status', 'portal-confirm', 'portal-save', 'portal-saved',
+  ].map(id => [id, element()]));
+  elements['portal-confirm'].hidden = true;
+  elements['portal-saved'].hidden = true;
+
+  const invoke = async (command, args) => {
+    if (command === 'saved_portal_url') return null;
+    if (command === 'check_portal_url') return check(args.input);
+    if (command === 'save_portal_url') return save(args.origin);
+    throw new Error(`Unexpected command: ${command}`);
+  };
+  runInNewContext(script, {
+    document: { getElementById: id => elements[id] },
+    window: { __TAURI__: { core: { invoke } } },
   });
-  elements['portal-url'].value = 'https://alias.example.com';
+  await Promise.resolve();
+  return elements;
+}
 
-  await elements['portal-url-form'].handlers.submit({ preventDefault() {} });
+// @spec CLIENT-011 CLIENT-013 CLIENT-028
+it('distinguishes checking and success, then clears the result when the address changes', async () => {
+  let resolveCheck;
+  const checked = new Promise(resolve => { resolveCheck = resolve; });
+  const elements = await page({ check: () => checked });
+  const input = elements['portal-url'];
+  const status = elements['portal-status'];
+  const confirmation = elements['portal-confirm'];
 
-  assert.match(elements['portal-status'].textContent, /https:\/\/portal\.example\.com/);
-  assert.equal(elements['portal-confirm'].hidden, false);
-  await elements['portal-save'].handlers.click();
-  const save = calls.find(call => call.command === 'save_portal_url');
-  assert.equal(save.args.origin, 'https://portal.example.com');
+  input.value = 'portal.example.com';
+  const pending = elements['portal-url-form'].dispatch('submit');
+  assert.equal(status.dataset.state, 'checking');
+  assert.match(status.textContent, /Checking/);
+  assert.equal(confirmation.hidden, true);
+
+  resolveCheck({ origin: 'https://portal.example.com', outcome: { kind: 'signInRequired' } });
+  await pending;
+  assert.equal(status.dataset.state, 'success');
+  assert.match(status.textContent, /Digital Fortress/);
+  assert.match(status.textContent, /Sign-in is not available/);
+  assert.equal(confirmation.hidden, false);
+
+  input.value = 'other.example.com';
+  input.dispatch('input');
+  assert.equal(status.textContent, '');
+  assert.equal(confirmation.hidden, true);
 });
 
-// @spec CLIENT-024 CLIENT-025 CLIENT-026
-test('discovery errors are visible and cannot be confirmed', async () => {
+// @spec CLIENT-012 CLIENT-013 CLIENT-028
+it('distinguishes errors and does not restore an outdated result', async () => {
+  let resolveCheck;
+  const checked = new Promise(resolve => { resolveCheck = resolve; });
+  const elements = await page({ check: input => input === 'bad' ? Promise.reject('Invalid address') : checked });
+  const input = elements['portal-url'];
+  const status = elements['portal-status'];
+
+  input.value = 'bad';
+  await elements['portal-url-form'].dispatch('submit');
+  assert.equal(status.dataset.state, 'error');
+  assert.equal(status.textContent, 'Invalid address');
+  assert.equal(elements['portal-confirm'].hidden, true);
+
+  input.value = 'old.example.com';
+  const pending = elements['portal-url-form'].dispatch('submit');
+  input.value = 'new.example.com';
+  input.dispatch('input');
+  resolveCheck({ origin: 'https://old.example.com', outcome: { kind: 'reachable' } });
+  await pending;
+  assert.equal(status.textContent, '');
+  assert.equal(elements['portal-confirm'].hidden, true);
+});
+
+// @spec CLIENT-012 CLIENT-028
+it('presents an unsuccessful connection check as an error', async () => {
+  const elements = await page({
+    check: async () => ({ origin: 'https://portal.example.com', outcome: { kind: 'network' } }),
+  });
+  await elements['portal-url-form'].dispatch('submit');
+  assert.equal(elements['portal-status'].dataset.state, 'error');
+  assert.match(elements['portal-status'].textContent, /network connection/);
+  assert.equal(elements['portal-confirm'].hidden, true);
+});
+
+// @spec CLIENT-013 CLIENT-028
+it('keeps saving explicit and labels the saved address as unverified', async () => {
+  const savedOrigins = [];
+  const elements = await page({
+    check: async () => ({ origin: 'https://portal.example.com', outcome: { kind: 'reachable' } }),
+    save: async origin => { savedOrigins.push(origin); return origin; },
+  });
+  elements['portal-url'].value = 'portal.example.com';
+  await elements['portal-url-form'].dispatch('submit');
+  assert.deepEqual(savedOrigins, []);
+
+  await elements['portal-save'].dispatch('click');
+  assert.deepEqual(savedOrigins, ['https://portal.example.com']);
+  assert.equal(elements['portal-confirm'].hidden, true);
+  assert.equal(elements['portal-saved'].hidden, false);
+  assert.match(elements['portal-saved'].textContent, /^Saved Digital Fortress URL:/);
+  assert.match(elements['portal-saved'].textContent, /not signed in or verified/);
+});
+
+// @spec CLIENT-013 CLIENT-026
+it('confirms and saves the discovered origin, not the entered alias', async () => {
+  const savedOrigins = [];
+  const elements = await page({
+    check: async () => ({
+      origin: 'https://portal.example.com',
+      outcome: { kind: 'signInRequired' },
+    }),
+    save: async origin => { savedOrigins.push(origin); return origin; },
+  });
+  elements['portal-url'].value = 'https://alias.example.com';
+  await elements['portal-url-form'].dispatch('submit');
+  assert.match(elements['portal-status'].textContent, /https:\/\/portal\.example\.com/);
+  assert.equal(elements['portal-confirm'].hidden, false);
+  await elements['portal-save'].dispatch('click');
+  assert.deepEqual(savedOrigins, ['https://portal.example.com']);
+});
+
+// @spec CLIENT-024 CLIENT-025 CLIENT-026 CLIENT-028
+it('discovery errors are visible and cannot be confirmed', async () => {
   for (const [outcome, message] of [
     [{ kind: 'discoveryInvalid' }, /invalid/],
     [{ kind: 'discoveryTooLarge' }, /8 KiB/],
     [{ kind: 'discoveryResponse', status: 403 }, /HTTP 403/],
   ]) {
-    const { elements } = setup({ origin: 'https://alias.example.com', outcome });
-    await elements['portal-url-form'].handlers.submit({ preventDefault() {} });
+    const elements = await page({
+      check: async () => ({ origin: 'https://alias.example.com', outcome }),
+    });
+    await elements['portal-url-form'].dispatch('submit');
+    assert.equal(elements['portal-status'].dataset.state, 'error');
     assert.match(elements['portal-status'].textContent, message);
     assert.equal(elements['portal-confirm'].hidden, true);
   }
