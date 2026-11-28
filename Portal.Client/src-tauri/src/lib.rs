@@ -23,7 +23,7 @@ fn config_path(app: &AppHandle) -> Result<PathBuf, String> {
         .map_err(|error| format!("Could not locate the configuration directory: {error}"))
 }
 
-/// @spec CLIENT-008 CLIENT-009 CLIENT-010 CLIENT-011 CLIENT-012
+/// @spec CLIENT-008 CLIENT-009 CLIENT-010 CLIENT-011 CLIENT-012 CLIENT-023 CLIENT-024 CLIENT-025 CLIENT-026
 #[tauri::command]
 async fn check_portal_url(
     input: String,
@@ -33,7 +33,7 @@ async fn check_portal_url(
     let origin = PortalOrigin::parse(&input, ORIGIN_POLICY).map_err(|error| error.to_string())?;
     let client =
         portal_onboarding::probe_client(PROBE_TIMEOUT).map_err(|error| error.to_string())?;
-    let outcome = portal_onboarding::probe(&client, &origin).await;
+    let (origin, outcome) = portal_onboarding::check_portal(&client, &origin, ORIGIN_POLICY).await;
     if outcome.found_portal() {
         pending.publish_if_current(generation, origin.clone());
     }

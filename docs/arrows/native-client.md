@@ -8,7 +8,9 @@ Tauri desktop/mobile shell and its platform-adapted smoke and UI verification.
 placeholder; portal integration is not implemented. Approved MinVer versioning
 and signed multi-ABI Android packaging are implemented; hosted-run verification
 remains pending. Manual Portal URL onboarding (issue #15) checks and saves an
-untrusted origin without authenticating. The owner selected the public-client authentication design on
+untrusted origin without authenticating. Optional well-known discovery (issue
+#16) is implemented in the Rust host; UI end-to-end coverage remains pending.
+The owner selected the public-client authentication design on
 2026-11-27; real-provider and platform validation remain.
 
 ## References
@@ -20,10 +22,11 @@ untrusted origin without authenticating. The owner selected the public-client au
 - `docs/intent/native-client/native-client-design.md`
 
 ### EARS
-- `docs/intent/native-client/native-client-specs.md` — 22 specs
+- `docs/intent/native-client/native-client-specs.md` — 26 specs
 
 ### Tests
 - `Portal.Client/tests/client.test.js`
+- `Portal.Client/tests/onboarding.test.js`
 - `Portal.Client/tests/android-uiautomator2.test.js`
 - `Portal.Client/tests/android-webview.test.js`
 - `Portal.Client/smoke-linux.sh`
@@ -61,14 +64,16 @@ smoke scripts.
 | Approved release packaging | CLIENT-006, CLIENT-007 | 2 | 0 | Hosted signing and platform builds remain unverified |
 | Manual Portal URL onboarding | CLIENT-008 to CLIENT-013 | 6 | 0 | UI flow lacks E2E coverage; Android private-CA trust unsupported |
 | Authenticated startup and manifest cache (planned) | CLIENT-014 to CLIENT-022 | 0 | 9 | Native implementation and tests are absent; Authelia and platform validation remain unverified |
+| Optional well-known discovery | CLIENT-023 to CLIENT-026 | 4 | 0 | Native UI flow lacks end-to-end coverage |
 
 **Traceability:** Android signing, ABI, versioning, and release workflow tests
 cite the approved EARS IDs. Portal connectivity and authentication are
 explicitly outside the present native-client implementation. CLIENT-014 to
 CLIENT-022 specify planned authenticated startup and cache behavior but have
 no native implementation or test coverage; Authelia and platform validation
-remain unverified. Onboarding unit tests cite CLIENT-008 to CLIENT-013; the
-Tauri commands and UI cite them at entry points.
+remain unverified. Onboarding unit tests cite CLIENT-008 to CLIENT-013 and
+CLIENT-023 to CLIENT-026; the Tauri commands and UI cite the applicable IDs at
+entry points.
 
 ## Key Findings
 
@@ -89,6 +94,8 @@ Tauri commands and UI cite them at entry points.
 1. Validate the selected public-client design against Authelia and the
    target platforms; the manifest API is implemented in identity-and-access
    (AUTH-008 to AUTH-016), but provider interoperability remains unvalidated.
+2. Verify optional well-known discovery through the native UI on target
+   platforms (CLIENT-023 to CLIENT-026).
 
 ### Nice to Have
 1. Review release packaging behavior on additional physical devices after the

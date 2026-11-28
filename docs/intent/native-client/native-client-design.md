@@ -22,10 +22,10 @@ platform adapters for desktop WebDriver and Android UI/WebView inspection.
 ## Current Boundary
 
 The developer guide states that this client does not yet connect to the portal,
-implement authentication, or change server provider registration. Portal
-discovery, sign-in, site launch integration, synchronization, and server
-interaction are not implemented, apart from the manual Portal URL onboarding
-described below, which does not authenticate. The owner-selected authentication design
+implement authentication, or change server provider registration. LAN discovery, sign-in, site launch integration,
+synchronization, and server interaction are not implemented, apart from the
+manual Portal URL onboarding and optional well-known discovery described
+below, which do not authenticate. The owner-selected authentication design
 below is not evidence of working integration.
 
 ## Manual Portal URL Onboarding (issue #15)
@@ -43,10 +43,11 @@ default port. HTTPS is required. Only a debug build compiled with the
 `dev-http-loopback` Cargo feature also accepts `http` for `localhost`,
 `127.0.0.0/8`, or `::1`; release builds ignore the feature.
 
-**Connection check.** The Rust host, not the WebView, sends one `GET
-{origin}/api/manifest`, the documented manifest endpoint (AUTH-008). It sends
-no credentials or cookies, follows no redirects, and times out after ten
-seconds. Certificates are validated normally against the platform trust store
+**Connection check.** After the optional discovery step described below, the
+Rust host, not the WebView, sends one `GET {origin}/api/manifest`, the
+documented manifest endpoint (AUTH-008). It sends no credentials or cookies,
+follows no redirects, and times out after ten seconds. Certificates are
+validated normally against the platform trust store
 plus the Mozilla root set; there is no option to bypass validation. Android
 does not yet read user-installed CAs, so a private CA is currently
 unsupported there. An unauthenticated Portal answers `401` with a `Bearer`
@@ -71,6 +72,46 @@ labels a saved origin as not yet verified or signed in.
 below, which has not been validated against Authelia or the target platforms.
 This change therefore performs no sign-in, sends no tokens, and does not claim
 a verified connection. Sign-in is added once that validation is complete.
+
+## Well-known Portal Discovery (issue #16)
+
+**[owner-approved design; issue #16]** Each entered address remains an
+untrusted origin, normalized under the existing HTTPS and development-loopback
+policy. As an optional initial discovery step, the host sends an
+unauthenticated `GET` to
+`{entered-origin}/.well-known/digital-fortress/manifest.json`, without cookies
+or redirects and with normal certificate validation. The document is JSON:
+
+```json
+{"origin":"https://portal.example.com"}
+```
+
+On `200`, `origin` is a required absolute origin and is validated with the same
+scheme, host, port, userinfo, path, query, and fragment rules as manual entry.
+Other document fields are ignored and do not grant trust or authorization.
+The client limits the response body to 8 KiB and reports malformed,
+missing-field, oversized, or invalid-origin documents as errors.
+
+On `404` or `302`, the client checks the entered origin directly as before,
+without following the redirect. This preserves direct entry when an absent
+document triggers the Portal's authentication redirect. Other discovery
+errors, including other redirects, TLS failures, timeouts, authentication
+challenges, and unexpected responses, are reported and do not silently fall
+back. Discovery and the subsequent manifest probe each use the existing
+ten-second request timeout. The client does not recursively discover the
+document's target.
+
+For either a discovered or direct origin, the existing `/api/manifest` probe
+determines reachability. Only a successful current check can publish the final
+origin for explicit user confirmation and storage; the UI displays that
+origin and does not describe it as verified or authenticated. Neither request
+sends credentials or cookies. Discovery may name a different HTTPS origin,
+but a certificate and the document do not prove Portal identity.
+
+The document is supplied externally; Portal.Web does not serve it. An alias
+host must serve the document at the well-known path; an alias that redirects
+that path must be configured with an exception. DNS-SD/mDNS and following
+redirects are outside this design.
 
 ## Approved Release Packaging
 
@@ -240,7 +281,7 @@ evidence that those integrations work.
 | Native authentication | Separate public OIDC client with system-browser code flow and PKCE S256. **[owner-selected 2026-11-27; not validated]** | Portal-mediated session/API flow. | Avoids embedding the confidential web secret or assuming shared browser cookies; requires provider and API compatibility. |
 | Native OIDC configuration | Fetch non-secret issuer, public client ID, API audience, and scopes from the Portal's unauthenticated `/.well-known/portal-native-oidc` endpoint. **[owner-selected source; endpoint contract proposed]** | Manual issuer/client ID fields; build-time configuration. | Supports different Portal deployments while keeping the Portal URL as the user's sole endpoint selection. |
 | Manifest cache | Cache only the API's filtered DTO per validated `(iss, sub)`; show it as stale until successful refresh or sign-out. **[issue #12; owner-selected offline policy 2026-11-27]** | No offline cache; time-limited stale display; account-independent cache. | Preserves useful startup while preventing one authenticated account from displaying another account's manifest. |
-| Manual Portal URL check | Rust host probes `/api/manifest` without credentials or redirects; the confirmed origin is saved untrusted. **[issue #15]** | Probe from the WebView; follow redirects; save on entry. | Keeps the network policy out of the WebView CSP, avoids leaking requests to redirect targets, and satisfies the issue's confirmation and no-trust criteria. |
+| Manual Portal URL check | Rust host optionally resolves an externally supplied well-known document, then probes `/api/manifest` without credentials or redirects; the confirmed origin is saved untrusted. **[issues #15 and #16]** | Probe from the WebView; follow redirects; save on entry. | Keeps the network policy out of the WebView CSP, avoids leaking requests to redirect targets, and preserves confirmation and no-trust criteria. |
 | UI verification | Shared Node E2E assertions use platform adapters. **[inferred]** | Separate assertions for each platform. | `Portal.Client/tests/client.test.js` shares assertions and adapters. |
 
 ## Open Questions & Future Decisions

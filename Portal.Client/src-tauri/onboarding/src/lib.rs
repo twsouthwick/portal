@@ -7,5 +7,5 @@ mod store;
 
 pub use origin::{OriginError, OriginPolicy, PortalOrigin};
 pub use pending::PendingOrigin;
-pub use probe::{PROBE_PATH, PROBE_TIMEOUT, ProbeOutcome, probe, probe_client};
+pub use probe::{PROBE_PATH, PROBE_TIMEOUT, ProbeOutcome, check_portal, probe, probe_client};
 pub use store::{StoreError, load_origin, save_origin};
