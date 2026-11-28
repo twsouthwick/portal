@@ -46,7 +46,7 @@ arrows:
     blockedBy: []
     detail: portal-experience.md
     next: Confirm intended filtering and launch behavior for private and internal sites.
-    drift: No @spec annotations currently connect implementation and tests to these inferred requirements.
+    drift: UX-009–011 have implementation citations and UX-009/UX-011 have rendering regression coverage; other UX requirements and automated viewport layout coverage remain unverified.
   native-client:
     status: MAPPED
     parent: null
