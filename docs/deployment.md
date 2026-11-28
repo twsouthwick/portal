@@ -493,8 +493,11 @@ For a local reference, see `Portal.AppHost/Authelia/configuration.yml`.
 - **Client API (`/api/manifest`):** accepts either the web session cookie or
   a signed JWT bearer access token whose audience is `Oidc__ApiAudience`
   (default `portal-api`) and whose `groups` claim supplies the user's roles.
-  An ID token is not an API access token and is rejected. **No audience setup
-  is needed for the web deployment.**
+  JWT validation checks the configured audience but does not distinguish
+  access tokens from ID tokens. An ID token is rejected only when its
+  `aud` does not include `Oidc__ApiAudience`; keep that value distinct from
+  the web client ID and use an access token with that audience. **No audience
+  setup is needed for the web deployment.**
 
 ### Native Authelia client
 

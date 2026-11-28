@@ -58,12 +58,14 @@ or policy:
 
 **Authentication.** The owner selected the native-client public OIDC client
 model (`docs/intent/native-client/native-client-design.md`). The manifest
-endpoint accepts only an OIDC access token as a JWT bearer token through an
-endpoint-specific policy; the Portal cookie is not accepted. The scheme
-validates issuer, signature, expiry, and the configured API audience
+endpoint expects an OIDC access token as a JWT bearer token through an
+endpoint-specific policy; the Portal cookie is not accepted. The bearer
+scheme validates issuer, signature, expiry, and the configured API audience
 (`Oidc:ApiAudience`, default `portal-api`), and maps trusted `groups` to roles
-exactly as the cookie scheme does. The native client must request an access
-token for that audience; an ID token is rejected because it has a different
+exactly as the cookie scheme does. It does not explicitly distinguish access
+tokens from ID tokens: an ID token is rejected only when its `aud` does not
+include the configured API audience. Keep the API audience distinct from the
+web client ID, and have the native client request an access token for that
 audience. An unauthenticated or invalid-token request receives `401` with RFC
 9457 problem details and a bearer challenge, not the OIDC redirect used by
 the Blazor routes (SITE-017). The existing cookie/OIDC defaults, Blazor
