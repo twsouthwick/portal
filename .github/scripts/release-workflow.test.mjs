@@ -68,7 +68,7 @@ test('Helm renders cross-namespace reads and chart runtime settings', () => {
   assert.match(first, /workloadRef:\n\s+type: object\n\s+required:\n\s+- kind\n\s+- name/);
   assert.match(first, /enum: \[Deployment, StatefulSet, ReplicaSet\]/);
   assert.match(first, /maxLength: 253/);
-  assert.match(first, /rule: '!has\(self.namespace\)'/);
+  assert.match(first, /rule: '!has\(self.__namespace__\)'/);
   assert.match(first, /targetPort: 8080/);
   assert.match(first, /containerPort: 8080/);
   assert.match(first, /name: ASPNETCORE_FORWARDEDHEADERS_ENABLED\s+value: "true"/);
