@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 
 namespace Portal.Web.Services;
@@ -20,20 +21,23 @@ public sealed partial class KubernetesPortalProvider : IPortalProvider
     private readonly string _version;
     private readonly string _plural;
     private readonly ILogger<KubernetesPortalProvider> _logger;
+    private readonly ISiteStatusProvider<KubernetesPortalSiteResource> _siteStatusProvider;
 
     public KubernetesPortalProvider(
         IKubernetes? kubernetes = null,
         string? group = null, string? version = null, string? plural = null,
-        ILogger<KubernetesPortalProvider>? logger = null)
+        ILogger<KubernetesPortalProvider>? logger = null,
+        ISiteStatusProvider<KubernetesPortalSiteResource>? siteStatusProvider = null)
     {
         _kubernetes = kubernetes ?? new Kubernetes(KubernetesClientConfiguration.BuildDefaultConfig());
         _group = group ?? Group;
         _version = version ?? Version;
         _plural = plural ?? Plural;
         _logger = logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<KubernetesPortalProvider>.Instance;
+        _siteStatusProvider = siteStatusProvider ?? new KubernetesSiteStatusProvider(_kubernetes, _logger);
     }
 
-    // @spec SITE-005 SITE-020
+    // @spec SITE-005 SITE-020 SITE-023 SITE-025 SITE-026
     public async ValueTask<PortalDetails> GetSiteDetailsAsync(CancellationToken cancellationToken = default)
     {
         var response = await _kubernetes.CustomObjects.ListClusterCustomObjectAsync<JsonElement>(
@@ -54,25 +58,23 @@ public sealed partial class KubernetesPortalProvider : IPortalProvider
         {
             var resource = item.Deserialize<KubernetesPortalSiteResource>(JsonOptions)
                 ?? throw new InvalidDataException("Kubernetes returned an invalid PortalSite.");
-            var spec = resource.Spec ?? throw new InvalidDataException("PortalSite is missing its spec.");
-            if (string.IsNullOrEmpty(spec.Id) || spec.Id.Length > 63 ||
-                !SiteIdPattern().IsMatch(spec.Id) || string.IsNullOrWhiteSpace(spec.Name))
-            {
-                throw new InvalidDataException("PortalSite must have a valid id and a non-empty name.");
-            }
+            var spec = ValidateSiteSpec(resource);
 
             if (!ids.Add(spec.Id))
             {
                 throw new InvalidDataException($"Duplicate PortalSite id '{spec.Id}'.");
             }
 
-            sites.Add(await MapPortalSiteToSiteInfoAsync(resource, cancellationToken));
+            if (await _siteStatusProvider.GetSiteStatusAsync(resource, cancellationToken) == SiteStatus.Available)
+            {
+                sites.Add(await MapPortalSiteToSiteInfoAsync(resource, cancellationToken));
+            }
         }
 
         return new PortalDetails("Portal") { Sites = sites };
     }
 
-    // @spec SITE-005 SITE-020
+    // @spec SITE-005 SITE-020 SITE-023 SITE-025 SITE-026
     public async ValueTask<SiteInfo?> GetSiteAsync(string siteId, CancellationToken cancellationToken = default)
     {
         var response = await _kubernetes.CustomObjects.ListClusterCustomObjectAsync<JsonElement>(
@@ -103,20 +105,18 @@ public sealed partial class KubernetesPortalProvider : IPortalProvider
             throw new InvalidDataException($"Duplicate PortalSite id '{siteId}'.");
         }
 
-        return await MapPortalSiteToSiteInfoAsync(matchingResources[0], cancellationToken);
+        var resource = matchingResources[0];
+        ValidateSiteSpec(resource);
+        return await _siteStatusProvider.GetSiteStatusAsync(resource, cancellationToken) == SiteStatus.Available
+            ? await MapPortalSiteToSiteInfoAsync(resource, cancellationToken)
+            : null;
     }
 
     // @spec SITE-007
     private async ValueTask<SiteInfo> MapPortalSiteToSiteInfoAsync(
         KubernetesPortalSiteResource resource, CancellationToken cancellationToken)
     {
-        var spec = resource.Spec ?? throw new InvalidDataException("PortalSite is missing its spec.");
-        if (string.IsNullOrEmpty(spec.Id) || spec.Id.Length > 63 ||
-            !SiteIdPattern().IsMatch(spec.Id) || string.IsNullOrWhiteSpace(spec.Name))
-        {
-            throw new InvalidDataException("PortalSite must have a valid id and a non-empty name.");
-        }
-
+        var spec = ValidateSiteSpec(resource);
         var site = MapPortalSiteToSiteInfo(spec, _logger);
         if (spec.ContentRef is { } contentRef)
         {
@@ -160,6 +160,17 @@ public sealed partial class KubernetesPortalProvider : IPortalProvider
 
     [GeneratedRegex("^[a-z0-9]([-a-z0-9]*[a-z0-9])?$", RegexOptions.CultureInvariant)]
     private static partial Regex SiteIdPattern();
+
+    private static KubernetesPortalSiteSpec ValidateSiteSpec(KubernetesPortalSiteResource resource)
+    {
+        var spec = resource.Spec ?? throw new InvalidDataException("PortalSite is missing its spec.");
+        if (string.IsNullOrEmpty(spec.Id) || spec.Id.Length > 63 ||
+            !SiteIdPattern().IsMatch(spec.Id) || string.IsNullOrWhiteSpace(spec.Name))
+        {
+            throw new InvalidDataException("PortalSite must have a valid id and a non-empty name.");
+        }
+        return spec;
+    }
 
     public static SiteInfo MapPortalSiteToSiteInfo(
         KubernetesPortalSiteSpec spec, ILogger<KubernetesPortalProvider>? logger = null)
@@ -252,6 +263,16 @@ public sealed class KubernetesPortalSiteSpec
     public bool IsInternal { get; init; }
     public IReadOnlyList<KubernetesPortalAppSpec> Apps { get; init; } = [];
     public KubernetesPortalContentRef? ContentRef { get; init; }
+    public KubernetesPortalWorkloadRef? WorkloadRef { get; init; }
+}
+
+public sealed class KubernetesPortalWorkloadRef
+{
+    public string Kind { get; init; } = string.Empty;
+    public string Name { get; init; } = string.Empty;
+
+    [JsonExtensionData]
+    public Dictionary<string, JsonElement>? AdditionalProperties { get; init; }
 }
 
 public sealed class KubernetesPortalAppSpec

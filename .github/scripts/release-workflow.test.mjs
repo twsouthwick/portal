@@ -47,7 +47,7 @@ test('chart trusts forwarded headers from the ingress by default', () => {
   assert.match(deployment, /if \.Values\.forwardedHeaders\.enabled[\s\S]*?name: ASPNETCORE_FORWARDEDHEADERS_ENABLED\s+value: "true"/);
 });
 
-// @spec K8S-002 K8S-003 K8S-008
+// @spec K8S-002 K8S-003 K8S-008 K8S-009 K8S-010
 test('Helm renders cross-namespace reads and chart runtime settings', () => {
   const render = (namespace, overrides = []) => execFileSync('helm', [
     'template', 'portal', './chart', '--namespace', namespace,
@@ -64,6 +64,11 @@ test('Helm renders cross-namespace reads and chart runtime settings', () => {
   assert.match(first, /subjects:\n  - kind: ServiceAccount\n    name: portal-portal\n    namespace: first/);
   assert.match(first, /resources: \["portalsites"\]\n    verbs: \["list"\]/);
   assert.match(first, /resources: \["configmaps"\]\n    verbs: \["get"\]/);
+  assert.match(first, /apiGroups: \["apps"\]\n    resources: \["deployments", "statefulsets", "replicasets"\]\n    verbs: \["get"\]/);
+  assert.match(first, /workloadRef:\n\s+type: object\n\s+required:\n\s+- kind\n\s+- name/);
+  assert.match(first, /enum: \[Deployment, StatefulSet, ReplicaSet\]/);
+  assert.match(first, /maxLength: 253/);
+  assert.match(first, /rule: '!has\(self.namespace\)'/);
   assert.match(first, /targetPort: 8080/);
   assert.match(first, /containerPort: 8080/);
   assert.match(first, /name: ASPNETCORE_FORWARDEDHEADERS_ENABLED\s+value: "true"/);

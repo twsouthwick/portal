@@ -163,6 +163,18 @@ the bundled JavaScript directly.
 - `Portal.Client` is a standalone Tauri v2 shell. It can check and save a
   manually entered Portal URL but does not yet implement authentication.
 
+### Site status
+
+`ISiteStatusProvider<TSite>.GetSiteStatusAsync` returns `SiteStatus.Available`
+or `SiteStatus.Unavailable`; errors propagate as exceptions.
+`KubernetesSiteStatusProvider` evaluates optional workload references.
+`KubernetesPortalProvider` uses this service for both catalog filtering and
+individual lookup, before loading content. It accepts an implementation through
+its `siteStatusProvider` constructor parameter. `AddKubernetes()` also honors a
+registered `ISiteStatusProvider<KubernetesPortalSiteResource>`; otherwise it
+creates the default service using the provider's Kubernetes client and logging.
+The abstraction does not change `SiteInfo` or the client manifest contract.
+
 ## Native client
 
 The `Portal.Client` Tauri v2 shell is a scaffold. It can check and save a

@@ -13,3 +13,14 @@ remains unverified.
 - [x] **K8S-006** When the chart is installed with default values, it shall configure one replica and a ClusterIP service on port 8081. Evidence: `chart/templates/deployment.yaml:6,35`, `chart/values.yaml:1-21`.
 - [ ] **K8S-007** When the chart is rendered without an explicit `image.tag` override, the Deployment shall use the chart's `appVersion` as its image tag. Evidence: `chart/templates/deployment.yaml`, `.github/scripts/release-workflow.test.mjs`.
 - [x] **K8S-008** Where `forwardedHeaders.enabled` is true (the default), the chart shall set `ASPNETCORE_FORWARDEDHEADERS_ENABLED=true` so that `X-Forwarded-Proto` and `X-Forwarded-For` from the TLS-terminating proxy determine the OIDC callback scheme and client address. Evidence: `chart/templates/deployment.yaml`, `chart/values.yaml`; test: `.github/scripts/release-workflow.test.mjs`.
+
+## Workload References
+
+Owner-approved requirements. Implementation:
+`chart/templates/crds/portalsites.portal.swick.app.yaml`,
+`chart/templates/rbac.yaml`. Rendered-chart tests:
+`.github/scripts/release-workflow.test.mjs`. Live cluster admission and reads
+remain unverified.
+
+- [x] **K8S-009** When the CRD is installed, its optional `spec.workloadRef` schema shall require a `kind` of Deployment, StatefulSet, or ReplicaSet and a Kubernetes DNS-subdomain `name`, and shall reject namespace overrides; other undeclared fields follow Kubernetes schema pruning.
+- [x] **K8S-010** When chart RBAC is enabled, its ClusterRole shall additionally grant cluster-wide `get` on `apps` deployments, statefulsets, and replicasets without granting workload list, watch, or write permissions; when RBAC is disabled it shall omit these permissions.

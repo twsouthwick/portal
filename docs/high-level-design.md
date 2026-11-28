@@ -27,6 +27,11 @@ server and native-client artifacts.
 PortalSite resources across all namespaces. ConfigMap content stays in the
 referencing resource's namespace; Helm supplies cluster-wide read permissions.
 
+**Owner-approved workload-linked catalog:** A PortalSite can optionally
+reference a Deployment, StatefulSet, or ReplicaSet in its own namespace. The
+Kubernetes provider excludes the site when the workload is missing or its
+desired replica count is zero; Helm supplies the additional read permissions.
+
 The Tauri client is currently a placeholder shell. Its integration with the
 portal, authentication, and catalog is not implemented.
 
