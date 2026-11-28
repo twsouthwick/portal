@@ -213,7 +213,10 @@ async function signIn() {
   showBanner('Finish signing in with your browser…', { state: 'info', cancellable: true });
   try {
     view = await invoke('sign_in');
-    showBanner(view.warning, { state: 'warn' });
+    signingIn = false;
+    render();
+    showBanner(view.warning || 'Signed in. Updating your sites…', { state: view.warning ? 'warn' : 'info' });
+    await refresh();
   } catch (error) {
     showBanner(String(error), { state: 'error' });
   } finally {
@@ -224,10 +227,14 @@ async function signIn() {
 
 /** @spec CLIENT-021 */
 async function signOut() {
-  openSiteId = null;
-  view = await invoke('sign_out');
-  render();
-  showBanner(view.warning, { state: 'warn' });
+  try {
+    view = await invoke('sign_out');
+    openSiteId = null;
+    render();
+    showBanner(view.warning, { state: 'warn' });
+  } catch (error) {
+    showBanner(String(error), { state: 'error' });
+  }
 }
 
 /** @spec CLIENT-018 */

@@ -42,6 +42,8 @@ pub enum SignInError {
     Token,
     #[error("Could not safely replace the saved sign-in. Try again.")]
     CredentialStore,
+    #[error("Could not remove the saved sign-in. Try again.")]
+    CredentialDelete,
     #[error("Could not reach the identity provider.")]
     Unreachable,
     #[error("The identity provider returned an invalid sign-in.")]

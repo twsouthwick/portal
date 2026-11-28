@@ -46,6 +46,7 @@ struct Active {
     access_token: Option<String>,
     expires_at: Option<Instant>,
     persisted: bool,
+    credential_entry_may_exist: bool,
     cached_manifest: Option<CachedManifest>,
 }
 
@@ -119,6 +120,7 @@ impl SessionManager {
                 access_token: None,
                 expires_at: None,
                 persisted: true,
+                credential_entry_may_exist: true,
                 cached_manifest,
             });
         }
@@ -322,8 +324,7 @@ impl SessionManager {
         state.pending_id = None;
     }
 
-    /// Completes sign-in from the callback, persists the session, and loads
-    /// the manifest.
+    /// Completes sign-in from the callback and persists the session.
     /// @spec CLIENT-015 CLIENT-036 CLIENT-037 CLIENT-038
     pub async fn complete_sign_in(&self, origin: &PortalOrigin, callback: &Url) -> Result<SessionView, SignInError> {
         let (transaction_id, pending, expires_at, provider) = {
@@ -393,16 +394,19 @@ impl SessionManager {
             _ => (CacheKey::generate().map_err(|_| SignInError::Token)?, None),
         };
         let stored = StoredSession { account: account.clone(), refresh_token: tokens.refresh_token, cache_key };
-        let persisted = match self.store.save(&stored) {
-            Ok(()) => true,
+        let (persisted, credential_entry_may_exist) = match self.store.save(&stored) {
+            Ok(()) => (true, true),
             Err(_) => {
-                let replacing_persisted_account = state.active.as_ref().is_some_and(|previous| {
-                    previous.persisted && previous.stored.account != account
+                let previous_may_exist = state.active.as_ref().is_some_and(|previous| {
+                    previous.stored.account != account && previous.credential_entry_may_exist
                 });
-                if replacing_persisted_account {
+                if previous_may_exist {
                     self.store.delete().map_err(|_| SignInError::CredentialStore)?;
                 }
-                false
+                let same_account_may_exist = state.active.as_ref().is_some_and(|previous| {
+                    previous.stored.account == account && previous.credential_entry_may_exist
+                });
+                (false, same_account_may_exist)
             }
         };
         if let Some(previous) = state.active.as_ref()
@@ -415,29 +419,36 @@ impl SessionManager {
             access_token: Some(tokens.access_token),
             expires_at: tokens.expires_at,
             persisted,
+            credential_entry_may_exist,
             cached_manifest,
         });
+        let active = state.active.as_ref().expect("active session");
+        let view = self.view(active, SessionStatus::Refreshing, self.read(active));
         drop(state);
-        Ok(self.refresh(origin).await)
+        Ok(view)
     }
 
     /// Clears the account's cache and credentials.
     /// @spec CLIENT-021
-    pub async fn sign_out(&self) -> SessionView {
+    pub async fn sign_out(&self) -> Result<SessionView, SignInError> {
         let mut state = self.state.lock().await;
         self.load(&mut state);
         state.pending = None;
         state.pending_id = None;
+        let must_delete_credentials = state
+            .active
+            .as_ref()
+            .is_none_or(|active| active.credential_entry_may_exist);
+        if must_delete_credentials {
+            self.store.delete().map_err(|_| SignInError::CredentialDelete)?;
+        }
         let mut warning = None;
         if let Some(active) = state.active.take()
             && let Err(error) = delete_cache(&self.data_dir, &active.stored.account)
         {
             warning = Some(error.to_string());
         }
-        if self.store.delete().is_err() {
-            warning = Some("Could not remove saved sign-in from secure storage.".into());
-        }
-        Self::signed_out(warning)
+        Ok(Self::signed_out(warning))
     }
 }
 
@@ -551,7 +562,8 @@ mod tests {
     async fn sign_in(manager: &SessionManager, origin: &PortalOrigin) -> SessionView {
         let url = manager.begin_sign_in(origin, DESKTOP_REDIRECT_URI).await.unwrap();
         let callback = authorize(&crate::http_client().unwrap(), &url, DESKTOP_REDIRECT_URI).await;
-        manager.complete_sign_in(origin, &callback).await.unwrap()
+        manager.complete_sign_in(origin, &callback).await.unwrap();
+        manager.refresh(origin).await
     }
 
     // @spec CLIENT-016 CLIENT-038 CLIENT-039
@@ -695,10 +707,34 @@ mod tests {
         sign_in(&manager, &origin).await;
         let account = store.load().unwrap().unwrap().account;
 
-        assert_eq!(manager.sign_out().await.status, SessionStatus::SignedOut);
+        assert_eq!(manager.sign_out().await.unwrap().status, SessionStatus::SignedOut);
         assert!(store.load().unwrap().is_none());
         assert!(!crate::cache::cache_path(dir.path(), &account).exists());
         assert_eq!(manager.startup(&origin).await.status, SessionStatus::SignedOut);
+    }
+
+    // @spec CLIENT-021 CLIENT-039
+    #[tokio::test]
+    async fn failed_credential_deletion_keeps_sign_out_retryable_across_restart() {
+        let idp = mock_idp().await;
+        let portal = portal(&idp, vec![]).await;
+        let dir = tempfile::tempdir().unwrap();
+        let store = Arc::new(FaultingCredentialStore::default());
+        let origin = portal.server.origin();
+        let session = manager(dir.path(), store.clone());
+        sign_in(&session, &origin).await;
+
+        store.set_failures(false, true);
+        assert_eq!(session.sign_out().await, Err(SignInError::CredentialDelete));
+        assert!(store.load().unwrap().is_some());
+
+        let restarted = manager(dir.path(), store.clone());
+        assert_eq!(restarted.startup(&origin).await.status, SessionStatus::Refreshing);
+        assert!(restarted.startup(&origin).await.manifest.is_some());
+
+        store.set_failures(false, false);
+        assert_eq!(session.sign_out().await.unwrap().status, SessionStatus::SignedOut);
+        assert_eq!(manager(dir.path(), store).startup(&origin).await.status, SessionStatus::SignedOut);
     }
 
     // @spec CLIENT-022 CLIENT-038
@@ -772,6 +808,59 @@ mod tests {
         let restarted = manager(dir.path(), store);
         assert_eq!(restarted.startup(&origin_a).await.status, SessionStatus::SignedOut);
         assert_eq!(restarted.startup(&origin_b).await.status, SessionStatus::SignedOut);
+    }
+
+    // @spec CLIENT-038
+    #[tokio::test]
+    async fn failed_refresh_rotation_and_account_save_still_invalidate_old_credentials() {
+        let idp = mock_idp().await;
+        let portal_a = portal(
+            &idp,
+            vec![(200, Some("\"v1\"")), (401, None), (200, Some("\"v2\""))],
+        )
+        .await;
+        let portal_b = portal(&idp, vec![]).await;
+        let dir = tempfile::tempdir().unwrap();
+        let store = Arc::new(FaultingCredentialStore::default());
+        let session = manager(dir.path(), store.clone());
+        let origin_a = portal_a.server.origin();
+        let origin_b = portal_b.server.origin();
+        sign_in(&session, &origin_a).await;
+        assert!(store.load().unwrap().is_some());
+
+        store.set_failures(true, false);
+        assert_eq!(session.refresh(&origin_a).await.status, SessionStatus::UpToDate);
+        assert_eq!(store.load().unwrap().unwrap().refresh_token.as_deref(), Some("refresh-1"));
+
+        let memory_only = sign_in(&session, &origin_b).await;
+        assert_eq!(memory_only.status, SessionStatus::UpToDate);
+        assert_eq!(memory_only.warning.as_deref(), Some(NOT_PERSISTED_WARNING));
+        assert!(store.load().unwrap().is_none());
+
+        let restarted = manager(dir.path(), store);
+        assert_eq!(restarted.startup(&origin_a).await.status, SessionStatus::SignedOut);
+        assert_eq!(restarted.startup(&origin_b).await.status, SessionStatus::SignedOut);
+    }
+
+    // @spec CLIENT-036
+    #[tokio::test]
+    async fn sign_in_finishes_at_commit_before_initial_manifest_refresh() {
+        let idp = mock_idp().await;
+        let portal = portal(&idp, vec![]).await;
+        let dir = tempfile::tempdir().unwrap();
+        let store = Arc::new(MemoryCredentialStore::default());
+        let session = manager(dir.path(), store.clone());
+        let origin = portal.server.origin();
+        let url = session.begin_sign_in(&origin, DESKTOP_REDIRECT_URI).await.unwrap();
+        let callback = authorize(&crate::http_client().unwrap(), &url, DESKTOP_REDIRECT_URI).await;
+
+        let committed = session.complete_sign_in(&origin, &callback).await.unwrap();
+        assert_eq!(committed.status, SessionStatus::Refreshing);
+        assert_eq!(portal.manifest_requests().len(), 0);
+        assert!(store.load().unwrap().is_some());
+
+        assert_eq!(session.refresh(&origin).await.status, SessionStatus::UpToDate);
+        assert_eq!(portal.manifest_requests().len(), 1);
     }
 
     // @spec CLIENT-038

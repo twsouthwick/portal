@@ -90,6 +90,14 @@ struct SignInSlot {
     callback: Mutex<Option<oneshot::Sender<Url>>>,
 }
 
+impl SignInSlot {
+    fn cancel_in_flight(&self) {
+        if let Some(cancel) = self.cancel.lock().unwrap().take() {
+            let _ = cancel.send(());
+        }
+    }
+}
+
 /// Selects the platform credential store; without one the session is kept in memory only.
 /// @spec CLIENT-022 CLIENT-038
 fn credential_store() -> Arc<dyn CredentialStore> {
@@ -176,17 +184,19 @@ async fn sign_in(
 /// @spec CLIENT-036
 #[tauri::command]
 async fn cancel_sign_in(session: State<'_, SessionManager>, slot: State<'_, SignInSlot>) -> Result<(), String> {
-    if let Some(cancel) = slot.cancel.lock().unwrap().take() {
-        let _ = cancel.send(());
-    }
+    slot.cancel_in_flight();
     session.cancel_sign_in().await;
     Ok(())
 }
 
 /// @spec CLIENT-021
 #[tauri::command]
-async fn sign_out(session: State<'_, SessionManager>) -> Result<SessionView, String> {
-    Ok(session.sign_out().await)
+async fn sign_out(
+    session: State<'_, SessionManager>,
+    slot: State<'_, SignInSlot>,
+) -> Result<SessionView, String> {
+    slot.cancel_in_flight();
+    session.sign_out().await.map_err(|error| error.to_string())
 }
 
 /// @spec CLIENT-044 CLIENT-045 CLIENT-046
@@ -273,4 +283,21 @@ pub fn run() {
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // @spec CLIENT-021 CLIENT-036
+    #[test]
+    fn sign_out_signals_the_in_flight_sign_in_cancellation() {
+        let slot = SignInSlot::default();
+        let (cancel, mut cancelled) = oneshot::channel();
+        *slot.cancel.lock().unwrap() = Some(cancel);
+
+        slot.cancel_in_flight();
+
+        assert_eq!(cancelled.try_recv(), Ok(()));
+    }
 }

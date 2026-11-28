@@ -291,7 +291,10 @@ from the provider it just discovered with the issuer bound to the stored
 account. If they differ, it must not send the refresh token to either issuer;
 it requires a fresh sign-in and keeps the account's cached manifest visible.
 If replacing a different account's credential entry fails, the client
-invalidates the previous entry before accepting a memory-only session. If
+invalidates the previous entry before accepting a memory-only session. This
+invalidation decision tracks whether an entry may still exist separately from
+whether the active session's latest tokens were saved, since a failed refresh
+token rotation save can leave the prior credential entry intact. If
 invalidation also fails, it rejects the account switch and retains the prior
 active account so that it cannot be silently restored after restart.
 
@@ -304,8 +307,10 @@ account's cached manifest is rendered immediately with a visible stale or
 refreshing state while the client attempts a network refresh. Per the owner's
 selected offline policy, a stale entry remains visible until a successful
 refresh replaces it or the user signs out. Signing out clears that account's
-cache and credentials. A different authenticated account never sees the
-previous account's cache.
+cache and credentials. Credential deletion must succeed before the client
+discards the active account or reports sign-out complete; a failure remains
+retryable and leaves the active session available. A different authenticated
+account never sees the previous account's cache.
 
 The client sends `If-None-Match` with that account's cached ETag. A `200`
 response is parsed and validated against the manifest DTO before atomically
@@ -360,7 +365,13 @@ transaction is rejected. The selected Portal address cannot be changed in the
 client while sign-in is pending, so a completed authorization result cannot
 replace a different Portal's view. The five-minute expiry and cancellation
 remain active through token exchange and the credential commit; a transaction
-cancelled or expired during exchange cannot update the active account.
+cancelled or expired during exchange cannot update the active account. Signing
+out signals the in-flight sign-in cancellation as well as clearing the
+transaction, so the browser-waiting command can finish promptly. The sign-in
+operation ends at the successful credential commit. Its initial
+manifest refresh is a separate operation, so a timeout or cancellation while
+fetching sites cannot make the UI report failed sign-in after the account has
+already been committed. The UI hides Cancel after that commit.
 
 **Authorization.** The request uses `response_type=code`, PKCE S256, a fresh
 `state`, a nonce, and the metadata scopes. It also sends
