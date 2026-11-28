@@ -59,12 +59,13 @@ unexpected response. A found endpoint shows reachability, not Portal identity
 or trustworthiness.
 
 **Confirmation and storage.** Only the most recent successfully checked
-origin can be saved, and only after the user explicitly confirms it. The Rust
-host keeps that pending origin in memory and rejects a save request for any
-other value. The saved file `portal.json` in the application configuration
-directory contains only the origin; it is revalidated when loaded and carries
-no trust or authentication state. The UI labels a saved origin as not yet
-verified or signed in.
+origin can be saved, and only after the user explicitly confirms it. Each new
+check supersedes earlier checks; a probe result updates the pending origin only
+if its check is still current. The Rust host keeps that pending origin in memory
+and rejects a save request for any other value. The saved file `portal.json` in
+the application configuration directory contains only the origin; it is
+revalidated when loaded and carries no trust or authentication state. The UI
+labels a saved origin as not yet verified or signed in.
 
 **Authentication.** Criterion 4 depends on the native public-client flow
 below, which has not been validated against Authelia or the target platforms.

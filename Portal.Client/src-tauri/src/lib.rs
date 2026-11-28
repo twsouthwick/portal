@@ -1,8 +1,6 @@
-use std::path::PathBuf;
-use std::sync::Mutex;
-
-use portal_onboarding::{OriginPolicy, PROBE_TIMEOUT, PortalOrigin, ProbeOutcome};
+use portal_onboarding::{OriginPolicy, PROBE_TIMEOUT, PendingOrigin, PortalOrigin, ProbeOutcome};
 use serde::Serialize;
+use std::path::PathBuf;
 use tauri::{AppHandle, Manager, State};
 
 const ORIGIN_POLICY: OriginPolicy = if cfg!(all(debug_assertions, feature = "dev-http-loopback")) {
@@ -10,10 +8,6 @@ const ORIGIN_POLICY: OriginPolicy = if cfg!(all(debug_assertions, feature = "dev
 } else {
     OriginPolicy::HttpsOnly
 };
-
-/// The origin most recently checked successfully, awaiting user confirmation.
-#[derive(Default)]
-struct PendingOrigin(Mutex<Option<PortalOrigin>>);
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -35,13 +29,13 @@ async fn check_portal_url(
     input: String,
     pending: State<'_, PendingOrigin>,
 ) -> Result<CheckResult, String> {
-    *pending.0.lock().unwrap() = None;
+    let generation = pending.begin_check();
     let origin = PortalOrigin::parse(&input, ORIGIN_POLICY).map_err(|error| error.to_string())?;
     let client =
         portal_onboarding::probe_client(PROBE_TIMEOUT).map_err(|error| error.to_string())?;
     let outcome = portal_onboarding::probe(&client, &origin).await;
     if outcome.found_portal() {
-        *pending.0.lock().unwrap() = Some(origin.clone());
+        pending.publish_if_current(generation, origin.clone());
     }
     Ok(CheckResult {
         origin: origin.to_string(),
@@ -56,14 +50,7 @@ fn save_portal_url(
     app: AppHandle,
     pending: State<'_, PendingOrigin>,
 ) -> Result<String, String> {
-    let mut pending = pending.0.lock().unwrap();
-    let confirmed = match pending.as_ref() {
-        Some(checked) if checked.as_str() == origin => checked.clone(),
-        _ => return Err("Check this Portal URL before saving it.".into()),
-    };
-    portal_onboarding::save_origin(&config_path(&app)?, &confirmed)
-        .map_err(|error| error.to_string())?;
-    *pending = None;
+    let confirmed = pending.save_if_confirmed(&config_path(&app)?, &origin)?;
     Ok(confirmed.to_string())
 }
 
