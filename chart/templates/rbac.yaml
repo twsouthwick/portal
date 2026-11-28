@@ -1,8 +1,9 @@
+{{/* @spec K8S-003 */}}
 {{- if .Values.rbac.create }}
 apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
+kind: ClusterRole
 metadata:
-  name: {{ .Release.Name }}-portal-reader
+  name: {{ .Release.Namespace }}-{{ .Release.Name }}-portal-reader
 rules:
   - apiGroups: ["portal.swick.app"]
     resources: ["portalsites"]
@@ -12,13 +13,13 @@ rules:
     verbs: ["get"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
+kind: ClusterRoleBinding
 metadata:
-  name: {{ .Release.Name }}-portal-reader
+  name: {{ .Release.Namespace }}-{{ .Release.Name }}-portal-reader
 roleRef:
   apiGroup: rbac.authorization.k8s.io
-  kind: Role
-  name: {{ .Release.Name }}-portal-reader
+  kind: ClusterRole
+  name: {{ .Release.Namespace }}-{{ .Release.Name }}-portal-reader
 subjects:
   - kind: ServiceAccount
     name: {{ .Release.Name }}-portal

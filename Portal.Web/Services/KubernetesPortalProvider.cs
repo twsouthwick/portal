@@ -16,35 +16,29 @@ public sealed partial class KubernetesPortalProvider : IPortalProvider
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     private readonly IKubernetes _kubernetes;
-    private readonly string _namespace;
     private readonly string _group;
     private readonly string _version;
     private readonly string _plural;
     private readonly ILogger<KubernetesPortalProvider> _logger;
 
     public KubernetesPortalProvider(
-        IKubernetes? kubernetes = null, string? @namespace = null,
+        IKubernetes? kubernetes = null,
         string? group = null, string? version = null, string? plural = null,
         ILogger<KubernetesPortalProvider>? logger = null)
     {
         _kubernetes = kubernetes ?? new Kubernetes(KubernetesClientConfiguration.BuildDefaultConfig());
-        _namespace = @namespace ?? Environment.GetEnvironmentVariable("PORTAL_KUBERNETES_NAMESPACE") ?? "default";
         _group = group ?? Group;
         _version = version ?? Version;
         _plural = plural ?? Plural;
         _logger = logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<KubernetesPortalProvider>.Instance;
-        if (string.IsNullOrWhiteSpace(_namespace))
-        {
-            throw new ArgumentException("Kubernetes namespace must not be empty.", nameof(@namespace));
-        }
     }
 
+    // @spec SITE-005 SITE-020
     public async ValueTask<PortalDetails> GetSiteDetailsAsync(CancellationToken cancellationToken = default)
     {
-        var response = await _kubernetes.CustomObjects.ListNamespacedCustomObjectAsync<JsonElement>(
+        var response = await _kubernetes.CustomObjects.ListClusterCustomObjectAsync<JsonElement>(
             group: _group,
             version: _version,
-            namespaceParameter: _namespace,
             plural: _plural,
             cancellationToken: cancellationToken);
 
@@ -58,8 +52,9 @@ public sealed partial class KubernetesPortalProvider : IPortalProvider
         var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var item in items.EnumerateArray())
         {
-            var resource = item.Deserialize<KubernetesPortalSiteResource>(JsonOptions);
-            var spec = resource?.Spec ?? throw new InvalidDataException("PortalSite is missing its spec.");
+            var resource = item.Deserialize<KubernetesPortalSiteResource>(JsonOptions)
+                ?? throw new InvalidDataException("Kubernetes returned an invalid PortalSite.");
+            var spec = resource.Spec ?? throw new InvalidDataException("PortalSite is missing its spec.");
             if (string.IsNullOrEmpty(spec.Id) || spec.Id.Length > 63 ||
                 !SiteIdPattern().IsMatch(spec.Id) || string.IsNullOrWhiteSpace(spec.Name))
             {
@@ -71,18 +66,18 @@ public sealed partial class KubernetesPortalProvider : IPortalProvider
                 throw new InvalidDataException($"Duplicate PortalSite id '{spec.Id}'.");
             }
 
-            sites.Add(await MapPortalSiteToSiteInfoAsync(spec, cancellationToken));
+            sites.Add(await MapPortalSiteToSiteInfoAsync(resource, cancellationToken));
         }
 
         return new PortalDetails("Portal") { Sites = sites };
     }
 
+    // @spec SITE-005 SITE-020
     public async ValueTask<SiteInfo?> GetSiteAsync(string siteId, CancellationToken cancellationToken = default)
     {
-        var response = await _kubernetes.CustomObjects.ListNamespacedCustomObjectAsync<JsonElement>(
+        var response = await _kubernetes.CustomObjects.ListClusterCustomObjectAsync<JsonElement>(
             group: _group,
             version: _version,
-            namespaceParameter: _namespace,
             plural: _plural,
             cancellationToken: cancellationToken);
 
@@ -92,26 +87,30 @@ public sealed partial class KubernetesPortalProvider : IPortalProvider
             throw new InvalidDataException("Kubernetes returned an invalid PortalSite list.");
         }
 
-        var matchingSpecs = items.EnumerateArray()
-            .Select(item => item.Deserialize<KubernetesPortalSiteResource>(JsonOptions)?.Spec
-                ?? throw new InvalidDataException("PortalSite is missing its spec."))
-            .Where(spec => string.Equals(spec.Id, siteId, StringComparison.OrdinalIgnoreCase))
+        var matchingResources = items.EnumerateArray()
+            .Select(item => item.Deserialize<KubernetesPortalSiteResource>(JsonOptions)
+                ?? throw new InvalidDataException("Kubernetes returned an invalid PortalSite."))
+            .Where(resource => string.Equals(
+                (resource.Spec ?? throw new InvalidDataException("PortalSite is missing its spec.")).Id,
+                siteId, StringComparison.OrdinalIgnoreCase))
             .ToArray();
-        if (matchingSpecs.Length == 0)
+        if (matchingResources.Length == 0)
         {
             return null;
         }
-        if (matchingSpecs.Length > 1)
+        if (matchingResources.Length > 1)
         {
             throw new InvalidDataException($"Duplicate PortalSite id '{siteId}'.");
         }
 
-        return await MapPortalSiteToSiteInfoAsync(matchingSpecs[0], cancellationToken);
+        return await MapPortalSiteToSiteInfoAsync(matchingResources[0], cancellationToken);
     }
 
+    // @spec SITE-007
     private async ValueTask<SiteInfo> MapPortalSiteToSiteInfoAsync(
-        KubernetesPortalSiteSpec spec, CancellationToken cancellationToken)
+        KubernetesPortalSiteResource resource, CancellationToken cancellationToken)
     {
+        var spec = resource.Spec ?? throw new InvalidDataException("PortalSite is missing its spec.");
         if (string.IsNullOrEmpty(spec.Id) || spec.Id.Length > 63 ||
             !SiteIdPattern().IsMatch(spec.Id) || string.IsNullOrWhiteSpace(spec.Name))
         {
@@ -126,8 +125,14 @@ public sealed partial class KubernetesPortalProvider : IPortalProvider
                 throw new InvalidDataException($"PortalSite '{spec.Id}' has an invalid contentRef.");
             }
 
+            var resourceNamespace = resource.Metadata?.NamespaceProperty;
+            if (string.IsNullOrWhiteSpace(resourceNamespace))
+            {
+                throw new InvalidDataException($"PortalSite '{spec.Id}' is missing its namespace for contentRef.");
+            }
+
             var configMap = await _kubernetes.CoreV1.ReadNamespacedConfigMapAsync(
-                contentRef.Name, _namespace, cancellationToken: cancellationToken);
+                contentRef.Name, resourceNamespace, cancellationToken: cancellationToken);
             var files = new Dictionary<string, byte[]>(StringComparer.Ordinal);
             foreach (var entry in configMap.Data ?? new Dictionary<string, string>())
             {
@@ -229,6 +234,7 @@ public sealed partial class KubernetesPortalProvider : IPortalProvider
 
 public sealed class KubernetesPortalSiteResource
 {
+    public k8s.Models.V1ObjectMeta? Metadata { get; init; }
     public KubernetesPortalSiteSpec? Spec { get; init; }
 }
 

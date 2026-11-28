@@ -51,6 +51,7 @@ public sealed class PortalProviderRegistrationTests
         }
     }
 
+    // @spec SITE-005
     [Fact]
     public async Task Registration_CombinesConfiguredFilesAndKubeconfig()
     {
@@ -64,13 +65,13 @@ public sealed class PortalProviderRegistrationTests
             var serverBuilder = WebApplication.CreateSlimBuilder();
             serverBuilder.WebHost.UseUrls("http://127.0.0.1:0");
             await using var server = serverBuilder.Build();
-            server.MapGet("/apis/portal.swick.app/v1alpha1/namespaces/test/portalsites", () =>
+            server.MapGet("/apis/portal.swick.app/v1alpha1/portalsites", () =>
                 Results.Json(new
                 {
                     items = new[]
                     {
-                        new { spec = new { id = "shared", name = "Kubernetes shared" } },
-                        new { spec = new { id = "cluster", name = "Cluster" } }
+                        new { metadata = new { @namespace = "first" }, spec = new { id = "shared", name = "Kubernetes shared" } },
+                        new { metadata = new { @namespace = "second" }, spec = new { id = "cluster", name = "Cluster" } }
                     }
                 }));
             await server.StartAsync();

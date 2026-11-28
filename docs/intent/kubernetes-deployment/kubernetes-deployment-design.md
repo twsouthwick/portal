@@ -15,15 +15,15 @@ operations beyond it are not assumed.
 ## Chart and Runtime Configuration
 
 Chart values configure the image, service type/port, OIDC authority and
-existing-secret name, namespace, example resources, and RBAC. The deployment
-sets OIDC environment variables and `PORTAL_KUBERNETES_NAMESPACE` and exposes
-container port 8080, the port the image's base `ASPNETCORE_HTTP_PORTS`
-setting makes Kestrel listen on. The Service keeps its default port 8081 and
-targets container port 8080. Unless `forwardedHeaders.enabled` is false, the
-deployment sets `ASPNETCORE_FORWARDEDHEADERS_ENABLED=true`; behind a
-TLS-terminating ingress, Portal otherwise builds an `http://` OIDC
-`redirect_uri` and sees the proxy address instead of the client address. The
-chart defaults to one replica and ClusterIP.
+existing-secret name, example resources, and RBAC. The deployment sets OIDC
+environment variables and exposes container port 8080, the port the image's
+base `ASPNETCORE_HTTP_PORTS` setting makes Kestrel listen on. The Service keeps
+its default port 8081 and targets container port 8080. Unless
+`forwardedHeaders.enabled` is false, the deployment sets
+`ASPNETCORE_FORWARDEDHEADERS_ENABLED=true`; behind a TLS-terminating ingress,
+Portal otherwise builds an `http://` OIDC `redirect_uri` and sees the proxy
+address instead of the client address. The chart defaults to one replica and
+ClusterIP.
 
 ## Approved Release Versioning
 
@@ -36,8 +36,12 @@ charts deploy the matching versioned development image rather than a mutable
 
 The CRD defines namespaced PortalSite objects and a schema for site metadata,
 apps, roles, visibility flags, and optional ConfigMap content references.
-RBAC grants the service account permission to list PortalSites and get
-ConfigMaps in the release namespace.
+The owner-approved RBAC uses a ClusterRole and ClusterRoleBinding to grant the
+release's service account permission to list PortalSites and get ConfigMaps
+across all namespaces. Cluster-scoped permission names include the release
+namespace and name so identically named releases in different namespaces do
+not collide. The deployment no longer sets `PORTAL_KUBERNETES_NAMESPACE`.
+Operators disabling chart RBAC must supply equivalent permissions themselves.
 
 ## Decisions & Alternatives
 
@@ -46,7 +50,7 @@ ConfigMaps in the release namespace.
 | Deployment format | Helm chart packages the web deployment and Kubernetes catalog resources. **[inferred]** | Raw manifests or an operator. | The tracked chart templates define this interface. |
 | Service exposure | ClusterIP service on port 8081 targeting container port 8080. **[proposed 2026-11-27]** | Override `ASPNETCORE_HTTP_PORTS` to 8081. | The image listens on 8080 by default; targeting it avoids a chart-only port override and matches the Docker example. |
 | Forwarded headers | Enabled by default through `ASPNETCORE_FORWARDEDHEADERS_ENABLED`. **[proposed 2026-11-27]** | Configure explicit known proxies in code. | Portal is expected behind an ingress that terminates TLS. The ASP.NET Core switch trusts forwarded headers from any source, so Portal must be reachable only through that proxy. |
-| Kubernetes permissions | Namespaced list of PortalSites and get of ConfigMaps. **[inferred]** | Cluster-wide read or watch/get permissions. | The Role is restricted to the release namespace; whether provider refresh requires additional verbs is unconfirmed. |
+| Kubernetes permissions | **Owner-approved:** cluster-wide PortalSite list and ConfigMap get, bound to the release's service account. | Restrict catalog discovery to the release namespace. | The web catalog discovers resources in every namespace and resolves content in each resource's namespace; no extra verbs are needed. |
 | Secret handling | OIDC secret is supplied by a pre-existing Kubernetes Secret. **[inferred]** | Store secret material in chart values. | The deployment references secret keys rather than embedding a value. |
 | Default image tag | **Owner-approved:** use chart `appVersion` unless `image.tag` is explicitly overridden. | Default to floating `latest`. | A chart installation resolves to the image version packaged by that chart, while allowing intentional overrides. |
 
@@ -64,8 +68,8 @@ ConfigMaps in the release namespace.
 5. Should the chart support `SITE_PATH` volumes, extra environment variables,
    probes, and disabling the Kubernetes provider for file-only deployments?
    See `docs/deployment.md` for current workarounds.
-6. Should `PortalSite` discovery span multiple namespaces? It currently reads
-   only `PORTAL_KUBERNETES_NAMESPACE`.
+6. Resolved: `PortalSite` discovery spans all namespaces, with no namespace
+   filter; `PORTAL_KUBERNETES_NAMESPACE` is no longer used.
 7. Should the CRD and RBAC be published as versioned plain-manifest release
    assets? The CRD is installed as a regular chart template and is deleted on
    `helm uninstall`.

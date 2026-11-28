@@ -6,6 +6,11 @@ resources. It describes the current behavior. Limitations are marked as
 **Not supported**. The [Helm chart](../chart/README.md) is optional; every
 step below can be done with plain manifests or Kustomize.
 
+Match this guide to the source commit used to build your image and chart.
+Earlier versions discover only one Kubernetes namespace and have different
+chart port settings; select a published build containing the cross-namespace
+and chart fixes before relying on the behavior described here.
+
 ## Versions and installation
 
 ### Published artifacts
@@ -66,7 +71,7 @@ Pin deployments to the exact version tag (or the digest), not `dev`. Helm
 needs the exact prerelease version (or `--devel`):
 
 ```bash
-helm show chart oci://ghcr.io/twsouthwick/charts/portal --version 0.0.0-alpha.0.150
+helm show chart oci://ghcr.io/twsouthwick/charts/portal --version '<exact-version>'
 ```
 
 ### Registry visibility and pull credentials
@@ -87,11 +92,14 @@ The source repository is public, but the GHCR image and chart packages are
    ```
 
 The chart has no `imagePullSecrets` value. With the chart, patch its service
-account instead:
+account instead, then restart the deployment so its new pods inherit the pull
+secret:
 
 ```bash
-kubectl -n portal patch serviceaccount <release>-portal \
+RELEASE=portal
+kubectl -n portal patch serviceaccount "${RELEASE}-portal" \
   -p '{"imagePullSecrets":[{"name":"ghcr-pull"}]}'
+kubectl -n portal rollout restart deployment/"${RELEASE}-portal"
 ```
 
 The package owner can also make the packages public in the GitHub package
@@ -108,8 +116,10 @@ above):
 https://raw.githubusercontent.com/twsouthwick/portal/<sha>/chart/templates/crds/portalsites.portal.swick.app.yaml
 ```
 
-The RBAC exists only as Helm templates. This is the equivalent namespaced
-RBAC, for a Portal running in namespace `portal` as service account `portal`:
+The RBAC exists only as Helm templates. This is equivalent cluster-wide RBAC
+for a Portal running in namespace `portal` as service account `portal`.
+Creating the ClusterRole and ClusterRoleBinding requires cluster-scoped
+permissions:
 
 ```yaml
 # rbac.yaml
@@ -121,7 +131,7 @@ imagePullSecrets:
   - name: ghcr-pull
 ---
 apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
+kind: ClusterRole
 metadata:
   name: portal-reader
 rules:
@@ -133,18 +143,30 @@ rules:
     verbs: ["get"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
+kind: ClusterRoleBinding
 metadata:
   name: portal-reader
 roleRef:
   apiGroup: rbac.authorization.k8s.io
-  kind: Role
+  kind: ClusterRole
   name: portal-reader
 subjects:
   - kind: ServiceAccount
     name: portal
     namespace: portal
 ```
+
+For plain manifests, apply the pinned CRD and RBAC, then wait for the CRD to
+be established:
+
+```bash
+kubectl apply -f 'https://raw.githubusercontent.com/twsouthwick/portal/<sha>/chart/templates/crds/portalsites.portal.swick.app.yaml'
+kubectl wait --for=condition=Established --timeout=60s crd/portalsites.portal.swick.app
+kubectl -n portal apply -f rbac.yaml
+```
+
+Replace `<sha>` with the matching commit and create the `portal` namespace
+first if needed.
 
 Kustomize can reference the pinned CRD URL directly:
 
@@ -162,6 +184,43 @@ resources:
 To upgrade the CRD, change `<sha>` and apply it again. The CRD has one served
 and stored version, `v1alpha1`. The `namespace:` setting does not affect it,
 because CRDs are cluster-scoped.
+
+The chart's ClusterRole grants `get` on **all** ConfigMaps cluster-wide. To
+limit that access, remove its ConfigMap rule and instead apply this Role and
+RoleBinding in each namespace containing referenced ConfigMaps, changing
+`media` as needed:
+
+```yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: portal-configmap-reader
+  namespace: media
+rules:
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: portal-configmap-reader
+  namespace: media
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: portal-configmap-reader
+subjects:
+  - kind: ServiceAccount
+    name: portal
+    namespace: portal
+```
+
+Keep the cluster-wide PortalSite `list` permission: namespace Roles alone
+cannot authorize the cluster-wide list request. Portal still discovers
+PortalSites in every namespace; if one references a ConfigMap without an
+appropriate `get` grant, the catalog fails. Optionally restrict each Role to
+specific ConfigMap names with `resourceNames`.
 
 ### CRD lifecycle and deletion
 
@@ -194,7 +253,9 @@ is no configuration switch:
 
 In a pod it uses the mounted service-account token. To run file-only, override
 the variable with an empty value. Container `env` entries take precedence over
-the variables that kubelet injects:
+the variables that kubelet injects. Also ensure `KUBECONFIG` is unset or empty
+and the container has no default `~/.kube/config`; either would still enable
+the provider:
 
 ```yaml
 env:
@@ -237,8 +298,8 @@ Startup does fail without `Oidc:Authority`, `Oidc:ClientId`, and
 | `Oidc__ApiAudience` | No | Default `portal-api`; see [Audiences](#audiences) |
 | `SITE_PATH` | For file catalogs | A directory, or a `.zip` file whose root contains `manifest.json` |
 | `ASPNETCORE_FORWARDEDHEADERS_ENABLED` | Behind a TLS proxy | `true`; see [Reverse proxy](#reverse-proxy-and-tls) |
-| `KUBERNETES_SERVICE_HOST` | File-only phase | `""` disables the Kubernetes provider |
-| `PORTAL_KUBERNETES_NAMESPACE` | With `PortalSite` | Namespace to read; default `default` |
+| `KUBERNETES_SERVICE_HOST` | File-only phase | `""` disables in-cluster detection when no kubeconfig exists |
+| `PORTAL_KUBERNETES_NAMESPACE` | No | Legacy setting is ignored; discovery is cluster-wide |
 
 The image runs as UID 1654 from `/app` and listens on **port 8080**
 (`ASPNETCORE_HTTP_PORTS`). The `SITE_PATH` files must be readable by that UID.
@@ -272,6 +333,9 @@ Mount options for `SITE_PATH`:
 
 ### Example file-only deployment
 
+Replace `<exact-version>` with a published version matching the intended
+source commit.
+
 ```yaml
 apiVersion: v1
 kind: ConfigMap
@@ -302,7 +366,7 @@ spec:
       automountServiceAccountToken: false
       containers:
         - name: portal
-          image: ghcr.io/twsouthwick/portal:0.0.0-alpha.0.150
+          image: ghcr.io/twsouthwick/portal:<exact-version>
           ports:
             - name: http
               containerPort: 8080
@@ -483,31 +547,34 @@ reachable and `500` when it is not. For rollout checks:
 
 ## Cross-namespace PortalSites
 
-**Not supported.** Portal reads `PortalSite` resources from exactly one
-namespace: `PORTAL_KUBERNETES_NAMESPACE` (default `default`; the chart sets it
-to the release namespace). There is no list of namespaces and no
-all-namespaces mode. Placing `PortalSite` resources in each application's
-namespace requires an upstream feature. Until then, create all `PortalSite`
-resources, and the ConfigMaps they reference, in Portal's namespace.
+Portal discovers `PortalSite` resources across **all** namespaces. It uses
+the cluster-wide list API; there is no watch or namespace filter to configure.
+`PORTAL_KUBERNETES_NAMESPACE` no longer limits discovery. Resources can be
+placed alongside their applications.
 
-Current single-namespace behavior:
+Before upgrading from a single-namespace version, inspect PortalSites across
+the entire cluster, not just the previously configured namespace. Additional
+sites become visible, and duplicates or errors in any namespace can break the
+catalog. The service account also needs the cluster-wide permissions below.
 
-- **Minimum RBAC:** a Role in the watched namespace with `list` on
-  `portalsites.portal.swick.app` and `get` on `configmaps`, bound to Portal's
-  service account (see [CRD and RBAC](#crd-and-rbac-without-helm)). Portal
-  does not use `watch` or `get` on PortalSites.
-- **`contentRef`** resolves in the `PortalSite`'s namespace, which is the
-  watched namespace.
+- **Minimum RBAC:** cluster-wide `list` on `portalsites.portal.swick.app`,
+  plus `get` on referenced `configmaps` in each resource's namespace. The
+  chart grants both permissions cluster-wide; see
+  [CRD and RBAC](#crd-and-rbac-without-helm) for a narrower ConfigMap option.
+  Portal does not use `watch` or `get` on PortalSites.
+- **`contentRef`** resolves in the `PortalSite`'s own namespace, not Portal's
+  namespace. Missing resource namespace metadata is an error.
 - **Duplicate IDs:** two `PortalSite` resources with the same `spec.id`,
-  case-insensitive, fail the whole catalog. This happens even if a file entry
-  overrides that ID.
+  case-insensitive, fail the whole catalog, including when they are in
+  different namespaces or a file entry overrides that ID.
 - **Errors:** API, permission, configuration, and validation errors fail the
   catalog request rather than being skipped (see
   [Failure behavior](#failure-behavior-when-site_path-is-set)).
-- **Change visibility:** Portal has no watch or cache. Every page load and
-  content request lists the resources and reads the referenced ConfigMaps.
-  Changes appear on the next page load or request, without a restart. An
-  already-open page does not refresh by itself.
+- **Change visibility:** Portal has no watch or cache. Catalog loads list
+  all resources and read their referenced ConfigMaps; a content request for a
+  Kubernetes-backed site lists all resources and reads the requested site's
+  referenced ConfigMap. Changes appear on the next load or request, without a
+  restart. An already-open page does not refresh by itself.
 
 ## Migration and behavior parity
 
@@ -543,7 +610,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: jellyfin-portal-content
-  namespace: portal
+  namespace: media
 binaryData:
   logo.png: <base64>
 ---
@@ -551,7 +618,7 @@ apiVersion: portal.swick.app/v1alpha1
 kind: PortalSite
 metadata:
   name: jellyfin
-  namespace: portal
+  namespace: media
 spec:
   id: jellyfin
   name: Jellyfin
@@ -605,9 +672,8 @@ Field mapping and differences:
 
 - When the file source and Kubernetes define the same `id`, compared
   case-insensitively, the **file entry wins** silently. The `PortalSite` is
-  ignored for both the list and the content. Duplicate IDs within Kubernetes
-  are an error (see above). There are no per-namespace rules, because only one
-  namespace is read.
+  ignored for both the list and the content. Duplicate IDs within Kubernetes,
+  even across namespaces, are an error (see above).
 - The portal **name and description** come from the root `manifest.json` of
   the file source. With only Kubernetes, the name is `Portal` and the
   description is empty; `PortalSite` cannot set them. To keep them, leave
@@ -619,18 +685,25 @@ Field mapping and differences:
 1. **File-only baseline.** Deploy with `SITE_PATH`,
    `KUBERNETES_SERVICE_HOST=""`, and the settings above. Verify sign-in, the
    site list for each role, app buttons, usage text, and every content URL.
-2. **Enable Kubernetes.** Apply the CRD and RBAC in Portal's namespace and set
-   `PORTAL_KUBERNETES_NAMESPACE`. Remove the `KUBERNETES_SERVICE_HOST`
-   override and `automountServiceAccountToken: false`, then roll out. The
-   catalog must look exactly the same. Any error now points to RBAC, the CRD,
-   or the namespace setting. **Rollback:** restore the override and roll out.
+2. **Enable Kubernetes.** Apply the CRD and cluster-wide RBAC. Before enabling
+   the provider, inspect existing PortalSites in all namespaces for duplicates
+   and invalid references. Then remove the `KUBERNETES_SERVICE_HOST` override
+   and `automountServiceAccountToken: false` and roll out with the
+   service-account token mounted. Previously existing PortalSites in any
+   namespace will now appear unless a file entry overrides them. Check for
+   catalog errors. **Rollback:** restore the override and roll out.
 3. **Shadow each site.** For one site, apply its ConfigMap and a `PortalSite`
-   with the **same `id`**. Check it with
+   in the application's namespace with the **same `id`**. Check it with
    `kubectl apply --dry-run=server -f site.yaml` first. Because the file entry
    wins, users see no change. However, Portal now lists and validates the
    resource on every load, so reload the portal and confirm the catalog still
    renders. A duplicate ID, schema problem, or missing ConfigMap or key breaks
-   the catalog immediately. **Rollback:** delete the `PortalSite`.
+   the catalog immediately. Before removing the file entry, verify the
+   Kubernetes version using a separate, access-restricted staging Portal
+   instance with `SITE_PATH` unset and Kubernetes access enabled. Register its
+   OIDC callback and check visibility for each role, app links, usage text, and
+   each content URL. Its root portal metadata will use the Kubernetes defaults.
+   **Rollback:** delete the `PortalSite`.
 4. **Remove the file entry.** Delete that site's directory (or ConfigMap
    `items`) and restart Portal. Verify the site's visibility for each role,
    its apps, its usage text, and each `/<id>/content/<key>` URL.

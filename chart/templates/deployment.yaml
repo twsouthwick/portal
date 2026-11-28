@@ -19,8 +19,6 @@ spec:
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           env:
-            - name: PORTAL_KUBERNETES_NAMESPACE
-              value: {{ .Release.Namespace | quote }}
             - name: Oidc__Authority
               value: {{ required "oidc.authority is required" .Values.oidc.authority | quote }}
             - name: Oidc__ClientId

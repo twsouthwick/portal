@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import { execFileSync } from 'node:child_process';
 
 const buildWorkflow = await readFile(new URL('../workflows/build.yaml', import.meta.url), 'utf8');
 const webProject = await readFile(new URL('../../Portal.Web/Portal.Web.csproj', import.meta.url), 'utf8');
@@ -44,4 +45,29 @@ test('chart targets the port the image listens on', () => {
 test('chart trusts forwarded headers from the ingress by default', () => {
   assert.match(chartValues, /forwardedHeaders:\s*\n\s+enabled: true/);
   assert.match(deployment, /if \.Values\.forwardedHeaders\.enabled[\s\S]*?name: ASPNETCORE_FORWARDEDHEADERS_ENABLED\s+value: "true"/);
+});
+
+// @spec K8S-002 K8S-003 K8S-008
+test('Helm renders cross-namespace reads and chart runtime settings', () => {
+  const render = (namespace, overrides = []) => execFileSync('helm', [
+    'template', 'portal', './chart', '--namespace', namespace,
+    '--set', 'oidc.authority=https://identity.example.com',
+    '--set', 'oidc.existingSecret=portal-oidc',
+    ...overrides,
+  ], { encoding: 'utf8' });
+  const first = render('first');
+  const second = render('second');
+  assert.match(first, /kind: ClusterRole\nmetadata:\n  name: first-portal-portal-reader/);
+  assert.match(second, /kind: ClusterRole\nmetadata:\n  name: second-portal-portal-reader/);
+  assert.match(first, /kind: ClusterRoleBinding\nmetadata:\n  name: first-portal-portal-reader/);
+  assert.match(first, /roleRef:\n  apiGroup: rbac.authorization.k8s.io\n  kind: ClusterRole\n  name: first-portal-portal-reader/);
+  assert.match(first, /subjects:\n  - kind: ServiceAccount\n    name: portal-portal\n    namespace: first/);
+  assert.match(first, /resources: \["portalsites"\]\n    verbs: \["list"\]/);
+  assert.match(first, /resources: \["configmaps"\]\n    verbs: \["get"\]/);
+  assert.match(first, /targetPort: 8080/);
+  assert.match(first, /containerPort: 8080/);
+  assert.match(first, /name: ASPNETCORE_FORWARDEDHEADERS_ENABLED\s+value: "true"/);
+  assert.doesNotMatch(first, /kind: (Role|RoleBinding)\n|PORTAL_KUBERNETES_NAMESPACE/);
+  assert.doesNotMatch(render('first', ['--set', 'rbac.create=false']), /kind: ClusterRole(?:Binding)?\n/);
+  assert.doesNotMatch(render('first', ['--set', 'forwardedHeaders.enabled=false']), /ASPNETCORE_FORWARDEDHEADERS_ENABLED/);
 });
