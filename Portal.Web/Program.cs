@@ -170,6 +170,7 @@ builder.Services.AddOpenApi(options =>
 });
 
 builder.Services.AddSingleton<IMarkdownConverter, MarkdownConverter>();
+builder.Services.AddSingleton(PortalVersion.FromAssembly(typeof(Program).Assembly));
 
 // Add client browser session service (JavaScript interop abstraction)
 builder.Services.AddClientBrowserSession();
@@ -194,6 +195,7 @@ if (!app.Environment.IsDevelopment())
 
 app.UseForwardedHeaders();
 app.UseHttpsRedirection();
+app.UsePortalVersionHeader();
 app.UseAuthentication();
 app.UseAuthorization();
 

@@ -95,6 +95,26 @@ provide readable status announcements. The screen uses local assets and system
 fonts and does not introduce authentication or change the URL-checking and
 storage behavior.
 
+### Version footer (owner-approved 2026-11-28)
+
+The onboarding footer shows the native app version, read from the Tauri
+package version through a host command (MinVer in release builds per
+CLIENT-007; `0.1.0` in local builds). It also shows the website version.
+
+The Rust host reads the website version from the `Portal-Version` header
+(AUTH-023) of the existing `/api/manifest` probe, so no additional request is
+made during a check. The header is untrusted: the host accepts it only if it
+is 1–64 characters drawn from ASCII letters, digits, `.`, `+`, and `-`, and
+otherwise treats it as absent. The website version is shown only after a
+check finds the Portal; editing the address or a failed check clears it.
+
+On startup with a saved origin, the host probes that saved origin's
+`/api/manifest` once with the CLIENT-010 rules and without well-known
+discovery. If the probe finds the Portal, the footer shows its version;
+otherwise the footer silently omits the website version and the saved origin,
+status message, and confirmation state are unchanged. The startup probe does
+not authenticate or establish trust.
+
 ## Well-known Portal Discovery (issue #16)
 
 **[owner-approved design; issue #16]** Each entered address remains an
@@ -304,6 +324,7 @@ evidence that those integrations work.
 | Native OIDC configuration | Fetch non-secret issuer, public client ID, API audience, and scopes from the Portal's unauthenticated `/.well-known/portal-native-oidc` endpoint. **[owner-selected source; endpoint contract proposed]** | Manual issuer/client ID fields; build-time configuration. | Supports different Portal deployments while keeping the Portal URL as the user's sole endpoint selection. |
 | Manifest cache | Cache only the API's filtered DTO per validated `(iss, sub)`; show it as stale until successful refresh or sign-out. **[issue #12; owner-selected offline policy 2026-11-27]** | No offline cache; time-limited stale display; account-independent cache. | Preserves useful startup while preventing one authenticated account from displaying another account's manifest. |
 | Manual Portal URL check | Rust host optionally resolves an externally supplied well-known document, then probes `/api/manifest` without credentials or redirects; the confirmed origin is saved untrusted. **[issues #15 and #16]** | Probe from the WebView; follow redirects; save on entry. | Keeps the network policy out of the WebView CSP, avoids leaking requests to redirect targets, and preserves confirmation and no-trust criteria. |
+| Website version source | `Portal-Version` header on the existing manifest probe; startup re-probes the saved origin. **[owner-selected 2026-11-28]** | Anonymous `/api/version` endpoint; field in the well-known document. | No extra request during a check; works without a well-known document. |
 | UI verification | Shared Node E2E assertions use platform adapters. **[inferred]** | Separate assertions for each platform. | `Portal.Client/tests/client.test.js` shares assertions and adapters. |
 
 ## Open Questions & Future Decisions

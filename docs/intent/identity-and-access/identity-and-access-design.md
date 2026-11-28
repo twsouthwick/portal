@@ -100,6 +100,13 @@ shared output cache and keeps no server-side representation cache, because
 Kubernetes-backed sites are read live. A provider failure returns `503` with
 RFC 9457 problem details, never a partial or unfiltered manifest (SITE-017).
 
+**Version header (owner-approved 2026-11-28).** Every `/api/manifest`
+response, including the anonymous `401` bearer challenge, `304`, and `503`,
+carries `Portal-Version: {version}` using the same value as the web footer
+(UX-012). This lets the native client display the website version during its
+existing unauthenticated check without an extra request. The owner accepted
+that the version is disclosed to unauthenticated callers.
+
 **OpenAPI.** Issue #6 owns the manifest contract and its schema metadata.
 Issue #7 uses ASP.NET Core's built-in OpenAPI support to generate a document
 from that contract and the manifest endpoint's actual behavior, including its

@@ -5,8 +5,8 @@ launch behavior in the web portal.
 
 ## Status
 
-**MAPPED** — first reconstructed 2026-11-27. Eleven EARS requirements describe
-current UI behavior; several have no direct component or browser tests.
+**MAPPED** — first reconstructed 2026-11-27. Twelve EARS requirements describe
+current UI behavior, including the version footer (UX-012); several have no direct component or browser tests.
 
 ## References
 
@@ -17,11 +17,12 @@ current UI behavior; several have no direct component or browser tests.
 - `docs/intent/portal-experience/portal-experience-design.md`
 
 ### EARS
-- `docs/intent/portal-experience/portal-experience-specs.md` — 11 specs
+- `docs/intent/portal-experience/portal-experience-specs.md` — 12 specs
 
 ### Tests
 - `Portal.Web.Tests/PortalExperienceTests.cs` — static component rendering
-  regression for card height and heading markup (UX-009, UX-011).
+  regression for card height and heading markup (UX-009, UX-011), version
+  metadata stripping, and the signed-out version footer (UX-012).
 - No browser automation tests cover viewport sizing or computed layout.
 - Related server test: `Portal.Web.Tests/AuthenticationTests.cs`
 
@@ -47,9 +48,12 @@ abstraction; TypeScript launch, detection, and storage modules.
 |---|---|---:|---:|---:|
 | Discovery, browser filtering, launch, usage | UX-001, UX-002, UX-003, UX-004, UX-005, UX-006, UX-007, UX-008 | 8 | 0 | 0 known implementation gaps |
 | Card layout, header sizing, typography | UX-009, UX-010, UX-011 | 3 | 0 | Automated computed-layout and viewport coverage missing |
+| Version footer | UX-012 | 1 | 0 | Main-layout footer lacks rendering coverage (interactive-only layout) |
 
 **Traceability:** Layout entry points cite UX-009–011; the component rendering
-test cites UX-009 and UX-011. UX-001–008 still lack direct UI test citations.
+test cites UX-009 and UX-011. `VersionFooter.razor` and
+`PortalVersion.cs` cite UX-012; tests cover the signed-out layout, while the
+main-layout footer is not rendered by a test. UX-001–008 still lack direct UI test citations.
 Computed layout was checked using a temporary browser preview, not automated
 viewport tests; the segment has not been audited.
 

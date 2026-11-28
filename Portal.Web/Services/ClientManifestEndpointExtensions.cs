@@ -13,6 +13,28 @@ public static class ClientManifestEndpointExtensions
     public const string AuthenticationScheme = "ClientManifestBearer";
     public const string AuthorizationPolicy = "ClientManifest";
 
+    /// <summary>
+    /// Adds <c>Portal-Version</c> to every manifest response, including authentication challenges.
+    /// </summary>
+    /// @spec AUTH-023
+    public static IApplicationBuilder UsePortalVersionHeader(this IApplicationBuilder app)
+    {
+        var version = app.ApplicationServices.GetRequiredService<PortalVersion>().Value;
+        return app.Use((context, next) =>
+        {
+            if (context.Request.Path.Equals("/api/manifest", StringComparison.OrdinalIgnoreCase))
+            {
+                context.Response.OnStarting(() =>
+                {
+                    context.Response.Headers[PortalVersion.HeaderName] = version;
+                    return Task.CompletedTask;
+                });
+            }
+
+            return next(context);
+        });
+    }
+
     public static void MapClientManifestEndpoint(this IEndpointRouteBuilder endpoints)
     {
         endpoints.MapGet("/api/manifest", async (

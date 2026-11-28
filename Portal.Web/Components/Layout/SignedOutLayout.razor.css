@@ -1,6 +1,6 @@
 .signed-out-layout {
     display: grid;
-    min-height: 100vh;
+    min-height: calc(100vh - 2.75rem);
     place-items: center;
     padding: 2rem;
     background:

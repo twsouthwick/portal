@@ -14,6 +14,7 @@ const ORIGIN_POLICY: OriginPolicy = if cfg!(all(debug_assertions, feature = "dev
 struct CheckResult {
     origin: String,
     outcome: ProbeOutcome,
+    portal_version: Option<String>,
 }
 
 fn config_path(app: &AppHandle) -> Result<PathBuf, String> {
@@ -23,7 +24,7 @@ fn config_path(app: &AppHandle) -> Result<PathBuf, String> {
         .map_err(|error| format!("Could not locate the configuration directory: {error}"))
 }
 
-/// @spec CLIENT-008 CLIENT-009 CLIENT-010 CLIENT-011 CLIENT-012 CLIENT-023 CLIENT-024 CLIENT-025 CLIENT-026
+/// @spec CLIENT-008 CLIENT-009 CLIENT-010 CLIENT-011 CLIENT-012 CLIENT-023 CLIENT-024 CLIENT-025 CLIENT-026 CLIENT-031
 #[tauri::command]
 async fn check_portal_url(
     input: String,
@@ -33,13 +34,14 @@ async fn check_portal_url(
     let origin = PortalOrigin::parse(&input, ORIGIN_POLICY).map_err(|error| error.to_string())?;
     let client =
         portal_onboarding::probe_client(PROBE_TIMEOUT).map_err(|error| error.to_string())?;
-    let (origin, outcome) = portal_onboarding::check_portal(&client, &origin, ORIGIN_POLICY).await;
-    if outcome.found_portal() {
-        pending.publish_if_current(generation, origin.clone());
+    let checked = portal_onboarding::check_portal(&client, &origin, ORIGIN_POLICY).await;
+    if checked.outcome.found_portal() {
+        pending.publish_if_current(generation, checked.origin.clone());
     }
     Ok(CheckResult {
-        origin: origin.to_string(),
-        outcome,
+        origin: checked.origin.to_string(),
+        outcome: checked.outcome,
+        portal_version: checked.portal_version,
     })
 }
 
@@ -62,6 +64,27 @@ fn saved_portal_url(app: AppHandle) -> Result<Option<String>, String> {
         .map_err(|error| error.to_string())
 }
 
+/// @spec CLIENT-030
+#[tauri::command]
+fn app_version(app: AppHandle) -> String {
+    app.package_info().version.to_string()
+}
+
+/// Probes the saved origin without discovery; failures yield no version.
+/// @spec CLIENT-033
+#[tauri::command]
+async fn saved_portal_version(app: AppHandle) -> Result<Option<String>, String> {
+    let Some(origin) = portal_onboarding::load_origin(&config_path(&app)?, ORIGIN_POLICY)
+        .map_err(|error| error.to_string())?
+    else {
+        return Ok(None);
+    };
+    let client =
+        portal_onboarding::probe_client(PROBE_TIMEOUT).map_err(|error| error.to_string())?;
+    let (outcome, version) = portal_onboarding::probe_portal(&client, &origin).await;
+    Ok(version.filter(|_| outcome.found_portal()))
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -69,7 +92,9 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             check_portal_url,
             save_portal_url,
-            saved_portal_url
+            saved_portal_url,
+            app_version,
+            saved_portal_version
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
