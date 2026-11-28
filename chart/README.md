@@ -35,9 +35,10 @@ helm upgrade portal ./chart -n default -f values.production.yaml --set exampleRe
 
 ## PortalSite resources
 
-The portal reads resources in its release namespace. Each resource has a
+The portal reads resources across all namespaces. Each resource has a
 unique `spec.id` (lowercase letters, digits and hyphens, at most 63 characters)
-and a nonempty `spec.name`. Other fields match the site manifest: `description`,
+across the cluster and a nonempty `spec.name`. Duplicate IDs are errors. Other
+fields match the site manifest: `description`,
 `url`, `icon`, `categories`, `roles`, `usageInstructions`, `isPrivate`,
 `isInternal`, and `apps`. Each app has `name`, `scheme`, `store` (one of
 `none`, `apple`, `macos`, `google`, `microsoft`, `windows`, or `linux`), and
@@ -60,13 +61,20 @@ spec:
     key: logo.png
 ```
 
-`contentRef` is optional and refers to a ConfigMap in the same namespace. Its
+`contentRef` is optional and refers to a ConfigMap in the PortalSite's namespace. Its
 `data` and `binaryData` keys are served at `/<id>/content/<key>` under the
 site's role policy. `key` restricts access to one key; omit it to expose all
 keys. ConfigMap keys are filenames, not nested paths. Resource and content
 changes are reflected on subsequent requests; API and configuration errors
 are surfaced rather than silently ignored. If `SITE_PATH` is also configured,
 its entries are combined with these resources and win on duplicate site IDs.
+
+With `rbac.create=true` (the default), the chart creates a ClusterRole and
+ClusterRoleBinding granting the release's service account `list` on PortalSites
+and `get` on ConfigMaps across all namespaces. Installing or upgrading requires
+permission to manage these cluster-scoped resources. Set `rbac.create=false`
+only when equivalent permissions are provided externally.
+`PORTAL_KUBERNETES_NAMESPACE` no longer limits discovery.
 
 The CRD is managed by this Helm release. Uninstalling the release removes the
 CRD and its PortalSite resources.

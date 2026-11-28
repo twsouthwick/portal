@@ -10,6 +10,8 @@ observed behavior; precedence and refresh policy remain owner decisions. The
 owner-approved client manifest contract and issue #7 endpoint behavior
 (SITE-010–SITE-019) are implemented; provider precedence and runtime refresh
 remain owner decisions.
+The owner-approved all-namespace Kubernetes scope (SITE-005, SITE-007,
+SITE-020) is implemented with targeted provider and registration coverage.
 
 ## References
 
@@ -20,7 +22,7 @@ remain owner decisions.
 - `docs/intent/site-catalog/site-catalog-design.md`
 
 ### EARS
-- `docs/intent/site-catalog/site-catalog-specs.md` — 19 specs
+- `docs/intent/site-catalog/site-catalog-specs.md` — 20 specs
 
 ### Tests
 - `Portal.Web.Tests/ClientManifestTests.cs`
@@ -51,10 +53,13 @@ authenticated static-content endpoint; versioned client manifest projection.
 |---|---|---:|---:|---:|
 | File/ZIP loading, composition, Kubernetes mapping, content | SITE-001, SITE-002, SITE-003, SITE-004, SITE-005, SITE-006, SITE-007, SITE-008, SITE-009 | 9 | 0 | 0 known implementation gaps |
 | Client manifest contract | SITE-010, SITE-011, SITE-012, SITE-013, SITE-014, SITE-015, SITE-016, SITE-017, SITE-018, SITE-019 | 10 | 0 | 0 known implementation gaps |
+| Cross-namespace duplicate rejection | SITE-020 | 1 | 0 | 0 known implementation gaps |
 
 **Traceability:** Provider and content tests cover portions of SITE-001–009,
-which carry no `@spec` annotations. Client manifest code and tests cite
-SITE-010–019 with `@spec`. The counts reflect source reconstruction, not
+with citations for SITE-005 and SITE-007; the other requirements in that range
+still lack annotations. Cross-namespace duplicate tests and provider entry
+points cite SITE-020. Client manifest code and tests cite SITE-010–019 with
+`@spec`. The counts reflect source reconstruction, not
 mechanically checked test coverage.
 
 ## Key Findings
@@ -67,6 +72,9 @@ mechanically checked test coverage.
 3. File loading is cached by the provider instance; Kubernetes calls are
    performed by the provider at read time. Refresh/caching expectations are
    not specified.
+4. Kubernetes catalog loading and individual lookup use the cluster-wide list
+   endpoint. Content references resolve in each PortalSite's namespace, and
+   duplicate IDs across namespaces are rejected.
 
 ## Work Required
 

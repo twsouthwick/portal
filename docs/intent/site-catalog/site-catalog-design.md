@@ -21,10 +21,14 @@ is used.
 
 The Kubernetes provider reads namespaced `PortalSite` resources from
 `portal.swick.app/v1alpha1`. It is enabled when in-cluster configuration or a
-kubeconfig is available; `PORTAL_KUBERNETES_NAMESPACE` selects the namespace
-and defaults to `default`. It maps resource metadata into `SiteInfo` and can
-load content from a referenced ConfigMap. A content key may restrict which
-ConfigMap entry is exposed.
+kubeconfig is available. The owner-approved scope is all namespaces, using the
+cluster-wide list endpoint for both catalog loading and individual site lookup.
+`PORTAL_KUBERNETES_NAMESPACE` is no longer used. It maps resource metadata into
+`SiteInfo` and loads referenced ConfigMaps in the PortalSite's own
+`metadata.namespace`; missing namespace metadata for a content reference is an
+explicit error, not a fallback to the release or default namespace. A content
+key may restrict which ConfigMap entry is exposed. Site IDs must be unique
+across namespaces, with case-insensitive duplicates remaining errors.
 
 `CompositePortalProvider` uses the first provider's portal details and the
 first site for a case-insensitive duplicate ID. `Program.cs` registers file
@@ -123,6 +127,7 @@ document is the machine-readable form of this contract.
 | Duplicate resolution | Registration order, first match wins. **[inferred]** | Merge or reject duplicate IDs. | Implemented by `CompositePortalProvider`; files are registered first (`Portal.Web/Program.cs:89`). Desired precedence is unconfirmed. |
 | File refresh | File manifest parsing is cached by the provider instance. **[inferred]** | Reload each request or watch for changes. | Current implementation caches its load task; README also directs operators to restart after file changes. |
 | Kubernetes reads | Query resources through the Kubernetes API and fetch referenced content. **[inferred]** | Watch/cache or a separate synchronization process. | This is the current provider contract; latency, caching, and refresh expectations are not specified. |
+| Kubernetes scope | **Owner-approved:** discover all namespaces; resolve ConfigMaps in the resource namespace and reject duplicate site IDs. | Namespace filtering; choose the first cross-namespace duplicate. | Sites anywhere in the cluster contribute to one catalog without arbitrary duplicate selection or cross-namespace content fallback. |
 | Client manifest source | Project from `IPortalProvider.GetSiteDetailsAsync`. | Expose `PortalSite` or a separate client catalog. | Owner-approved (issue #6): one catalog for UI and clients. |
 | Client manifest versioning | Integer `schemaVersion` body field. | URL-path versioning; both. | Owner-approved (issue #6). |
 | Private/internal sites in the manifest | Include with `isPrivate`/`isInternal` flags. | Exclude, or include without flags. | Owner-approved (issue #6): the client applies context-dependent behavior. |

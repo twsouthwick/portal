@@ -23,6 +23,10 @@ service-discovery, resilience, and health-check configuration. A Helm chart
 packages the server for Kubernetes. GitHub Actions validates and publishes
 server and native-client artifacts.
 
+**Owner-approved catalog scope:** The web Kubernetes provider discovers
+PortalSite resources across all namespaces. ConfigMap content stays in the
+referencing resource's namespace; Helm supplies cluster-wide read permissions.
+
 The Tauri client is currently a placeholder shell. Its integration with the
 portal, authentication, and catalog is not implemented.
 

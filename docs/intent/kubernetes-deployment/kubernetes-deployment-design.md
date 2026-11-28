@@ -16,7 +16,7 @@ operations beyond it are not assumed.
 
 Chart values configure the image, service type/port, OIDC authority and
 existing-secret name, namespace, example resources, and RBAC. The deployment
-sets OIDC environment variables and `PORTAL_KUBERNETES_NAMESPACE` and exposes
+sets OIDC environment variables and exposes
 container port 8081. The chart defaults to one replica and ClusterIP.
 
 ## Approved Release Versioning
@@ -30,8 +30,12 @@ charts deploy the matching versioned development image rather than a mutable
 
 The CRD defines namespaced PortalSite objects and a schema for site metadata,
 apps, roles, visibility flags, and optional ConfigMap content references.
-RBAC grants the service account permission to list PortalSites and get
-ConfigMaps in the release namespace.
+The owner-approved RBAC uses a ClusterRole and ClusterRoleBinding to grant the
+release's service account permission to list PortalSites and get ConfigMaps
+across all namespaces. Cluster-scoped permission names include the release
+namespace and name so identically named releases in different namespaces do
+not collide. The deployment no longer sets `PORTAL_KUBERNETES_NAMESPACE`.
+Operators disabling chart RBAC must supply equivalent permissions themselves.
 
 ## Decisions & Alternatives
 
@@ -39,7 +43,7 @@ ConfigMaps in the release namespace.
 |---|---|---|---|
 | Deployment format | Helm chart packages the web deployment and Kubernetes catalog resources. **[inferred]** | Raw manifests or an operator. | The tracked chart templates define this interface. |
 | Service exposure | ClusterIP service targeting container port 8081. **[inferred]** | External service, ingress, or another port. | `values.yaml` and the service template configure this. |
-| Kubernetes permissions | Namespaced list of PortalSites and get of ConfigMaps. **[inferred]** | Cluster-wide read or watch/get permissions. | The Role is restricted to the release namespace; whether provider refresh requires additional verbs is unconfirmed. |
+| Kubernetes permissions | **Owner-approved:** cluster-wide PortalSite list and ConfigMap get, bound to the release's service account. | Restrict catalog discovery to the release namespace. | The web catalog discovers resources in every namespace and resolves content in each resource's namespace; no extra verbs are needed. |
 | Secret handling | OIDC secret is supplied by a pre-existing Kubernetes Secret. **[inferred]** | Store secret material in chart values. | The deployment references secret keys rather than embedding a value. |
 | Default image tag | **Owner-approved:** use chart `appVersion` unless `image.tag` is explicitly overridden. | Default to floating `latest`. | A chart installation resolves to the image version packaged by that chart, while allowing intentional overrides. |
 

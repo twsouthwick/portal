@@ -35,7 +35,7 @@ arrows:
     blockedBy: []
     detail: site-catalog.md
     next: Confirm provider precedence and runtime refresh expectations.
-    drift: Client manifest endpoint and OpenAPI specs cite implementation/tests; SITE-001–009 implementation and tests have none.
+    drift: Client manifest and cross-namespace Kubernetes specs cite implementation/tests; SITE-001–004, SITE-006, SITE-008–009 still lack citations.
   portal-experience:
     status: MAPPED
     parent: null
@@ -79,7 +79,7 @@ arrows:
     blockedBy: []
     detail: kubernetes-deployment.md
     next: Confirm production scaling, probes, resource limits, and image-pull configuration.
-    drift: K8S-007 is implemented and tested locally; hosted chart packaging and cluster rendering remain unverified.
+    drift: K8S-002, K8S-003, and K8S-007 have local template/tests coverage; hosted chart packaging and live cluster behavior remain unverified.
   build-delivery:
     status: MAPPED
     parent: null

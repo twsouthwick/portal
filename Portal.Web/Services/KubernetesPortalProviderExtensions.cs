@@ -4,6 +4,7 @@ namespace Portal.Web.Services;
 
 public static class KubernetesPortalProviderExtensions
 {
+    // @spec SITE-005
     public static PortalProviderBuilder AddKubernetes(this PortalProviderBuilder portal)
     {
         return portal.AddProvider(services =>
@@ -17,7 +18,6 @@ public static class KubernetesPortalProviderExtensions
                 ? KubernetesClientConfiguration.InClusterConfig()
                 : KubernetesClientConfiguration.BuildDefaultConfig();
             return new KubernetesPortalProvider(new Kubernetes(configuration),
-                portal.Host.Configuration["PORTAL_KUBERNETES_NAMESPACE"],
                 logger: services.GetRequiredService<ILogger<KubernetesPortalProvider>>());
         });
     }
