@@ -50,8 +50,8 @@ publish server artifacts on configured push triggers.
 
 **Key components:** .NET/npm build integration; xUnit server suite; cross-OS
 Tauri jobs; Android emulator workflow; container packaging validation; GHCR
-multi-architecture image and OCI chart publication; stable and rolling native
-releases; devcontainer toolchain.
+multi-architecture image and OCI chart publication; versioned native
+prereleases and stable releases; devcontainer toolchain.
 
 ## Spec Coverage
 
@@ -65,9 +65,9 @@ releases; devcontainer toolchain.
 **Traceability:** Release policy, publisher, workflow, Android signing, and
 Helm default tests cite their EARS IDs. Hosted GHCR, GitHub Release, and
 Android signing execution remain unverified.
-The release-presentation tests cover versioned names, checksums, notes, and
-rolling updates across native runs and attempts. The signing adapter and
-regression tests cite DELIVERY-019 and cover generated
+The release-presentation tests cover versioned names, checksums, notes,
+immutable reruns, interrupted drafts, and version collisions. The signing
+adapter and regression tests cite DELIVERY-019 and cover generated
 scripts with and without a `Properties` import, rejecting duplicate imports and
 fully qualified `java.*` references inside `android {}`.
 

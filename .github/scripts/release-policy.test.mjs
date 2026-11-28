@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { containerTags, isNewerRun, releaseChannel } from './release-policy.mjs';
+import { containerTags, releaseChannel } from './release-policy.mjs';
 
 // @spec DELIVERY-009 DELIVERY-013 DELIVERY-014
 test('only main pushes and stable version tags select a release channel', () => {
@@ -19,11 +19,4 @@ test('container tags separate rolling development from stable aliases', () => {
   assert.deepEqual(containerTags('0.1.0', 'stable'), ['0.1.0', '0.1', '0', 'latest']);
   assert.throws(() => containerTags('0.1.0-rc.1', 'stable'), /stable version/);
   assert.throws(() => containerTags('0.1.0', 'dev'), /prerelease version/);
-});
-
-// @spec DELIVERY-018
-test('rolling development publication rejects an older completed run', () => {
-  assert.equal(isNewerRun({ run_number: 13 }, { run_number: 12 }), true);
-  assert.equal(isNewerRun({ run_number: 12 }, { run_number: 13 }), false);
-  assert.equal(isNewerRun({ run_number: 13 }, { run_number: 13 }), false);
 });

@@ -488,19 +488,21 @@ bit-for-bit identical rebuilds are not guaranteed.
 ### Native release publication
 
 The `Publish native release` workflow reacts to completion of the main build,
-Android debug smoke, and native release workflows. For a `main` push it updates
-one rolling prerelease tagged `dev`; for a stable `vMAJOR.MINOR.PATCH` tag it
-creates an immutable GitHub Release. Each publication waits until all three
-matching runs for the same commit have succeeded. Pull requests, manual runs,
-and non-stable tags do not publish. Only the publisher receives release-write
-permissions.
+Android debug smoke, and native release workflows. For a `main` push it creates
+an immutable prerelease tagged with the bare MinVer version; for a stable
+`vMAJOR.MINOR.PATCH` tag it creates an immutable GitHub Release. Each
+publication waits until all three matching runs for the same commit have
+succeeded. Pull requests, manual runs, and non-stable tags do not publish. Only
+the publisher receives release-write permissions.
 
 New release titles exactly match the verified artifacts' MinVer version,
-including any prerelease suffix. Tags remain `dev` or `vMAJOR.MINOR.PATCH`;
-older prereleases may retain `dev-<commit>` tags. The
-[Releases page](https://github.com/twsouthwick/portal/releases) contains the
-mutable `dev` prerelease and immutable stable releases. Release notes link to
-the named verification runs. Downloads include their MinVer version and a
+including any prerelease suffix. Bare prerelease tags do not match MinVer's
+`v` tag prefix and therefore do not affect subsequent version calculations.
+The existing rolling `dev` release is left unchanged; the `dev` container tag
+continues to move on main builds. The [Releases page](https://github.com/twsouthwick/portal/releases)
+contains the versioned prereleases and stable releases. GitHub reserves its
+**Latest** label for stable releases. Release notes link to the named
+verification runs. Downloads include their MinVer version and a
 `b<run-number>.<attempt>` suffix; for example, `b67.1` identifies native
 workflow run number 67, attempt 1. Provenance identifies the full commit,
 native run ID, attempt, original artifacts, and toolchain details. `SHA256SUMS`
@@ -516,13 +518,15 @@ or load the site catalog. Android's x86_64 ABI is emulator-tested; arm64 is
 included and architecture-checked but not device-tested. Upgrade compatibility
 and physical-device testing remain unverified.
 
-Publishers serialize repository-wide without cancelling a running publisher. A
-release is uploaded as a draft and published only after all assets are present
-and the verification runs are rechecked. A published release is never
-replaced. An interrupted draft is retried only for the same native run and
-attempt; a conflicting tag, stable release, or draft from a different run or
-attempt fails closed. Inspect and manually remove a conflicting draft before
-retrying. Existing draft assets must match the freshly prepared files'
+Publishers serialize per source revision and ref without cancelling a running
+publisher; different revisions may publish concurrently. GitHub permits up to
+100 pending runs per concurrency group. A release is uploaded as a draft and
+published only after all assets are present and the verification runs are
+rechecked. A published release is never replaced, including when a version is
+rebuilt. An interrupted draft is retried only for the same native run and
+attempt; a conflicting tag target, release channel, or draft from a different
+run or attempt fails closed. Inspect and manually remove a conflicting draft
+before retrying. Existing draft assets must match the freshly prepared files'
 GitHub-reported SHA-256 digests; unexpected or mismatched assets require
 manual inspection and cleanup. Do not manually publish or edit a draft or
 rerun verification while a publisher is running: GitHub's release and

@@ -4,7 +4,7 @@ import { readFile, readdir, mkdir, lstat } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, basename } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { isNewerRun, releaseChannel } from './release-policy.mjs';
+import { isMinVerVersion, releaseChannel } from './release-policy.mjs';
 
 const workflows = [
   { file: 'build.yaml', name: 'Build and publish' },
@@ -29,17 +29,14 @@ export function selectRun(runs, sha, branch = 'main') {
 }
 
 export function releaseDisposition(release, marker, channel = 'stable') {
+  if (channel !== 'dev' && channel !== 'stable') throw new Error(`Unknown release channel: ${channel}`);
   if (!release) return 'create';
   if (channel === 'dev') {
-    if (release.tag_name && release.tag_name !== 'dev') throw new Error('Refusing to modify a non-dev release');
-    if (!release.prerelease) throw new Error('Refusing to modify a stable release');
-    return release.body?.includes(marker) ? 'retry' : 'update';
+    if (release.prerelease !== true) throw new Error('Refusing to modify a stable release');
+  } else if (release.prerelease !== false) {
+    throw new Error('Stable tag points to a prerelease');
   }
-  if (channel !== 'stable') throw new Error(`Unknown release channel: ${channel}`);
-  if (!release.draft) {
-    if (release.prerelease) throw new Error('Stable tag points to a prerelease');
-    return 'complete';
-  }
+  if (!release.draft) return 'complete';
   if (!release.body?.includes(marker)) throw new Error('Draft belongs to another native run or attempt');
   return 'retry';
 }
@@ -78,11 +75,6 @@ function provenanceValues(provenance) {
     if (index < 1) throw new Error('Malformed provenance');
     return [line.slice(0, index), line.slice(index + 1)];
   }));
-}
-
-function runNumberFromBody(body) {
-  const match = /<!-- native-run:\d+-attempt:\d+-run-number:(\d+) -->/.exec(body ?? '');
-  return match ? Number(match[1]) : null;
 }
 
 // @spec DELIVERY-008 DELIVERY-009 DELIVERY-010 DELIVERY-011 DELIVERY-012 DELIVERY-017 DELIVERY-018 DELIVERY-020 DELIVERY-021 DELIVERY-022
@@ -141,26 +133,23 @@ export async function publish({ event, repository, repositoryId, apiUrl, token, 
   if (!Number.isSafeInteger(native.run_number) || native.run_number < 1) throw new Error('Missing native workflow run number');
   if (!Number.isSafeInteger(native.run_attempt) || native.run_attempt < 1) throw new Error('Missing native workflow attempt');
   const runNumber = String(native.run_number);
-  const tag = channel === 'dev' ? 'dev' : trigger.head_branch;
   const marker = `<!-- native-run:${runId}-attempt:${attempt}-run-number:${runNumber} -->`;
-  let ref = await api(`/git/ref/tags/${tag}`, {}, true);
-  if (ref && channel === 'stable' && await tagCommitSha(ref) !== sha) throw new Error('Conflicting tag');
-  const releases = [];
-  for (let page = 1; ; page++) {
-    const result = await api(`/releases?per_page=100&page=${page}`);
-    releases.push(...result);
-    if (result.length < 100) break;
+  async function findPublication(tag) {
+    const ref = await api(`/git/ref/tags/${tag}`, {}, true);
+    if (ref && await tagCommitSha(ref) !== sha) throw new Error('Conflicting tag');
+    const releases = [];
+    for (let page = 1; ; page++) {
+      const result = await api(`/releases?per_page=100&page=${page}`);
+      releases.push(...result);
+      if (result.length < 100) break;
+    }
+    const release = findRelease(releases, tag);
+    if (release && !ref) throw new Error('Release exists without its expected tag');
+    return { ref, release, disposition: releaseDisposition(release, marker, channel) };
   }
-  let release = findRelease(releases, tag);
-  if (release && !ref) throw new Error('Release exists without its expected tag');
-  const currentRunNumber = runNumberFromBody(release?.body);
-  if (channel === 'dev' && currentRunNumber !== null && isNewerRun({ run_number: currentRunNumber }, native)) {
-    console.log(`A newer successful main run already published ${tag}; leaving it unchanged.`);
-    return;
-  }
-  const disposition = releaseDisposition(release, marker, channel);
-  if (disposition === 'complete') {
-    console.log(`Stable release ${tag} already exists; leaving it unchanged.`);
+  let publication = channel === 'stable' ? await findPublication(trigger.head_branch) : null;
+  if (publication?.disposition === 'complete') {
+    console.log(`Stable release ${trigger.head_branch} already exists; leaving it unchanged.`);
     return;
   }
 
@@ -191,9 +180,16 @@ export async function publish({ event, repository, repositoryId, apiUrl, token, 
   const versions = new Set(downloaded.map(item => item.version));
   if (versions.size !== 1) throw new Error('Native artifacts have different application versions');
   const version = versions.values().next().value;
-  if (!/^[A-Za-z0-9][A-Za-z0-9.-]*$/.test(version)) throw new Error('Invalid native artifact version');
+  if (!isMinVerVersion(version)) throw new Error('Invalid native artifact version');
   if (channel === 'stable' && version !== trigger.head_branch.slice(1)) throw new Error('Native version does not match stable tag');
   if (channel === 'dev' && !version.includes('-')) throw new Error('Development artifacts must use a MinVer prerelease version');
+  const tag = channel === 'dev' ? version : trigger.head_branch;
+  publication ??= await findPublication(tag);
+  if (publication.disposition === 'complete') {
+    console.log(`Release ${tag} already exists; leaving it unchanged.`);
+    return;
+  }
+  let { ref, release, disposition } = publication;
   const suffix = `${version}-b${runNumber}.${attempt}`;
   const assets = [];
   const provenance = [];
@@ -242,19 +238,13 @@ export async function publish({ event, repository, repositoryId, apiUrl, token, 
   if (uploadUrl.protocol !== 'https:' || uploadUrl.hostname !== 'uploads.github.com') throw new Error('Unexpected release upload host');
   function checkRelease(current) {
     if (current.tag_name !== tag || current.prerelease !== (channel === 'dev')) throw new Error('Release changed during publication');
-    if (channel === 'stable' && (!current.draft || !current.body?.includes(marker))) {
-      throw new Error('Stable draft changed during publication');
-    }
-    if (channel === 'dev') {
-      const publishedRun = runNumberFromBody(current.body);
-      if (publishedRun !== null && isNewerRun({ run_number: publishedRun }, native)) throw new Error('A newer main run already published dev');
-    }
+    if (!current.draft || !current.body?.includes(marker)) throw new Error('Draft changed during publication');
     for (const uploaded of current.assets) {
       const expected = assets.find(asset => asset.name === uploaded.name);
       if (expected && (uploaded.state !== 'uploaded' || uploaded.digest !== `sha256:${expected.hash}`)) {
         throw new Error(`Mismatched release asset: ${uploaded.name}`);
       }
-      if (channel === 'stable' && !expected) throw new Error(`Unexpected stable release asset: ${uploaded.name}`);
+      if (!expected) throw new Error(`Unexpected release asset: ${uploaded.name}`);
     }
   }
   for (const asset of assets) {
@@ -276,28 +266,14 @@ export async function publish({ event, repository, repositoryId, apiUrl, token, 
   const finalRef = await api(`/git/ref/tags/${tag}`);
   if (!finalRef) throw new Error('Tag changed during publication');
   const finalTagSha = await tagCommitSha(finalRef);
-  if (channel === 'stable' && finalTagSha !== sha) throw new Error('Stable tag changed during publication');
+  if (finalTagSha !== sha) throw new Error('Tag changed during publication');
   const finalRelease = await api(`/releases/${release.id}`);
   checkRelease(finalRelease);
   if (assets.some(asset => !finalRelease.assets.some(uploaded => uploaded.name === asset.name && uploaded.digest === `sha256:${asset.hash}`))) {
     throw new Error('Release is missing a verified asset');
   }
-  if (finalRelease.name !== version || finalRelease.body !== body || finalRelease.draft || finalRelease.prerelease !== (channel === 'dev')) {
-    await api(`/releases/${release.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: version, body, draft: false, prerelease: channel === 'dev', make_latest: channel === 'stable' ? 'true' : 'false' }) });
-  }
-  if (channel === 'dev' && finalTagSha !== sha) {
-    await api(`/git/refs/tags/${tag}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sha, force: true }) });
-    const updatedRef = await api(`/git/ref/tags/${tag}`);
-    if (!updatedRef || await tagCommitSha(updatedRef) !== sha) throw new Error('Updated dev tag does not point at the source commit');
-  }
-  if (channel === 'dev') {
-    const current = await api(`/releases/${release.id}`);
-    for (const stale of current.assets.filter(uploaded => !assets.some(asset => asset.name === uploaded.name))) {
-      await api(`/releases/assets/${stale.id}`, { method: 'DELETE' });
-    }
-  }
+  await api(`/releases/${release.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: version, body, draft: false, prerelease: channel === 'dev', make_latest: channel === 'stable' ? 'true' : 'false' }) });
   console.log(`Published ${channel} release ${tag} for ${sha}.`);
 }
 

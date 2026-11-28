@@ -35,44 +35,32 @@ test('the newest matching run must be completed and successful', () => {
   assert.equal(selectRun([], sha), null);
 });
 
-// @spec DELIVERY-011
+// @spec DELIVERY-011 DELIVERY-018
 test('only matching drafts are retried; published releases are immutable', () => {
   const marker = '<!-- native-run:12-attempt:1 -->';
-  assert.equal(releaseDisposition(null, marker), 'create');
-  assert.equal(releaseDisposition({ draft: true, prerelease: true, body: marker }, marker), 'retry');
-  assert.equal(releaseDisposition({ draft: false, prerelease: true, tag_name: 'dev', body: '<!-- previous run -->' }, marker, 'dev'), 'update');
-  assert.equal(releaseDisposition({ draft: false, prerelease: false, tag_name: 'v1.0.0', body: marker }, marker), 'complete');
-  assert.throws(() => releaseDisposition({ draft: true, prerelease: true, body: '<!-- native-run:12-attempt:2 -->' }, marker));
-  assert.throws(() => releaseDisposition({ draft: false, prerelease: true, body: marker }, marker, 'stable'));
-});
-
-// @spec DELIVERY-008 DELIVERY-011 DELIVERY-017
-test('the rolling dev release is replaceable while stable releases stay immutable', () => {
-  const marker = '<!-- native-run:12-attempt:1 -->';
   assert.equal(releaseDisposition(null, marker, 'dev'), 'create');
-  assert.equal(releaseDisposition({ draft: false, prerelease: true, tag_name: 'dev' }, marker, 'dev'), 'update');
-  assert.equal(releaseDisposition({ draft: true, prerelease: true, tag_name: 'dev', body: marker }, marker, 'dev'), 'retry');
-  assert.equal(releaseDisposition({ draft: false, prerelease: false, tag_name: 'v0.1.0' }, marker, 'stable'), 'complete');
-  assert.throws(() => releaseDisposition(
-    { draft: false, prerelease: false, tag_name: 'v0.1.0' },
-    marker,
-    'dev',
-  ));
+  assert.equal(releaseDisposition({ draft: true, prerelease: true, body: marker }, marker, 'dev'), 'retry');
+  assert.equal(releaseDisposition({ draft: false, prerelease: true, body: '<!-- previous run -->' }, marker, 'dev'), 'complete');
+  assert.equal(releaseDisposition({ draft: false, prerelease: false, tag_name: 'v1.0.0', body: marker }, marker), 'complete');
+  assert.throws(() => releaseDisposition({ draft: true, prerelease: true, body: '<!-- native-run:12-attempt:2 -->' }, marker, 'dev'));
+  assert.throws(() => releaseDisposition({ draft: false, prerelease: true, body: marker }, marker, 'stable'));
+  assert.throws(() => releaseDisposition({ draft: false, prerelease: false, body: marker }, marker, 'dev'));
 });
 
 // @spec DELIVERY-011
 test('drafts are found in the release listing and duplicate tags are rejected', () => {
-  const draft = { draft: true, tag_name: `dev-${sha}` };
+  const draft = { draft: true, tag_name: '0.1.1-alpha.0.4' };
   assert.equal(findRelease([draft], draft.tag_name), draft);
   assert.equal(findRelease([], draft.tag_name), null);
   assert.throws(() => findRelease([draft, draft], draft.tag_name));
 });
 
-// @spec DELIVERY-008 DELIVERY-009 DELIVERY-011
-test('publisher workflow serializes releases and admits only main or stable-tag pushes', async () => {
+// @spec DELIVERY-008 DELIVERY-009 DELIVERY-011 DELIVERY-018
+test('publisher workflow serializes each revision and admits only main or stable-tag pushes', async () => {
   const workflow = await readFile(new URL('../workflows/prerelease.yaml', import.meta.url), 'utf8');
-  assert.match(workflow, /group: native-release-\$\{\{ github\.repository \}\}/);
+  assert.match(workflow, /group: native-release-\$\{\{ github\.repository \}\}-\$\{\{ github\.event\.workflow_run\.head_sha \}\}-\$\{\{ github\.event\.workflow_run\.head_branch \}\}/);
   assert.match(workflow, /cancel-in-progress: false/);
+  assert.match(workflow, /queue: max/);
   assert.match(workflow, /github\.event\.workflow_run\.event == 'push'/);
   assert.match(workflow, /github\.event\.workflow_run\.head_branch == 'main'/);
   assert.match(workflow, /startsWith\(github\.event\.workflow_run\.head_branch, 'v'\)/);
@@ -109,33 +97,25 @@ test('failed or untrusted source runs do not mutate a release', async () => {
   assert.equal(requests, 1);
 });
 
-// @spec DELIVERY-017 DELIVERY-018
-test('a stable release is immutable and an older main run cannot replace dev', async () => {
+// @spec DELIVERY-017
+test('an existing stable release is left unchanged without downloading artifacts', async () => {
   const stableSha = 'b'.repeat(40);
   const calls = [];
   const result = (data, status = 200) => new Response(data === null ? null : JSON.stringify(data), { status });
   const stableRelease = { id: 2, tag_name: 'v0.1.0', name: 'Portal v0.1.0', draft: false, prerelease: false, body: 'stable', assets: [] };
-  const devRelease = {
-    id: 3, tag_name: 'dev', draft: false, prerelease: true,
-    body: '<!-- native-run:99-attempt:1-run-number:13 -->', assets: [],
-  };
-  let release = stableRelease;
-  let workflowBranch = 'v0.1.0';
-  let workflowSha = stableSha;
   const request = async (url, options = {}) => {
     const path = new URL(url).pathname.replace('/repos/o/r', '');
     const method = options.method ?? 'GET';
     calls.push(`${method} ${path}`);
     if (path.includes('/actions/workflows/')) {
       return result({ workflow_runs: [{
-        ...push, head_branch: workflowBranch, head_sha: workflowSha,
+        ...push, head_branch: 'v0.1.0', head_sha: stableSha,
         html_url: 'https://github.com/o/r/actions/runs/12',
       }] });
     }
     if (path === '/git/ref/tags/v0.1.0') return result({ object: { type: 'tag', sha: 'd'.repeat(40) } });
     if (path === `/git/tags/${'d'.repeat(40)}`) return result({ object: { type: 'commit', sha: stableSha } });
-    if (path === '/git/ref/tags/dev') return result({ object: { type: 'commit', sha: 'c'.repeat(40) } });
-    if (path === '/releases' && method === 'GET') return result([release]);
+    if (path === '/releases' && method === 'GET') return result([stableRelease]);
     throw new Error(`Unexpected request: ${method} ${url}`);
   };
   const base = {
@@ -145,25 +125,23 @@ test('a stable release is immutable and an older main run cannot replace dev', a
   const stableEvent = { workflow_run: { ...push, head_branch: 'v0.1.0', head_sha: stableSha, head_repository: { id: 123 } } };
   await publish({ ...base, event: stableEvent });
   assert.deepEqual(calls.filter(call => !call.startsWith('GET ')), []);
-
-  calls.length = 0;
-  workflowBranch = 'main';
-  workflowSha = sha;
-  release = devRelease;
-  const oldMainEvent = { workflow_run: { ...push, head_repository: { id: 123 } } };
-  await publish({ ...base, event: oldMainEvent });
-  assert.deepEqual(calls.filter(call => !call.startsWith('GET ')), []);
 });
 
 async function publicationFixture({ channel = 'dev', rerunOnRecheck = false } = {}) {
   const dir = await mkdtemp(join(tmpdir(), 'portal-prerelease-test-'));
-  const tag = channel === 'dev' ? 'dev' : 'v0.1.0';
-  const branch = channel === 'dev' ? 'main' : tag;
+  const stableTag = 'v0.1.0';
+  const branch = channel === 'dev' ? 'main' : stableTag;
   const version = channel === 'dev' ? '0.1.1-alpha.0.4' : '0.1.0';
   const state = {
-    ref: { object: { type: 'commit', sha: channel === 'dev' ? 'c'.repeat(40) : sha } },
-    release: null, nativeId: 12, nativeRunNumber: 12, nativeAttempt: 1, version, assetContents: new Map(),
+    refs: new Map(), releases: new Map(), sourceSha: sha,
+    nativeId: 12, nativeRunNumber: 12, nativeAttempt: 1, version, assetContents: new Map(),
+    get tag() { return channel === 'dev' ? this.version : stableTag; },
+    get ref() { return this.refs.get(this.tag) ?? null; },
+    set ref(value) { if (value) this.refs.set(this.tag, value); else this.refs.delete(this.tag); },
+    get release() { return this.releases.get(this.tag) ?? null; },
+    set release(value) { if (value) this.releases.set(this.tag, value); else this.releases.delete(this.tag); },
   };
+  if (channel === 'stable') state.ref = { object: { type: 'commit', sha } };
   const mutations = [];
   const workflowRequests = new Map();
   let nextAssetId = 1;
@@ -180,42 +158,55 @@ async function publicationFixture({ channel = 'dev', rerunOnRecheck = false } = 
       const rerunId = workflow === 'build.yaml' ? 22 : 23;
       const id = workflow === 'build.yaml' ? 10 : workflow === 'android.yaml' ? 11 : state.nativeId;
       const run = rerun
-        ? { ...push, head_branch: branch, id: rerunId, run_attempt: 2, html_url: `https://github.com/o/r/actions/runs/${rerunId}` }
-        : { ...push, head_branch: branch, id, run_number: state.nativeRunNumber,
+        ? { ...push, head_branch: branch, head_sha: state.sourceSha, id: rerunId, run_attempt: 2, html_url: `https://github.com/o/r/actions/runs/${rerunId}` }
+        : { ...push, head_branch: branch, head_sha: state.sourceSha, id, run_number: state.nativeRunNumber,
           run_attempt: workflow === 'native-release.yaml' ? state.nativeAttempt : 1,
           html_url: `https://github.com/o/r/actions/runs/${id}` };
       return result({ workflow_runs: [run] });
     }
-    if (path === `/git/ref/tags/${tag}`) return state.ref ? result(state.ref) : result(null, 404);
-    if (path === '/releases' && method === 'GET') return result(state.release ? [state.release] : []);
+    if (path.startsWith('/git/ref/tags/') && method === 'GET') {
+      const ref = state.refs.get(decodeURIComponent(path.slice('/git/ref/tags/'.length)));
+      return ref ? result(ref) : result(null, 404);
+    }
+    if (path === '/releases' && method === 'GET') return result([...state.releases.values()]);
     if (method !== 'GET') mutations.push(`${method} ${path}`);
-    if (path === `/git/refs/tags/${tag}` && method === 'PATCH') {
-      state.ref = { object: { type: 'commit', sha: body.sha } };
-      return result(state.ref);
+    if (path.startsWith('/git/refs/tags/') && method === 'PATCH') {
+      const ref = { object: { type: 'commit', sha: body.sha } };
+      state.refs.set(decodeURIComponent(path.slice('/git/refs/tags/'.length)), ref);
+      return result(ref);
     }
-    if (path === '/git/refs' && method === 'POST') return result(state.ref = { object: { type: 'commit', sha: body.sha } });
+    if (path === '/git/refs' && method === 'POST') {
+      const ref = { object: { type: 'commit', sha: body.sha } };
+      state.refs.set(body.ref.slice('refs/tags/'.length), ref);
+      return result(ref);
+    }
     if (path === '/releases' && method === 'POST') {
-      state.release = { ...body, id: 1, assets: [], upload_url: 'https://uploads.github.com/repos/o/r/releases/1/assets{?name,label}' };
-      return result(state.release);
+      const id = Math.max(0, ...[...state.releases.values()].map(release => release.id)) + 1;
+      const release = { ...body, id, assets: [], upload_url: `https://uploads.github.com/repos/o/r/releases/${id}/assets{?name,label}` };
+      state.releases.set(body.tag_name, release);
+      return result(release);
     }
-    if (path === '/releases/1/assets' && method === 'POST') {
+    const releaseMatch = /^\/releases\/(\d+)(\/assets)?$/.exec(path);
+    const release = releaseMatch && [...state.releases.values()].find(item => item.id === Number(releaseMatch[1]));
+    if (releaseMatch?.[2] && method === 'POST') {
       const name = new URL(url).searchParams.get('name');
       const asset = { id: nextAssetId++, name, state: 'uploaded',
         digest: `sha256:${createHash('sha256').update(options.body).digest('hex')}` };
-      state.release.assets.push(asset);
+      release.assets.push(asset);
       state.assetContents.set(name, Buffer.from(options.body));
       return result(asset);
     }
     if (path.startsWith('/releases/assets/') && method === 'DELETE') {
-      const deleted = state.release.assets.find(asset => asset.id === Number(path.split('/').pop()));
+      const release = [...state.releases.values()].find(item => item.assets.some(asset => asset.id === Number(path.split('/').pop())));
+      const deleted = release.assets.find(asset => asset.id === Number(path.split('/').pop()));
       state.assetContents.delete(deleted.name);
-      state.release.assets = state.release.assets.filter(asset => asset.id !== Number(path.split('/').pop()));
+      release.assets = release.assets.filter(asset => asset.id !== Number(path.split('/').pop()));
       return result(null, 204);
     }
-    if (path === '/releases/1' && method === 'GET') return result(state.release);
-    if (path === '/releases/1' && method === 'PATCH') {
-      Object.assign(state.release, body);
-      return result(state.release);
+    if (releaseMatch && !releaseMatch[2] && method === 'GET') return result(release);
+    if (releaseMatch && !releaseMatch[2] && method === 'PATCH') {
+      Object.assign(release, body);
+      return result(release);
     }
     throw new Error(`Unexpected request: ${method} ${url}`);
   };
@@ -232,11 +223,11 @@ async function publicationFixture({ channel = 'dev', rerunOnRecheck = false } = 
     await writeFile(join(directory, name), contents);
     await writeFile(join(directory, 'SHA256SUMS'), `${hash}  ${name}\n`);
     await writeFile(join(directory, 'provenance.txt'),
-      `commit=${sha}\nrun=${state.nativeId}\nattempt=${state.nativeAttempt}\nrunner=${android ? 'Linux-Android' : `${windows ? 'Windows' : 'Linux'}-${arch}`}\n${android ? 'abi=arm64-v8a,x86_64\n' : ''}version=${state.version}\nrust=rustc\nnode=v24\n`);
+      `commit=${state.sourceSha}\nrun=${state.nativeId}\nattempt=${state.nativeAttempt}\nrunner=${android ? 'Linux-Android' : `${windows ? 'Windows' : 'Linux'}-${arch}`}\n${android ? 'abi=arm64-v8a,x86_64\n' : ''}version=${state.version}\nrust=rustc\nnode=v24\n`);
   };
   const options = { event: { workflow_run: { ...push, head_branch: branch, head_repository: { id: 123 } } }, repository: 'o/r', repositoryId: '123',
     apiUrl: 'https://api.github.com', token: 'test', publisherRunId: '1', request, download, tempRoot: dir };
-  return { options, state, mutations, version, tag, cleanup: () => rm(dir, { recursive: true, force: true }) };
+  return { options, state, mutations, version, tag: state.tag, cleanup: () => rm(dir, { recursive: true, force: true }) };
 }
 
 // @spec DELIVERY-008 DELIVERY-010 DELIVERY-011 DELIVERY-012 DELIVERY-021
@@ -272,15 +263,23 @@ test('publication stays draft after verification reruns and retries the same nat
 });
 
 for (const channel of ['dev', 'stable']) {
-  // @spec DELIVERY-010 DELIVERY-020 DELIVERY-021 DELIVERY-022
+  // @spec DELIVERY-008 DELIVERY-010 DELIVERY-017 DELIVERY-020 DELIVERY-021 DELIVERY-022
   test(`new ${channel} release presents versioned downloads and verifiable build details`, async (t) => {
     const { options, state, version, tag, cleanup } = await publicationFixture({ channel });
     t.after(cleanup);
     await publish(options);
+    assert.ok(state.release, `Expected release ${tag}; found ${[...state.releases.keys()].join(', ')}`);
     assert.equal(state.release.name, version);
     assert.equal(state.release.tag_name, tag);
+    assert.equal(state.ref.object.sha, sha);
     assert.equal(state.release.prerelease, channel === 'dev');
+    assert.equal(state.release.make_latest, channel === 'dev' ? 'false' : 'true');
     assert.equal(state.release.draft, false);
+    if (channel === 'dev') {
+      const project = await readFile(new URL('../../Portal.Web/Portal.Web.csproj', import.meta.url), 'utf8');
+      assert.equal(tag, version);
+      assert.match(project, /<MinVerTagPrefix>v<\/MinVerTagPrefix>/);
+    }
     const suffix = `${version}-b12.1`;
     const binaries = [
       `portal-client-linux-x86_64-${suffix}.AppImage`,
@@ -332,72 +331,97 @@ for (const [name, next] of [
   ['a rerun', { nativeId: 12, nativeRunNumber: 12, nativeAttempt: 2 }],
   ['a new run', { nativeId: 13, nativeRunNumber: 13, nativeAttempt: 1 }],
 ]) {
-  // @spec DELIVERY-011 DELIVERY-018 DELIVERY-021
-  test(`${name} of the same version retains the old release until new assets are verified`, async (t) => {
-    const { options, state, version, cleanup } = await publicationFixture();
+  // @spec DELIVERY-011 DELIVERY-018
+  test(`${name} of the same version leaves the published release unchanged`, async (t) => {
+    const { options, state, mutations, cleanup } = await publicationFixture();
     t.after(cleanup);
     await publish(options);
-    const oldBody = state.release.body;
-    const oldNames = state.release.assets.map(asset => asset.name);
+    const published = structuredClone(state.release);
+    const before = mutations.length;
     Object.assign(state, next);
-    let uploads = 0;
-    const request = async (url, init) => {
-      if (new URL(url).hostname === 'uploads.github.com' && ++uploads === 2) throw new Error('Upload failed');
-      return options.request(url, init);
-    };
-    await assert.rejects(publish({ ...options, publisherRunId: 'failed-update', request }), /Upload failed/);
-    assert.equal(state.release.body, oldBody);
-    assert.ok(oldNames.every(oldName => state.release.assets.some(asset => asset.name === oldName)));
-
-    await publish({ ...options, publisherRunId: 'retry-update' });
-    const suffix = `${version}-b${next.nativeRunNumber}.${next.nativeAttempt}`;
-    assert.ok(state.release.assets.every(asset => asset.name.includes(suffix)));
-    assert.equal(state.release.assets.length, 7);
-    assert.ok(oldNames.every(oldName => !state.release.assets.some(asset => asset.name === oldName)));
+    await publish({ ...options, publisherRunId: 'rebuilt' });
+    assert.deepEqual(state.release, published);
+    assert.equal(mutations.length, before);
+    assert.equal(state.releases.size, 1);
     assert.equal(state.ref.object.sha, sha);
   });
 }
 
-// @spec DELIVERY-021
-test('a version unsafe for a release filename is rejected before publication', async (t) => {
-  const { options, state, cleanup } = await publicationFixture();
+// @spec DELIVERY-008 DELIVERY-011 DELIVERY-018
+test('separate versioned prereleases survive out-of-order publication and an interrupted draft', async (t) => {
+  const { options, state, mutations, cleanup } = await publicationFixture();
   t.after(cleanup);
-  state.version = '../unsafe-alpha';
-  await assert.rejects(publish(options), /Invalid native artifact version/);
-  assert.equal(state.release, null);
-});
-
-// @spec DELIVERY-011 DELIVERY-020
-test('rolling release title changes only after the new assets are verified and repairs a stale name', async (t) => {
-  const { options, state, mutations, version, cleanup } = await publicationFixture();
-  t.after(cleanup);
-  const oldBody = '<!-- native-run:11-attempt:1-run-number:11 -->\nPrevious development build.';
-  state.release = {
-    id: 1, tag_name: 'dev', name: 'Portal development build', draft: false, prerelease: true, body: oldBody,
-    assets: [{ id: 100, name: 'previous.AppImage', state: 'uploaded', digest: 'sha256:old' }],
-    upload_url: 'https://uploads.github.com/repos/o/r/releases/1/assets{?name,label}',
+  const legacy = {
+    id: 100, tag_name: 'dev', name: 'Legacy development build', draft: false, prerelease: true,
+    body: 'Legacy release', assets: [], upload_url: 'https://uploads.github.com/repos/o/r/releases/100/assets{?name,label}',
   };
+  state.releases.set('dev', structuredClone(legacy));
+  state.refs.set('dev', { object: { type: 'commit', sha: 'c'.repeat(40) } });
+  state.version = '0.1.1-alpha.0.5';
+  await publish(options);
+  const newer = structuredClone(state.release);
+  const newerTag = state.tag;
+
+  state.version = '0.1.1-alpha.0.4';
+  state.sourceSha = 'b'.repeat(40);
+  state.nativeId = 11;
+  state.nativeRunNumber = 11;
+  options.event.workflow_run.head_sha = state.sourceSha;
+  let uploads = 0;
   const request = async (url, init) => {
-    if (new URL(url).hostname === 'uploads.github.com') throw new Error('Upload failed');
+    if (new URL(url).hostname === 'uploads.github.com' && ++uploads === 2) throw new Error('Upload failed');
     return options.request(url, init);
   };
-  await assert.rejects(publish({ ...options, publisherRunId: 'failed', request }), /Upload failed/);
-  assert.equal(state.release.name, 'Portal development build');
-  assert.equal(state.release.body, oldBody);
-  assert.equal(state.release.assets.length, 1);
+  await assert.rejects(publish({ ...options, publisherRunId: 'failed-older', request }), /Upload failed/);
+  assert.equal(state.release.draft, true);
+  assert.deepEqual(state.releases.get(newerTag), newer);
+  assert.deepEqual(state.releases.get('dev'), legacy);
 
-  await publish({ ...options, publisherRunId: 'update' });
-  assert.equal(state.release.name, version);
-  assert.equal(state.ref.object.sha, sha);
-  assert.equal(state.release.assets.some(asset => asset.name === 'previous.AppImage'), false);
+  await publish({ ...options, publisherRunId: 'retry-older' });
+  assert.equal(state.release.draft, false);
+  assert.equal(state.release.tag_name, state.version);
+  assert.equal(state.ref.object.sha, state.sourceSha);
+  assert.deepEqual(state.releases.get(newerTag), newer);
+  assert.deepEqual(state.releases.get('dev'), legacy);
+  assert.deepEqual([...state.releases.keys()].sort(), ['0.1.1-alpha.0.4', '0.1.1-alpha.0.5', 'dev']);
+  assert.equal(state.refs.get(newerTag).object.sha, sha);
+  assert.equal(state.refs.get('dev').object.sha, 'c'.repeat(40));
+  assert.equal(mutations.some(mutation => mutation.startsWith('DELETE ') || mutation.startsWith('PATCH /git/refs/')), false);
+});
 
-  state.release.name = 'Portal development build';
-  const before = mutations.length;
-  await publish({ ...options, publisherRunId: 'name-only' });
-  assert.equal(state.release.name, version);
-  assert.deepEqual(mutations.slice(before), ['PATCH /releases/1']);
+// @spec DELIVERY-011
+test('conflicting version tags, release channels, and drafts fail without mutations', async (t) => {
+  const { options, state, mutations, version, cleanup } = await publicationFixture();
+  t.after(cleanup);
+  state.ref = { object: { type: 'commit', sha: 'b'.repeat(40) } };
+  await assert.rejects(publish({ ...options, publisherRunId: 'conflicting-tag' }), /Conflicting tag/);
+  assert.deepEqual(mutations, []);
 
-  const after = mutations.length;
-  await publish({ ...options, publisherRunId: 'unchanged' });
-  assert.equal(mutations.length, after);
+  state.ref = { object: { type: 'commit', sha } };
+  state.release = {
+    id: 1, tag_name: version, draft: false, prerelease: false, body: 'stable', assets: [],
+    upload_url: 'https://uploads.github.com/repos/o/r/releases/1/assets{?name,label}',
+  };
+  await assert.rejects(publish({ ...options, publisherRunId: 'conflicting-channel' }), /stable release|release channel/i);
+  assert.deepEqual(mutations, []);
+
+  state.release.prerelease = true;
+  state.release.draft = true;
+  state.release.body = '<!-- native-run:99-attempt:1-run-number:99 -->';
+  await assert.rejects(publish({ ...options, publisherRunId: 'conflicting-draft' }), /Draft belongs to another native run or attempt/);
+  assert.deepEqual(mutations, []);
+});
+
+// @spec DELIVERY-008 DELIVERY-020 DELIVERY-021
+test('invalid semantic versions are rejected before creating a release tag', async (t) => {
+  const { options, state, cleanup } = await publicationFixture();
+  t.after(cleanup);
+  for (const [index, version] of [
+    '../unsafe-alpha', 'not-a-semver', '01.2.3-alpha.1', '1.2.3-alpha..1', '1.2.3-alpha.01',
+  ].entries()) {
+    state.version = version;
+    await assert.rejects(publish({ ...options, publisherRunId: `invalid-${index}` }), /Invalid native artifact version/);
+    assert.equal(state.release, null);
+    assert.equal(state.refs.size, 0);
+  }
 });

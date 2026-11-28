@@ -8,8 +8,9 @@ on:
 permissions: {}
 
 concurrency:
-  group: native-release-${{ github.repository }}
+  group: native-release-${{ github.repository }}-${{ github.event.workflow_run.head_sha }}-${{ github.event.workflow_run.head_branch }}
   cancel-in-progress: false
+  queue: max
 
 jobs:
   publish:
