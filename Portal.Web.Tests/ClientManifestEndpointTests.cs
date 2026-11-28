@@ -156,6 +156,52 @@ public sealed class ClientManifestEndpointTests
         Assert.Equal(503, body.RootElement.GetProperty("status").GetInt32());
     }
 
+    // @spec AUTH-020
+    [Fact]
+    public async Task NativeOidcMetadata_ExposesConfiguredPublicSettingsWithoutAuthentication()
+    {
+        using var provider = new MutablePortalProvider(PortalDetails());
+        using var factory = CreateFactory(provider, nativeClientId: "portal-native");
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false
+        });
+
+        var response = await client.GetAsync("/.well-known/portal-native-oidc");
+        var json = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.True(response.Headers.CacheControl?.NoCache);
+        using var metadata = JsonDocument.Parse(json);
+        Assert.Equal(Issuer, metadata.RootElement.GetProperty("issuer").GetString());
+        Assert.Equal("portal-native", metadata.RootElement.GetProperty("clientId").GetString());
+        Assert.Equal(Audience, metadata.RootElement.GetProperty("apiAudience").GetString());
+        Assert.Equal(
+            ["openid", "groups"],
+            metadata.RootElement.GetProperty("scopes").EnumerateArray()
+                .Select(scope => scope.GetString()!).ToArray());
+        Assert.Equal(
+            ["apiAudience", "clientId", "issuer", "scopes"],
+            metadata.RootElement.EnumerateObject().Select(property => property.Name)
+                .Order(StringComparer.Ordinal).ToArray());
+    }
+
+    // @spec AUTH-021
+    [Fact]
+    public async Task NativeOidcMetadata_IsNotAvailableWithoutNativeClientConfiguration()
+    {
+        using var provider = new MutablePortalProvider(PortalDetails());
+        using var factory = CreateFactory(provider);
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false
+        });
+
+        var response = await client.GetAsync("/.well-known/portal-native-oidc");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
     // @spec AUTH-017 AUTH-018 AUTH-019 SITE-019
     [Fact]
     public async Task OpenApi_IsAuthenticatedDevelopmentOnlyAndHasNoInteractiveUi()
@@ -214,9 +260,10 @@ public sealed class ClientManifestEndpointTests
 
     private static WebApplicationFactory<Program> CreateFactory(
         MutablePortalProvider provider,
-        string environment = "Development")
+        string environment = "Development",
+        string? nativeClientId = null)
     {
-        return new ManifestWebApplicationFactory(provider, SigningKey, environment);
+        return new ManifestWebApplicationFactory(provider, SigningKey, environment, nativeClientId);
     }
 
     private static HttpRequestMessage AuthorizedRequest(string token)
@@ -262,7 +309,8 @@ public sealed class ClientManifestEndpointTests
     private sealed class ManifestWebApplicationFactory(
         MutablePortalProvider provider,
         SymmetricSecurityKey signingKey,
-        string environment) : WebApplicationFactory<Program>
+        string environment,
+        string? nativeClientId) : WebApplicationFactory<Program>
     {
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
@@ -271,6 +319,12 @@ public sealed class ClientManifestEndpointTests
             builder.UseSetting("Oidc:ClientId", "portal-web");
             builder.UseSetting("Oidc:ClientSecret", "test-secret");
             builder.UseSetting("Oidc:ApiAudience", Audience);
+            if (nativeClientId is not null)
+            {
+                builder.UseSetting("Oidc:NativeClientId", nativeClientId);
+                builder.UseSetting("Oidc:NativeScopes:0", "openid");
+                builder.UseSetting("Oidc:NativeScopes:1", "groups");
+            }
             builder.ConfigureServices(services =>
             {
                 services.RemoveAll<IPortalProvider>();

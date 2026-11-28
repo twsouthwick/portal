@@ -29,6 +29,10 @@ static class PortalAppExtensions
         return builder
             .WithEnvironment("Oidc__Authority", AutheliaResource.Issuer)
             .WithEnvironment("Oidc__ClientId", "portal-web")
+            .WithEnvironment("Oidc__NativeClientId", "portal-native")
+            .WithEnvironment("Oidc__NativeScopes__0", "openid")
+            .WithEnvironment("Oidc__NativeScopes__1", "groups")
+            .WithEnvironment("Oidc__NativeScopes__2", "offline_access")
             .WithEnvironment("Oidc__ClientSecret", clientSecret);
     }
 }

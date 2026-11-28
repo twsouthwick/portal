@@ -107,6 +107,42 @@ the application's normal authenticated session. No Swagger or Scalar UI is
 added. Documentation does not change the DTO's JSON representation or weaken
 manifest authorization.
 
+## Native OIDC Configuration Discovery (issue #12 design draft)
+
+The native client needs the identity provider and public-client settings before
+it can start sign-in. These values are not inferable from the Portal URL: the
+OIDC authority may use a different origin, and the existing `Oidc:ClientId`
+belongs to the confidential web client.
+
+The proposed `GET /.well-known/portal-native-oidc` endpoint is available
+without authentication and returns only non-secret deployment configuration:
+the configured `Oidc:Authority` as `issuer`, a separately configured
+`Oidc:NativeClientId` as `clientId`, the configured API audience as
+`apiAudience`, and the `Oidc:NativeScopes` list as `scopes` (default:
+`openid` and `groups`). The proposed JSON fields are `issuer`, `clientId`,
+`apiAudience`, and `scopes`. The client ID is public and must identify a
+separate public client registered at the issuer; the endpoint never returns
+the web client ID, a client secret, tokens, or redirect URIs. The client
+retrieves standard OIDC protocol endpoints from the issuer's discovery
+document and verifies its `issuer` exactly matches this metadata. The
+metadata is read from the user's configured Portal origin over validated
+HTTPS and cannot redirect the client to a new Portal origin.
+
+If `Oidc:NativeClientId` is not configured, the endpoint is not available.
+`Oidc:ClientId`, `Oidc:ClientSecret`, existing cookie/OIDC authentication, and
+the bearer-only `/api/manifest` policy remain unchanged. The issuer must
+separately be configured to issue access tokens with the API audience and
+trusted `groups` claims; publishing the audience does not assert that the
+identity provider can issue such a token.
+
+The proposed endpoint returns `404` when `Oidc:NativeClientId` is absent, so
+deployments that have not registered a public client do not advertise native
+sign-in. It sends `Cache-Control: no-cache` so deployment configuration
+changes are observed on the next client startup. No CORS policy is needed for
+the native Rust HTTP client. Authelia support, client registration, token
+audiences/claims, and platform redirect compatibility remain
+integration-validation gates.
+
 ## Sign-out
 
 The authenticated POST `/auth/logout` endpoint validates antiforgery, clears

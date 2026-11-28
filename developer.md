@@ -87,16 +87,17 @@ directory. Portal logout clears its own cookie, not the Authelia session.
 The `portal-web` client is confidential and uses authorization code with PKCE
 and the `groups` scope. The Authelia client claims policy includes `groups` and
 `name` in the ID token for Portal, which currently does not fetch userinfo.
-This is not a native public client; native authentication and callback
-compatibility are tracked separately in issue #11.
+The separate `portal-native` development client is public and uses PKCE with
+S256, a loopback callback, `offline_access`, and an RS256 access token for
+`portal-api`. The shared claims policy's `access_token` list places `groups` in
+that access JWT; see the native-client notes in `docs/deployment.md`.
 
 The authenticated `GET /api/manifest` endpoint accepts a signed JWT access
 token whose issuer matches `Oidc:Authority`, whose audience matches
 `Oidc:ApiAudience` (default `portal-api`), and whose `groups` claims carry the
-user's portal roles. The local `portal-web` client currently places `groups`
-and `name` in the ID token rather than the access token and is not configured
-as the native public client; native access-token issuance and redirect
-compatibility still need provider integration.
+user's portal roles. The `portal-web` client uses ID-token claims for web
+sign-in. The local `portal-native` client's access JWT satisfies this contract;
+Authelia 4.39.16 or later is required for the `access_token` claims policy.
 
 To check the bundled site roles, sign in as `admin` and verify Site 1 and
 `/site1/content/icon.png` are accessible. In a separate browser session, sign
