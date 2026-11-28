@@ -83,6 +83,43 @@ permission to manage these cluster-scoped resources. Set `rbac.create=false`
 only when equivalent permissions are provided externally.
 `PORTAL_KUBERNETES_NAMESPACE` no longer limits discovery.
 
+### Workload references
+
+Optionally link a PortalSite to a workload in the same namespace:
+
+```yaml
+spec:
+  id: home
+  name: Home
+  url: https://home.example.com
+  workloadRef:
+    kind: Deployment
+    name: home
+```
+
+`kind` must be `Deployment`, `StatefulSet`, or `ReplicaSet` from `apps/v1`;
+`name` is the workload's Kubernetes name. Namespace overrides are rejected.
+The site appears only when the workload's desired `spec.replicas` is greater
+than zero (omitted means one). This is a scaling check, not a readiness or
+health check: a starting workload with desired replicas still appears.
+Sites without `workloadRef` retain their existing behavior.
+
+A zero replica count or missing workload hides the site from the web catalog
+and client manifest; individual lookup returns no site and static-content
+requests return 404. A missing workload also logs a warning. Other API errors
+still fail the request. Availability is
+checked on subsequent loads or requests, before reading ConfigMap content;
+an already-open page does not refresh automatically. Hidden sites still
+participate in duplicate-ID validation.
+
+Chart RBAC additionally grants cluster-wide `get` on `apps` deployments,
+statefulsets, and replicasets, with no workload list, watch, or write access.
+With `rbac.create=false`, supply these permissions for referenced workloads
+externally. Upgrade the CRD and RBAC before adding references to an existing
+installation. Undeclared reference fields follow Kubernetes schema pruning.
+
+## CRD lifecycle
+
 The CRD is managed by this Helm release. Uninstalling the release removes the
 CRD and every PortalSite resource in every namespace. The chart has no values
 for `SITE_PATH`, probes, or disabling the Kubernetes provider, and it cannot

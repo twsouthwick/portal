@@ -251,6 +251,245 @@ public class KubernetesPortalProviderTests
     private static Kubernetes CreateClient(KubernetesHandler handler) =>
         new(new KubernetesClientConfiguration { Host = "http://localhost" }, handler);
 
+    // @spec SITE-021 SITE-022
+    [Theory]
+    [InlineData("Deployment", "deployments", 0, SiteStatus.Unavailable)]
+    [InlineData("Deployment", "deployments", 1, SiteStatus.Available)]
+    [InlineData("StatefulSet", "statefulsets", 0, SiteStatus.Unavailable)]
+    [InlineData("StatefulSet", "statefulsets", 2, SiteStatus.Available)]
+    [InlineData("ReplicaSet", "replicasets", 0, SiteStatus.Unavailable)]
+    [InlineData("ReplicaSet", "replicasets", 3, SiteStatus.Available)]
+    [InlineData("Deployment", "deployments", null, SiteStatus.Available)]
+    public async Task SiteStatus_UsesDesiredReplicas(
+        string kind, string plural, int? replicas, SiteStatus expected)
+    {
+        var handler = new KubernetesHandler
+        {
+            Workload = replicas is null
+                ? """{"spec":{},"status":{"readyReplicas":0}}"""
+                : $$$"""{"spec":{"replicas":{{{replicas}}}},"status":{"readyReplicas":99}}"""
+        };
+        using var client = CreateClient(handler);
+        var statusProvider = new KubernetesSiteStatusProvider(client);
+        var resource = CreateLinkedResource(kind);
+
+        Assert.Equal(expected, await statusProvider.GetSiteStatusAsync(resource));
+        Assert.Equal([$"/apis/apps/v1/namespaces/site-ns/{plural}/workload"], handler.Paths);
+
+        handler.Paths.Clear();
+        Assert.Equal(SiteStatus.Available, await statusProvider.GetSiteStatusAsync(
+            new KubernetesPortalSiteResource { Spec = new() { Id = "unlinked", Name = "Unlinked" } }));
+        Assert.Empty(handler.Paths);
+    }
+
+    // @spec SITE-022 SITE-023 SITE-025
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task LinkedSite_RefreshesAvailabilityBeforeFetchingContent(bool lookup)
+    {
+        var handler = new KubernetesHandler
+        {
+            Sites = """
+                {"items":[{"metadata":{"namespace":"site-ns"},"spec":{"id":"home","name":"Home",
+                "workloadRef":{"kind":"Deployment","name":"workload"},"contentRef":{"name":"content"}}}]}
+                """,
+            Workload = """{"spec":{"replicas":0}}""",
+            ConfigMap = """{"data":{"file.txt":"content"}}"""
+        };
+        using var client = CreateClient(handler);
+        var provider = new KubernetesPortalProvider(client);
+        async Task<SiteInfo?> LoadAsync() => lookup
+            ? await provider.GetSiteAsync("home")
+            : (await provider.GetSiteDetailsAsync()).Sites.SingleOrDefault();
+
+        Assert.Null(await LoadAsync());
+        Assert.Empty(ClientManifest.Create(await provider.GetSiteDetailsAsync(), new()).Sites);
+        Assert.DoesNotContain(handler.Paths, path => path.Contains("/configmaps/"));
+        handler.Workload = """{"spec":{"replicas":1},"status":{"readyReplicas":0}}""";
+        Assert.NotNull((await LoadAsync())?.Content);
+        Assert.Single(ClientManifest.Create(await provider.GetSiteDetailsAsync(), new()).Sites);
+
+        handler.Paths.Clear();
+        handler.WorkloadStatus = HttpStatusCode.NotFound;
+        Assert.Null(await LoadAsync());
+        Assert.DoesNotContain(handler.Paths, path => path.Contains("/configmaps/"));
+
+        handler.Sites = """
+            {"items":[
+            {"metadata":{"namespace":"site-ns"},"spec":{"id":"home","name":"Home",
+            "workloadRef":{"kind":"Deployment","name":"workload"}}},
+            {"metadata":{"namespace":"other-ns"},"spec":{"id":"home","name":"Duplicate"}}]}
+            """;
+        await Assert.ThrowsAsync<InvalidDataException>(async () => await LoadAsync());
+    }
+
+    // @spec SITE-023 SITE-024
+    [Fact]
+    public async Task SiteStatus_OnlyTreatsNotFoundAsUnavailableAndLogsReference()
+    {
+        var handler = new KubernetesHandler { WorkloadStatus = HttpStatusCode.NotFound };
+        var logger = new TestLogger<KubernetesSiteStatusProvider>();
+        using var client = CreateClient(handler);
+        var statusProvider = new KubernetesSiteStatusProvider(client, logger);
+        var resource = CreateLinkedResource("StatefulSet");
+
+        Assert.Equal(SiteStatus.Unavailable, await statusProvider.GetSiteStatusAsync(resource));
+        Assert.Contains(logger.Warnings, warning =>
+            warning.Contains("home") && warning.Contains("site-ns") &&
+            warning.Contains("StatefulSet") && warning.Contains("workload"));
+
+        handler.WorkloadStatus = HttpStatusCode.Forbidden;
+        await Assert.ThrowsAnyAsync<Exception>(async () => await statusProvider.GetSiteStatusAsync(resource));
+        handler.WorkloadStatus = HttpStatusCode.InternalServerError;
+        await Assert.ThrowsAnyAsync<Exception>(async () => await statusProvider.GetSiteStatusAsync(resource));
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(async () =>
+            await statusProvider.GetSiteStatusAsync(resource, cancellation.Token));
+    }
+
+    // @spec SITE-024
+    [Theory]
+    [InlineData("Job", "workload", "site-ns")]
+    [InlineData("deployment", "workload", "site-ns")]
+    [InlineData("Deployment", "", "site-ns")]
+    [InlineData("Deployment", "../workload", "site-ns")]
+    [InlineData("Deployment", "Workload", "site-ns")]
+    [InlineData("Deployment", "workload\n", "site-ns")]
+    [InlineData("Deployment", "workload", null)]
+    [InlineData("Deployment", "workload", " ")]
+    public async Task SiteStatus_RejectsInvalidReferencesWithoutWorkloadRead(
+        string kind, string name, string? resourceNamespace)
+    {
+        var handler = new KubernetesHandler();
+        using var client = CreateClient(handler);
+        var statusProvider = new KubernetesSiteStatusProvider(client);
+        var resource = new KubernetesPortalSiteResource
+        {
+            Metadata = new() { NamespaceProperty = resourceNamespace },
+            Spec = new() { Id = "home", Name = "Home", WorkloadRef = new() { Kind = kind, Name = name } }
+        };
+
+        await Assert.ThrowsAsync<InvalidDataException>(async () =>
+            await statusProvider.GetSiteStatusAsync(resource));
+        Assert.Empty(handler.Paths);
+    }
+
+    // @spec SITE-024
+    [Theory]
+    [InlineData(253, true)]
+    [InlineData(254, false)]
+    public async Task SiteStatus_ValidatesWorkloadNameLength(int length, bool valid)
+    {
+        var handler = new KubernetesHandler();
+        using var client = CreateClient(handler);
+        var statusProvider = new KubernetesSiteStatusProvider(client);
+        var resource = new KubernetesPortalSiteResource
+        {
+            Metadata = new() { NamespaceProperty = "site-ns" },
+            Spec = new()
+            {
+                Id = "home", Name = "Home",
+                WorkloadRef = new() { Kind = "Deployment", Name = new string('a', length) }
+            }
+        };
+        if (valid)
+        {
+            Assert.Equal(SiteStatus.Available, await statusProvider.GetSiteStatusAsync(resource));
+        }
+        else
+        {
+            await Assert.ThrowsAsync<InvalidDataException>(async () =>
+                await statusProvider.GetSiteStatusAsync(resource));
+            Assert.Empty(handler.Paths);
+        }
+    }
+
+    // @spec SITE-024
+    [Theory]
+    [InlineData("{}")]
+    [InlineData("null")]
+    [InlineData("""{"spec":{"replicas":-1}}""")]
+    [InlineData("""{"spec":{"replicas":"invalid"}}""")]
+    public async Task SiteStatus_RejectsMalformedWorkload(string workload)
+    {
+        var handler = new KubernetesHandler { Workload = workload };
+        using var client = CreateClient(handler);
+        var statusProvider = new KubernetesSiteStatusProvider(client);
+
+        await Assert.ThrowsAnyAsync<Exception>(async () =>
+            await statusProvider.GetSiteStatusAsync(CreateLinkedResource("ReplicaSet")));
+    }
+
+    // @spec SITE-024
+    [Fact]
+    public async Task LinkedSite_RejectsNamespaceOverride()
+    {
+        var handler = new KubernetesHandler
+        {
+            Sites = """
+                {"items":[{"metadata":{"namespace":"site-ns"},"spec":{"id":"home","name":"Home",
+                "workloadRef":{"kind":"Deployment","name":"workload","namespace":"other-ns"}}}]}
+                """
+        };
+        using var client = CreateClient(handler);
+        var provider = new KubernetesPortalProvider(client);
+
+        await Assert.ThrowsAsync<InvalidDataException>(async () => await provider.GetSiteDetailsAsync());
+        Assert.Single(handler.Paths);
+    }
+
+    // @spec SITE-026
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Provider_UsesInjectedSiteStatusProvider(bool lookup)
+    {
+        var handler = new KubernetesHandler
+        {
+            Sites = """{"items":[{"spec":{"id":"home","name":"Home"}}]}"""
+        };
+        using var client = CreateClient(handler);
+        var statusProvider = new StubSiteStatusProvider();
+        var provider = new KubernetesPortalProvider(client, siteStatusProvider: statusProvider);
+        async Task<SiteInfo?> LoadAsync() => lookup
+            ? await provider.GetSiteAsync("home")
+            : (await provider.GetSiteDetailsAsync()).Sites.SingleOrDefault();
+
+        Assert.Null(await LoadAsync());
+        Assert.Equal("home", statusProvider.LastResource?.Spec?.Id);
+        statusProvider.Status = SiteStatus.Available;
+        Assert.NotNull(await LoadAsync());
+        statusProvider.Error = new InvalidOperationException("status failed");
+        Assert.Same(statusProvider.Error,
+            await Assert.ThrowsAsync<InvalidOperationException>(async () => await LoadAsync()));
+    }
+
+    private static KubernetesPortalSiteResource CreateLinkedResource(string kind) => new()
+    {
+        Metadata = new() { NamespaceProperty = "site-ns" },
+        Spec = new()
+        {
+            Id = "home", Name = "Home",
+            WorkloadRef = new() { Kind = kind, Name = "workload" }
+        }
+    };
+
+    private sealed class StubSiteStatusProvider : ISiteStatusProvider<KubernetesPortalSiteResource>
+    {
+        public SiteStatus Status { get; set; } = SiteStatus.Unavailable;
+        public Exception? Error { get; set; }
+        public KubernetesPortalSiteResource? LastResource { get; private set; }
+
+        public ValueTask<SiteStatus> GetSiteStatusAsync(
+            KubernetesPortalSiteResource site, CancellationToken cancellationToken = default)
+        {
+            LastResource = site;
+            return Error is null ? ValueTask.FromResult(Status) : ValueTask.FromException<SiteStatus>(Error);
+        }
+    }
+
     private sealed class TestLogger<T> : ILogger<T>
     {
         public List<string> Warnings { get; } = [];
@@ -273,17 +512,22 @@ public class KubernetesPortalProviderTests
     {
         public string Sites { get; set; } = """{"items":[]}""";
         public string ConfigMap { get; set; } = "{}";
+        public string Workload { get; set; } = """{"spec":{"replicas":1}}""";
+        public HttpStatusCode WorkloadStatus { get; set; } = HttpStatusCode.OK;
         public HttpStatusCode Status { get; set; } = HttpStatusCode.OK;
         public List<string> Paths { get; } = [];
 
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var path = request.RequestUri!.AbsolutePath;
             Paths.Add(path);
-            return Task.FromResult(new HttpResponseMessage(Status)
+            var isWorkload = path.StartsWith("/apis/apps/v1/", StringComparison.Ordinal);
+            return Task.FromResult(new HttpResponseMessage(isWorkload ? WorkloadStatus : Status)
             {
                 RequestMessage = request,
-                Content = new StringContent(path.Contains("/configmaps/") ? ConfigMap : Sites, Encoding.UTF8, "application/json")
+                Content = new StringContent(isWorkload ? Workload :
+                    path.Contains("/configmaps/") ? ConfigMap : Sites, Encoding.UTF8, "application/json")
             });
         }
     }

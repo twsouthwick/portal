@@ -141,6 +141,9 @@ rules:
   - apiGroups: [""]
     resources: ["configmaps"]
     verbs: ["get"]
+  - apiGroups: ["apps"]
+    resources: ["deployments", "statefulsets", "replicasets"]
+    verbs: ["get"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -525,7 +528,7 @@ If you keep it:
 | Destination | When | Notes |
 |---|---|---|
 | OIDC authority (`/.well-known/openid-configuration`, JWKS, token endpoint) | First sign-in and periodically after | The pod itself must resolve the authority URL and trust its TLS certificate. If Authelia is in the same cluster, the public hostname must resolve from inside it. For a private CA, mount the CA bundle and set `SSL_CERT_FILE` or `SSL_CERT_DIR`. |
-| Kubernetes API (`kubernetes.default.svc`) | Provider enabled | `list` PortalSites and `get` ConfigMaps on every catalog load |
+| Kubernetes API (`kubernetes.default.svc`) | Provider enabled | `list` PortalSites; `get` referenced workloads and available sites' ConfigMaps on catalog loads |
 | OTLP endpoint | `OTEL_EXPORTER_OTLP_ENDPOINT` set | Optional telemetry |
 
 If the authority cannot be reached, unauthenticated requests return `500`
@@ -558,22 +561,33 @@ sites become visible, and duplicates or errors in any namespace can break the
 catalog. The service account also needs the cluster-wide permissions below.
 
 - **Minimum RBAC:** cluster-wide `list` on `portalsites.portal.swick.app`,
-  plus `get` on referenced `configmaps` in each resource's namespace. The
-  chart grants both permissions cluster-wide; see
+  plus `get` on referenced `configmaps` and linked `apps` deployments,
+  statefulsets, or replicasets in each resource's namespace. The
+  chart grants these permissions cluster-wide; see
   [CRD and RBAC](#crd-and-rbac-without-helm) for a narrower ConfigMap option.
   Portal does not use `watch` or `get` on PortalSites.
 - **`contentRef`** resolves in the `PortalSite`'s own namespace, not Portal's
   namespace. Missing resource namespace metadata is an error.
+- **`workloadRef`** optionally links an `apps/v1` Deployment, StatefulSet, or
+  ReplicaSet by `kind` and `name` in the PortalSite's namespace. Zero desired
+  replicas or a missing workload hides the site from catalog and client
+  manifest, and makes content lookup return 404. Readiness is not checked.
+  Missing workloads log warnings; other API failures remain errors. Update
+  CRD and RBAC before using this feature; see the
+  [workload example](../chart/README.md#workload-references).
 - **Duplicate IDs:** two `PortalSite` resources with the same `spec.id`,
   case-insensitive, fail the whole catalog, including when they are in
-  different namespaces or a file entry overrides that ID.
+  different namespaces, one is hidden by workload status, or a file entry
+  overrides that ID.
 - **Errors:** API, permission, configuration, and validation errors fail the
   catalog request rather than being skipped (see
   [Failure behavior](#failure-behavior-when-site_path-is-set)).
 - **Change visibility:** Portal has no watch or cache. Catalog loads list
-  all resources and read their referenced ConfigMaps; a content request for a
+  all resources, read linked workloads, and fetch available sites' referenced
+  ConfigMaps; a content request for a
   Kubernetes-backed site lists all resources and reads the requested site's
-  referenced ConfigMap. Changes appear on the next load or request, without a
+  workload status before fetching its referenced ConfigMap. Changes appear on
+  the next load or request, without a
   restart. An already-open page does not refresh by itself.
 
 ## Migration and behavior parity

@@ -9,6 +9,9 @@ configuration for the portal.
 checked-in chart; production operations are not fully specified.
 The owner-approved cluster-wide permissions and removal of namespace filtering
 (K8S-002, K8S-003) are implemented and checked with rendered-chart tests.
+Optional workload references and GET-only workload permissions
+(K8S-009, K8S-010) are implemented with rendered-chart coverage; live cluster
+admission and API behavior remain unverified.
 
 ## References
 
@@ -19,7 +22,7 @@ The owner-approved cluster-wide permissions and removal of namespace filtering
 - `docs/intent/kubernetes-deployment/kubernetes-deployment-design.md`
 
 ### EARS
-- `docs/intent/kubernetes-deployment/kubernetes-deployment-specs.md` — 8 specs
+- `docs/intent/kubernetes-deployment/kubernetes-deployment-specs.md` — 10 specs
 
 ### Tests
 - `Portal.Web.Tests/KubernetesPortalProviderTests.cs`
@@ -49,9 +52,10 @@ Operator guide: `docs/deployment.md`.
 | Chart, runtime values, RBAC, CRD, examples | K8S-001, K8S-002, K8S-003, K8S-004, K8S-005, K8S-006 | 6 | 0 | No `SITE_PATH`, probe, or provider-toggle values |
 | Approved release image pinning | K8S-007 | 0 | 1 | Template and local test exist; hosted chart packaging remains unverified |
 | Reverse-proxy forwarded headers | K8S-008 | 1 | 0 | Trusts any proxy; Portal must be reachable only through the ingress |
+| Workload reference schema and read permissions | K8S-009, K8S-010 | 2 | 0 | Live cluster admission and reads unverified |
 
 **Traceability:** Templates and release workflow tests cite K8S-002, K8S-003,
-K8S-007, and K8S-008. No production cluster behavior is claimed as tested by
+K8S-007, K8S-008, K8S-009, and K8S-010. No production cluster behavior is claimed as tested by
 chart lint.
 
 ## Key Findings
@@ -64,6 +68,9 @@ chart lint.
    bound to the release's service account (`chart/templates/rbac.yaml`).
 3. The CRD constrains site metadata and app/content references
    (`chart/templates/crds/portalsites.portal.swick.app.yaml:1-86`).
+4. Workload references support same-namespace apps/v1 Deployment, StatefulSet,
+   and ReplicaSet. The chart grants only `get` on these workloads; the CRD
+   rejects namespace overrides.
 
 ## Work Required
 

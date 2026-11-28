@@ -84,7 +84,13 @@ configured, the bundled `sites` directory is used.
 Kubernetes uses the in-cluster service account or the default kubeconfig. The
 service account needs permission to list PortalSites cluster-wide and get
 referenced ConfigMaps in their respective namespaces. The chart grants
-ConfigMap access cluster-wide. Site IDs must be unique across namespaces.
+ConfigMap access cluster-wide. Optional `workloadRef: { kind, name }` links a
+PortalSite to an `apps/v1` Deployment, StatefulSet, or ReplicaSet in its own
+namespace. Linked sites are hidden when the workload is missing or its desired
+replica count is zero; ready replicas are not checked. Unlinked sites are
+unchanged. Workload reads require `get` permission, supplied by the chart.
+See [workload references](chart/README.md#workload-references) for an example.
+Site IDs must be unique across namespaces, even for hidden sites.
 Once configured, Kubernetes errors are surfaced rather than silently ignored.
 File manifests are loaded on first use and require a restart to refresh.
 

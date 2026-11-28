@@ -43,6 +43,24 @@ namespace and name so identically named releases in different namespaces do
 not collide. The deployment no longer sets `PORTAL_KUBERNETES_NAMESPACE`.
 Operators disabling chart RBAC must supply equivalent permissions themselves.
 
+## Workload References (Owner-approved)
+
+The optional PortalSite `spec.workloadRef` object contains required `kind` and
+`name` fields. `kind` is one of `Deployment`, `StatefulSet`, or `ReplicaSet`
+(`apps/v1`); `name` is a Kubernetes DNS-subdomain name. No namespace override is
+supported: the Site Catalog segment resolves workloads in the PortalSite's
+namespace and filters sites using desired replicas.
+The CRD declares an optional but forbidden `namespace` field with a CEL
+validation rejecting its presence; ordinary undeclared fields follow Kubernetes
+schema pruning. The runtime rejects all unexpected reference fields.
+
+Chart RBAC adds cluster-wide `get` on `apps` resources `deployments`,
+`statefulsets`, and `replicasets`. It adds no list, watch, or write permissions
+for workloads. With RBAC disabled, operators must supply these reads
+externally. Existing PortalSite list and ConfigMap get permissions remain
+unchanged. Upgrading existing installations requires updating both CRD and
+RBAC before adding references.
+
 ## Decisions & Alternatives
 
 | Decision | Current approach | Alternatives considered | Rationale |

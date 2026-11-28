@@ -51,7 +51,7 @@ public sealed class PortalProviderRegistrationTests
         }
     }
 
-    // @spec SITE-005
+    // @spec SITE-005 SITE-026
     [Fact]
     public async Task Registration_CombinesConfiguredFilesAndKubeconfig()
     {
@@ -113,6 +113,16 @@ public sealed class PortalProviderRegistrationTests
             Assert.Collection(details.Sites,
                 site => Assert.Equal("File shared", site.Name),
                 site => Assert.Equal("Cluster", site.Name));
+
+            var customBuilder = Host.CreateApplicationBuilder();
+            customBuilder.Configuration["SITE_PATH"] = sites;
+            var statusProvider = new UnavailableSiteStatusProvider();
+            customBuilder.Services.AddSingleton<ISiteStatusProvider<KubernetesPortalSiteResource>>(statusProvider);
+            customBuilder.AddPortalProvider(portal => portal.AddFile().AddKubernetes());
+            using var customHost = customBuilder.Build();
+            var customDetails = await customHost.Services.GetRequiredService<IPortalProvider>().GetSiteDetailsAsync();
+            Assert.Equal("File shared", Assert.Single(customDetails.Sites).Name);
+            Assert.Equal(2, statusProvider.Calls);
         }
         finally
         {
@@ -126,5 +136,16 @@ public sealed class PortalProviderRegistrationTests
     {
         public ValueTask<PortalDetails> GetSiteDetailsAsync(CancellationToken cancellationToken = default) =>
             ValueTask.FromResult(new PortalDetails("Other"));
+    }
+
+    private sealed class UnavailableSiteStatusProvider : ISiteStatusProvider<KubernetesPortalSiteResource>
+    {
+        public int Calls { get; private set; }
+        public ValueTask<SiteStatus> GetSiteStatusAsync(
+            KubernetesPortalSiteResource site, CancellationToken cancellationToken = default)
+        {
+            Calls++;
+            return ValueTask.FromResult(SiteStatus.Unavailable);
+        }
     }
 }

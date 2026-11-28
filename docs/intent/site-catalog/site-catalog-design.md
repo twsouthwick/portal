@@ -35,6 +35,49 @@ first site for a case-insensitive duplicate ID. `Program.cs` registers file
 before Kubernetes, so a file entry wins a duplicate. Provider errors are not
 silently treated as empty results.
 
+## Workload-linked Sites (Owner-approved)
+
+The owner selected an optional `spec.workloadRef` with `kind` and `name`.
+Supported kinds are exactly `Deployment`, `StatefulSet`, and `ReplicaSet`
+from `apps/v1`. The reference resolves only in the PortalSite's
+`metadata.namespace`; there is no cross-namespace reference field.
+
+On each catalog load or individual lookup, the provider reads the named
+workload and checks `spec.replicas > 0`, not observed or ready replicas.
+An omitted replica count uses the Kubernetes default of one. Sites without a
+reference retain their existing behavior and cause no workload reads.
+Zero replicas or a workload GET returning 404 make the site unavailable:
+catalog loading omits it and individual lookup returns null. This also makes
+its static-content endpoint return 404, while the shared catalog ensures the
+Blazor UI and client manifest omit it without introducing availability fields.
+Availability is evaluated before fetching ConfigMap content.
+
+Invalid references, unsupported kinds, missing namespace metadata, malformed
+workload responses, and negative replica counts are explicit errors.
+Only a 404 from the named workload read means unavailable; permission,
+connectivity, and other API errors continue to propagate. A missing workload
+is logged as a warning with the site and reference identity.
+Duplicate PortalSite IDs remain errors even if one duplicate is unavailable.
+Each request reads current state; no watch, cache, scaling action, or health
+probe is introduced. Desired replicas express operator intent, not readiness.
+
+The Kubernetes Deployment segment owns the matching optional CRD schema and
+cluster-wide `get` permissions for these three workload kinds. The runtime
+validates the reference as well, so older CRDs or direct provider inputs cannot
+silently bypass validation.
+
+### Status Abstraction (Owner-approved)
+
+`ISiteStatusProvider<TSite>` exposes asynchronous
+`GetSiteStatusAsync(TSite, CancellationToken)` returning a shared `SiteStatus`
+enum (`Available`, `Unavailable`). The Kubernetes implementation accepts
+`KubernetesPortalSiteResource` and owns reference validation, workload reads,
+and missing-workload logging. Errors remain exceptions, not status values.
+`KubernetesPortalProvider` accepts an injectable implementation, with a default
+using the same Kubernetes client, and uses it before mapping content in both
+catalog and individual lookup paths. No status field is added to `SiteInfo`,
+no public status endpoint is introduced, and no other provider changes.
+
 ## Content Endpoint
 
 The catalog maps a site's `IFileProvider` to
@@ -163,6 +206,8 @@ document is the machine-readable form of this contract.
   `Portal.Web/Services/SubdirectoryExtensions.cs`
 - Kubernetes source: `Portal.Web/Services/KubernetesPortalProvider.cs`,
   `Portal.Web/Services/KubernetesPortalProviderExtensions.cs`
+- Site status: `Portal.Web/Services/ISiteStatusProvider.cs`,
+  `Portal.Web/Services/KubernetesSiteStatusProvider.cs`
 - Composition and content: `Portal.Web/Services/CompositePortalProvider.cs`,
   `Portal.Web/Services/SiteDetailsExtensions.cs`
 - Client manifest: `Portal.Web/Services/ClientManifest.cs`,

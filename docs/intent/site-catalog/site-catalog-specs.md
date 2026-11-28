@@ -32,3 +32,20 @@ The endpoint and OpenAPI behavior are implemented in issue #7.
 - [x] **SITE-017** When the client manifest is served to an unauthenticated request, or when the provider fails, the endpoint shall return RFC 9457 problem details with status 401 or 503 respectively, and shall not return a partial manifest. Evidence: `Portal.Web/Services/ClientManifestEndpointExtensions.cs`; test: `Portal.Web.Tests/ClientManifestEndpointTests.cs`.
 - [x] **SITE-018** When the client manifest schema is generated, the manifest, site, and app types shall describe every field, and `store` shall be a string enumeration of `none`, `apple`, `macos`, `google`, `microsoft`, `windows`, and `linux`. Evidence: `Portal.Web/Services/ClientManifest.cs`; test: `Portal.Web.Tests/ClientManifestTests.cs`.
 - [x] **SITE-019** Where the portal runs in the Development environment, it shall publish an OpenAPI document requiring an authenticated session and describing the client manifest response and its 401 and 503 problem-details responses; outside Development it shall not serve that document, and it shall not serve a Swagger or Scalar UI. Evidence: `Portal.Web/Program.cs`; test: `Portal.Web.Tests/ClientManifestEndpointTests.cs`.
+
+## Workload-linked Sites
+
+Owner-approved requirements. Implementation:
+`Portal.Web/Services/KubernetesSiteStatusProvider.cs`,
+`Portal.Web/Services/ISiteStatusProvider.cs`,
+`Portal.Web/Services/KubernetesPortalProvider.cs`,
+`Portal.Web/Services/KubernetesPortalProviderExtensions.cs`.
+Tests: `Portal.Web.Tests/KubernetesPortalProviderTests.cs`,
+`Portal.Web.Tests/PortalProviderRegistrationTests.cs`.
+
+- [x] **SITE-021** When a PortalSite has no `workloadRef`, the Kubernetes provider shall preserve its existing catalog and lookup behavior without reading a workload.
+- [x] **SITE-022** When a PortalSite has a valid `workloadRef`, the provider shall read the named `apps/v1` Deployment, StatefulSet, or ReplicaSet in the PortalSite's namespace on each catalog load or lookup and include the site only when desired `spec.replicas` is greater than zero, treating an omitted replica count as one without considering ready replicas.
+- [x] **SITE-023** When a linked workload has zero desired replicas or its named read returns HTTP 404, the provider shall omit the site from the catalog and return null for individual lookup before fetching ConfigMap content; it shall log a warning identifying the site and reference for a missing workload.
+- [x] **SITE-024** When a workload reference has an unsupported kind, invalid Kubernetes DNS-subdomain name, namespace override, or missing PortalSite namespace, or its response has missing spec or invalid/negative replicas, the provider shall surface an explicit error; workload errors other than HTTP 404 shall propagate rather than be treated as unavailable, and cancellation shall propagate.
+- [x] **SITE-025** When Kubernetes PortalSites have duplicate case-insensitive IDs, the provider shall reject catalog loading or lookup of that ID even when a duplicate's linked workload is unavailable.
+- [x] **SITE-026** When the Kubernetes catalog or individual lookup evaluates site availability, it shall use an injectable `ISiteStatusProvider<KubernetesPortalSiteResource>` returning shared `SiteStatus.Available` or `SiteStatus.Unavailable`; the default implementation shall own workload validation and reads and propagate errors as exceptions, without adding status to the client manifest or changing other providers.
