@@ -58,12 +58,14 @@ or policy:
 
 **Authentication.** The owner selected the native-client public OIDC client
 model (`docs/intent/native-client/native-client-design.md`). The manifest
-endpoint accepts only an OIDC access token as a JWT bearer token through an
-endpoint-specific policy; the Portal cookie is not accepted. The scheme
-validates issuer, signature, expiry, and the configured API audience
+endpoint expects an OIDC access token as a JWT bearer token through an
+endpoint-specific policy; the Portal cookie is not accepted. The bearer
+scheme validates issuer, signature, expiry, and the configured API audience
 (`Oidc:ApiAudience`, default `portal-api`), and maps trusted `groups` to roles
-exactly as the cookie scheme does. The native client must request an access
-token for that audience; an ID token is rejected because it has a different
+exactly as the cookie scheme does. It does not explicitly distinguish access
+tokens from ID tokens: an ID token is rejected only when its `aud` does not
+include the configured API audience. Keep the API audience distinct from the
+web client ID, and have the native client request an access token for that
 audience. An unauthenticated or invalid-token request receives `401` with RFC
 9457 problem details and a bearer challenge, not the OIDC redirect used by
 the Blazor routes (SITE-017). The existing cookie/OIDC defaults, Blazor
@@ -106,6 +108,44 @@ document endpoint is mapped only in the Development environment and requires
 the application's normal authenticated session. No Swagger or Scalar UI is
 added. Documentation does not change the DTO's JSON representation or weaken
 manifest authorization.
+
+## Native OIDC Configuration Discovery (issue #12)
+
+The native client needs the identity provider and public-client settings before
+it can start sign-in. These values are not inferable from the Portal URL: the
+OIDC authority may use a different origin, and the existing `Oidc:ClientId`
+belongs to the confidential web client.
+
+The `GET /.well-known/portal-native-oidc` endpoint is available
+without authentication and returns only non-secret deployment configuration:
+the configured `Oidc:Authority` as `issuer`, a separately configured
+`Oidc:NativeClientId` as `clientId`, the configured API audience as
+`apiAudience`, and the whitespace-separated `Oidc:NativeScopes` string as
+an ordered `scopes` array. The environment variable is
+`Oidc__NativeScopes`; if it is absent, empty, or whitespace-only, the scopes
+default to `openid` and `groups`. The JSON fields are `issuer`,
+`clientId`, `apiAudience`, and `scopes`. The client ID is public and must
+identify a separate public client registered at the issuer; the endpoint
+never returns the web client ID, a client secret, tokens, or redirect URIs.
+The client retrieves standard OIDC protocol endpoints from the issuer's
+discovery document and verifies its `issuer` exactly matches this metadata.
+The metadata is read from the user's configured Portal origin over validated
+HTTPS and cannot redirect the client to a new Portal origin.
+
+If `Oidc:NativeClientId` is not configured, the endpoint is not available.
+`Oidc:ClientId`, `Oidc:ClientSecret`, existing cookie/OIDC authentication, and
+the bearer-only `/api/manifest` policy remain unchanged. The issuer must
+separately be configured to issue access tokens with the API audience and
+trusted `groups` claims; publishing the audience does not assert that the
+identity provider can issue such a token.
+
+The endpoint returns `404` when `Oidc:NativeClientId` is absent, so
+deployments that have not registered a public client do not advertise native
+sign-in. It sends `Cache-Control: no-cache` so deployment configuration
+changes are observed on the next client startup. No CORS policy is needed for
+the native Rust HTTP client. Local Authelia token issuance and Linux loopback
+redirects were checked manually; other provider registrations and target
+platforms remain integration-validation gates.
 
 ## Sign-out
 

@@ -299,6 +299,8 @@ Startup does fail without `Oidc:Authority`, `Oidc:ClientId`, and
 | `Oidc__ClientSecret` | Yes | Plain-text client secret; load it from a Secret |
 | `Oidc__RequireHttpsMetadata` | No | Default `true`; keep it `true` in production |
 | `Oidc__ApiAudience` | No | Default `portal-api`; see [Audiences](#audiences) |
+| `Oidc__NativeClientId` | No | Public client ID; without it native OIDC metadata is unavailable |
+| `Oidc__NativeScopes` | No | Whitespace-separated native scopes; defaults to `openid groups` when unset or blank |
 | `SITE_PATH` | For file catalogs | A directory, or a `.zip` file whose root contains `manifest.json` |
 | `ASPNETCORE_FORWARDEDHEADERS_ENABLED` | Behind a TLS proxy | `true`; see [Reverse proxy](#reverse-proxy-and-tls) |
 | `KUBERNETES_SERVICE_HOST` | File-only phase | `""` disables in-cluster detection when no kubeconfig exists |
@@ -433,7 +435,12 @@ Portal uses the authorization code flow with PKCE, a form-post response, and
 `profile`, and `groups`. It reads the display name from the `name` claim and
 roles from the `groups` claim of the **ID token**. Portal does not call the
 userinfo endpoint, so those claims must be in the ID token. Authelia 4.39 or
-later supports this through a claims policy.
+later supports this through a claims policy. By default, the `groups` scope
+makes the groups claim available from UserInfo; the claims policy's `id_token`
+list also places it in the ID token for Portal's web sign-in. Its
+`access_token` list places groups in JWT access tokens for the native client
+(see [Native Authelia client](#native-authelia-client)); it requires Authelia
+4.39.16 or later and has no effect on the web client's opaque access tokens.
 
 ```yaml
 identity_providers:
@@ -441,6 +448,7 @@ identity_providers:
     claims_policies:
       portal:
         id_token: ['groups', 'name']
+        access_token: ['groups']
     clients:
       - client_id: 'portal'
         client_name: 'Portal'
@@ -470,8 +478,9 @@ identity_providers:
   `kubectl -n portal create secret generic portal-oidc --from-literal=client-secret='<plain secret>'`.
 - **Groups:** each Authelia group name becomes a Portal role. A site's `roles`
   are matched against those names. A site with no roles is visible to any
-  authenticated user. Authelia emits `groups` only when the `groups` scope is
-  granted.
+  authenticated user. Grant the `groups` scope. Authelia returns the groups
+  from UserInfo by default; the claims policy above is needed because Portal's
+  web sign-in reads the ID token instead.
 - Session cookie: `portal.session`, which is `Secure`, `HttpOnly`, and
   `SameSite=Lax`.
 
@@ -482,9 +491,51 @@ For a local reference, see `Portal.AppHost/Authelia/configuration.yml`.
 - **Web sign-in:** the ID token audience is the client ID. Authelia sets this
   automatically, and no extra audience configuration is needed.
 - **Client API (`/api/manifest`):** accepts either the web session cookie or
-  a JWT bearer access token whose audience is `Oidc__ApiAudience` (default
-  `portal-api`). Only the native client uses bearer tokens, and it does not
-  authenticate yet. **No audience setup is needed for the web deployment.**
+  a signed JWT bearer access token whose audience is `Oidc__ApiAudience`
+  (default `portal-api`) and whose `groups` claim supplies the user's roles.
+  JWT validation checks the configured audience but does not distinguish
+  access tokens from ID tokens. An ID token is rejected only when its
+  `aud` does not include `Oidc__ApiAudience`; keep that value distinct from
+  the web client ID and use an access token with that audience. **No audience
+  setup is needed for the web deployment.**
+
+### Native Authelia client
+
+A native app needs a separate public client; it must not use the confidential
+`portal` client's secret. For the Linux loopback flow, a client can be
+registered like this:
+
+```yaml
+identity_providers:
+  oidc:
+    clients:
+      - client_id: 'portal-native'
+        client_name: 'Portal Native'
+        client_secret: ''
+        public: true
+        claims_policy: 'portal'
+        authorization_policy: 'one_factor'
+        redirect_uris:
+          - 'http://127.0.0.1:49152/callback'
+        scopes: ['openid', 'groups', 'offline_access']
+        response_types: ['code']
+        grant_types: ['authorization_code', 'refresh_token']
+        token_endpoint_auth_method: 'none'
+        require_pkce: true
+        pkce_challenge_method: 'S256'
+        audience: ['portal-api']
+        requested_audience_mode: 'explicit'
+        access_token_signed_response_alg: 'RS256'
+```
+
+The `access_token: ['groups']` entry in the `portal` claims policy places the
+user's groups in the RS256 access JWT, which `/api/manifest` requires; Portal
+does not call UserInfo. Authelia 4.39.15 accepts that setting but ignores it,
+so use 4.39.16 or later. Authelia 4.39.28 was verified to accept a different
+port on the registered `127.0.0.1` callback, issue a refresh token, and issue
+an access JWT with the `portal-api` audience and `groups`, which
+`/api/manifest` accepted with role filtering applied. Do not send the ID token
+as the API bearer token.
 
 ### Reverse proxy and TLS
 

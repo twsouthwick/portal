@@ -219,6 +219,7 @@ app.MapPost("/auth/logout", async (HttpContext context, IAntiforgery antiforgery
 app.MapSiteContentEndpoints();
 // @spec AUTH-008 AUTH-009 AUTH-010 AUTH-011 AUTH-012 AUTH-013 AUTH-014 AUTH-015 AUTH-016 SITE-017
 app.MapClientManifestEndpoint();
+app.MapNativeOidcMetadataEndpoint(app.Configuration);
 
 app.MapDefaultEndpoints();
 

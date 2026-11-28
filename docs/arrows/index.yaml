@@ -23,8 +23,8 @@ arrows:
     blocks: []
     blockedBy: []
     detail: identity-and-access.md
-    next: Validate Authelia public-client access-token claims and native redirects; confirm content-endpoint policy for private/internal sites.
-    drift: Local Authelia access-token issuance and native-client interoperability lack automated integration coverage.
+    next: Automate local Authelia public-client interoperability coverage; confirm content-endpoint policy for private/internal sites.
+    drift: Native metadata configuration has endpoint tests; local Authelia access-token issuance and native-client interoperability lack automated integration coverage.
   site-catalog:
     status: MAPPED
     parent: null
@@ -56,8 +56,8 @@ arrows:
     blocks: []
     blockedBy: []
     detail: native-client.md
-    next: Validate the owner-selected public-client authentication against Authelia and target platforms before integration.
-    drift: Manual Portal URL onboarding is implemented without authentication; its UI lacks E2E coverage, and native authentication and Authelia compatibility are unverified.
+    next: Implement CLIENT-014–022, then validate the selected public-client authentication against Authelia and target platforms.
+    drift: Manual Portal URL onboarding is implemented without authentication; CLIENT-014–022 specify planned startup/cache behavior with no native implementation or tests, and provider/platform validation remains unverified.
   runtime-services:
     status: MAPPED
     parent: null
