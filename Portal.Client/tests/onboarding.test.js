@@ -34,7 +34,7 @@ function setup(outcome) {
   return { elements, calls };
 }
 
-// @spec CLIENT-013 CLIENT-017
+// @spec CLIENT-013 CLIENT-026
 test('confirms and saves the discovered origin, not the entered alias', async () => {
   const { elements, calls } = setup({
     origin: 'https://portal.example.com',
@@ -51,7 +51,7 @@ test('confirms and saves the discovered origin, not the entered alias', async ()
   assert.equal(save.args.origin, 'https://portal.example.com');
 });
 
-// @spec CLIENT-015 CLIENT-016 CLIENT-017
+// @spec CLIENT-024 CLIENT-025 CLIENT-026
 test('discovery errors are visible and cannot be confirmed', async () => {
   for (const [outcome, message] of [
     [{ kind: 'discoveryInvalid' }, /invalid/],

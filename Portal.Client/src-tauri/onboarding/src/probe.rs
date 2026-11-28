@@ -75,7 +75,7 @@ struct DiscoveryDocument {
     origin: String,
 }
 
-/// @spec CLIENT-014 CLIENT-015 CLIENT-016 CLIENT-017
+/// @spec CLIENT-023 CLIENT-024 CLIENT-025 CLIENT-026
 pub async fn check_portal(
     client: &Client,
     origin: &PortalOrigin,
@@ -307,7 +307,7 @@ mod tests {
         .await
     }
 
-    // @spec CLIENT-014 CLIENT-015 CLIENT-017
+    // @spec CLIENT-023 CLIENT-024 CLIENT-026
     #[tokio::test]
     async fn discovery_checks_and_selects_the_document_origin_without_recursion() {
         let target = serve_scripted(vec![PORTAL_401.into()]).await;
@@ -331,7 +331,7 @@ mod tests {
         }
     }
 
-    // @spec CLIENT-014 CLIENT-016
+    // @spec CLIENT-023 CLIENT-025
     #[tokio::test]
     async fn missing_discovery_document_falls_back_to_entered_origin() {
         let server = serve_scripted(vec![response("404 Not Found", ""), PORTAL_401.into()]).await;
@@ -346,7 +346,7 @@ mod tests {
         assert!(requests[1].starts_with("GET /api/manifest "));
     }
 
-    // @spec CLIENT-014 CLIENT-016
+    // @spec CLIENT-023 CLIENT-025
     #[tokio::test]
     async fn discovery_302_falls_back_without_following_the_redirect() {
         let server = serve_scripted(vec![
@@ -365,7 +365,7 @@ mod tests {
         assert!(requests[1].starts_with("GET /api/manifest "));
     }
 
-    // @spec CLIENT-015 CLIENT-016
+    // @spec CLIENT-024 CLIENT-025
     #[tokio::test]
     async fn discovery_rejects_bad_documents_without_fallback() {
         for body in [
@@ -383,7 +383,7 @@ mod tests {
         }
     }
 
-    // @spec CLIENT-015
+    // @spec CLIENT-024
     #[tokio::test]
     async fn discovery_enforces_the_exact_body_size_limit() {
         let prefix = r#"{"origin":"http://example.com","padding":""#;
@@ -403,7 +403,7 @@ mod tests {
         }
     }
 
-    // @spec CLIENT-015
+    // @spec CLIENT-024
     #[tokio::test]
     async fn discovery_limits_a_chunked_response_without_a_content_length() {
         let body = format!(
@@ -418,7 +418,7 @@ mod tests {
         assert_eq!(server.requests.lock().await.len(), 1);
     }
 
-    // @spec CLIENT-014 CLIENT-016
+    // @spec CLIENT-023 CLIENT-025
     #[tokio::test]
     async fn discovery_timeout_does_not_fall_back() {
         let server = serve(None).await;
@@ -435,7 +435,7 @@ mod tests {
         assert_eq!(server.requests.load(Ordering::SeqCst), 1);
     }
 
-    // @spec CLIENT-014 CLIENT-016
+    // @spec CLIENT-023 CLIENT-025
     #[tokio::test]
     async fn discovery_redirects_and_other_statuses_do_not_fall_back() {
         for (response, status) in [

@@ -217,6 +217,61 @@ that browser sign-in does not automatically give the WebView or another app a
 Portal session. Keycloak and mock OIDC tests do not establish Authelia or
 platform compatibility.
 
+### Authenticated startup and manifest cache (issue #12)
+
+**Design draft for owner review.** This extends the owner-selected public OIDC
+client flow above; it does not change Portal.Web authentication or the
+bearer-only manifest endpoint.
+
+Before sign-in, the client fetches non-secret OIDC configuration from the
+selected Portal origin at `GET /.well-known/portal-native-oidc`. The response
+supplies the issuer, public client ID, API audience, and requested scopes; the
+issuer's standard OIDC discovery document supplies protocol endpoints. The
+client validates both documents over HTTPS and requires the discovered issuer
+to match the Portal-provided issuer. It does not accept issuer or endpoint
+URLs from an authorization callback. This metadata endpoint is unauthenticated
+because it is needed before sign-in and contains no credentials.
+
+After sign-in, the client validates the OIDC transaction and obtains an API
+access token for the configured Portal audience. The account key is the
+validated issuer plus the OIDC subject (`iss`, `sub`), never an email address
+or display name. The API access token is sent only to the configured Portal
+origin over validated HTTPS; it is not placed in WebView storage, the manifest
+cache, logs, or diagnostics. Refresh credentials, if required by the provider,
+use the platform-protected credential store described above.
+
+The cache contains only the authenticated, role-filtered client manifest DTO
+returned by `GET /api/manifest`, together with its ETag, account key, and
+refresh timestamp. It contains no token or unfiltered provider data. It is
+stored in the OS-protected application-private data area and replaced
+atomically. Each account has a separate cache entry. At startup, the last
+account's cached manifest is rendered immediately with a visible stale or
+refreshing state while the client attempts a network refresh. Per the owner's
+selected offline policy, a stale entry remains visible until a successful
+refresh replaces it or the user signs out. Signing out clears that account's
+cache and credentials. A different authenticated account never sees the
+previous account's cache.
+
+The client sends `If-None-Match` with that account's cached ETag. A `200`
+response is parsed and validated against the manifest DTO before atomically
+replacing the cache and timestamp. A `304` retains the matching cached DTO and
+updates its successful refresh time; if no cache exists for the authenticated
+account, the client retries once without a conditional header. Network,
+provider, or token-refresh failures keep the account's previous manifest
+visible and clearly marked stale; a `401` triggers at most one token refresh
+and retry before reporting that sign-in is required. No partial response is
+cached. A successful response for one account cannot update another account's
+entry.
+
+Persistent cache data uses the platform-protected application-private storage
+available to the client target; credentials remain in the separate OS
+credential store and are never copied into the cache. If the required
+protection cannot be established, the client reports the storage failure
+instead of silently writing the manifest or credentials to an unprotected
+location. Authelia public-client issuance, platform callbacks, token refresh,
+and protected-storage behavior remain validation gates; this design is not
+evidence that those integrations work.
+
 ## Decisions & Alternatives
 
 | Decision | Current approach | Alternatives considered | Rationale |
@@ -224,6 +279,8 @@ platform compatibility.
 | Native framework | Tauri v2 with a Vite frontend and minimal Rust bootstrap. **[inferred]** | Browser-only application or another native shell. | These are the checked-in crate and configuration. |
 | Current client scope | Placeholder shell only. **[inferred from developer guide]** | Portal-connected client. | The developer guide documents the current non-integration. |
 | Native authentication | Separate public OIDC client with system-browser code flow and PKCE S256. **[owner-selected 2026-11-27; not validated]** | Portal-mediated session/API flow. | Avoids embedding the confidential web secret or assuming shared browser cookies; requires provider and API compatibility. |
+| Native OIDC configuration | Fetch non-secret issuer, public client ID, API audience, and scopes from the Portal's unauthenticated `/.well-known/portal-native-oidc` endpoint. **[owner-selected source; endpoint contract proposed]** | Manual issuer/client ID fields; build-time configuration. | Supports different Portal deployments while keeping the Portal URL as the user's sole endpoint selection. |
+| Manifest cache | Cache only the API's filtered DTO per validated `(iss, sub)`; show it as stale until successful refresh or sign-out. **[issue #12; owner-selected offline policy 2026-11-27]** | No offline cache; time-limited stale display; account-independent cache. | Preserves useful startup while preventing one authenticated account from displaying another account's manifest. |
 | Manual Portal URL check | Rust host optionally resolves an externally supplied well-known document, then probes `/api/manifest` without credentials or redirects; the confirmed origin is saved untrusted. **[issues #15 and #16]** | Probe from the WebView; follow redirects; save on entry. | Keeps the network policy out of the WebView CSP, avoids leaking requests to redirect targets, and preserves confirmation and no-trust criteria. |
 | UI verification | Shared Node E2E assertions use platform adapters. **[inferred]** | Separate assertions for each platform. | `Portal.Client/tests/client.test.js` shares assertions and adapters. |
 

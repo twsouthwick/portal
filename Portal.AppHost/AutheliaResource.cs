@@ -16,7 +16,7 @@ static class AutheliaExtensions
         var hmacSecret = builder.AddParameter("authelia-oidc-hmac-secret", secret: true);
 
         return builder.AddResource(new AutheliaResource(name))
-            .WithImage("authelia/authelia", "4.39.15")
+            .WithImage("authelia/authelia", "4.39.28")
             .WithHttpsEndpoint(port: 8080, targetPort: 9091, name: "https")
             .WithBindMount("./Authelia/configuration.yml", "/config/configuration.yml", isReadOnly: true)
             .WithBindMount("./Authelia/users.yml", "/config/users.yml", isReadOnly: true)

@@ -22,7 +22,7 @@ The owner selected the public-client authentication design on
 - `docs/intent/native-client/native-client-design.md`
 
 ### EARS
-- `docs/intent/native-client/native-client-specs.md` — 17 specs
+- `docs/intent/native-client/native-client-specs.md` — 26 specs
 
 ### Tests
 - `Portal.Client/tests/client.test.js`
@@ -63,12 +63,17 @@ smoke scripts.
 | Shell and configured verification | CLIENT-001, CLIENT-002, CLIENT-003, CLIENT-004, CLIENT-005 | 5 | 0 | 0 known shell gaps |
 | Approved release packaging | CLIENT-006, CLIENT-007 | 2 | 0 | Hosted signing and platform builds remain unverified |
 | Manual Portal URL onboarding | CLIENT-008 to CLIENT-013 | 6 | 0 | UI flow lacks E2E coverage; Android private-CA trust unsupported |
-| Optional well-known discovery | CLIENT-014 to CLIENT-017 | 4 | 0 | Native UI flow lacks end-to-end coverage |
+| Authenticated startup and manifest cache (planned) | CLIENT-014 to CLIENT-022 | 0 | 9 | Native implementation and tests are absent; Authelia and platform validation remain unverified |
+| Optional well-known discovery | CLIENT-023 to CLIENT-026 | 4 | 0 | Native UI flow lacks end-to-end coverage |
 
 **Traceability:** Android signing, ABI, versioning, and release workflow tests
 cite the approved EARS IDs. Portal connectivity and authentication are
-explicitly outside the present implementation. Onboarding unit tests cite
-CLIENT-008 to CLIENT-013; the Tauri commands and UI cite them at entry points.
+explicitly outside the present native-client implementation. CLIENT-014 to
+CLIENT-022 specify planned authenticated startup and cache behavior but have
+no native implementation or test coverage; Authelia and platform validation
+remain unverified. Onboarding unit tests cite CLIENT-008 to CLIENT-013 and
+CLIENT-023 to CLIENT-026; the Tauri commands and UI cite the applicable IDs at
+entry points.
 
 ## Key Findings
 
@@ -90,7 +95,7 @@ CLIENT-008 to CLIENT-013; the Tauri commands and UI cite them at entry points.
    target platforms; the manifest API is implemented in identity-and-access
    (AUTH-008 to AUTH-016), but provider interoperability remains unvalidated.
 2. Verify optional well-known discovery through the native UI on target
-   platforms (CLIENT-014 to CLIENT-017).
+   platforms (CLIENT-023 to CLIENT-026).
 
 ### Nice to Have
 1. Review release packaging behavior on additional physical devices after the

@@ -1,4 +1,4 @@
-// @spec CLIENT-011 CLIENT-012 CLIENT-013 CLIENT-016 CLIENT-017
+// @spec CLIENT-011 CLIENT-012 CLIENT-013 CLIENT-025 CLIENT-026
 const invoke = window.__TAURI__?.core?.invoke;
 
 const form = document.getElementById('portal-url-form');

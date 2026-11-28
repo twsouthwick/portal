@@ -23,7 +23,7 @@ fn config_path(app: &AppHandle) -> Result<PathBuf, String> {
         .map_err(|error| format!("Could not locate the configuration directory: {error}"))
 }
 
-/// @spec CLIENT-008 CLIENT-009 CLIENT-010 CLIENT-011 CLIENT-012 CLIENT-014 CLIENT-015 CLIENT-016 CLIENT-017
+/// @spec CLIENT-008 CLIENT-009 CLIENT-010 CLIENT-011 CLIENT-012 CLIENT-023 CLIENT-024 CLIENT-025 CLIENT-026
 #[tauri::command]
 async fn check_portal_url(
     input: String,
