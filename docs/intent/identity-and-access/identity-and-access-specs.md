@@ -32,5 +32,6 @@ metadata merged in PR #54.
 
 ## Native OIDC configuration discovery (issue #12)
 
-- [ ] **AUTH-020** When `GET /.well-known/portal-native-oidc` is requested and `Oidc:NativeClientId` is configured, the endpoint shall require no authentication and return `issuer`, `clientId`, `apiAudience`, and `scopes` from the configured OIDC authority, native public client ID, API audience, and native scopes; it shall not include a client secret, token, or redirect URI, and shall set `Cache-Control: no-cache`.
-- [ ] **AUTH-021** When `GET /.well-known/portal-native-oidc` is requested without a configured `Oidc:NativeClientId`, the endpoint shall return `404` and shall not expose native OIDC metadata.
+- [x] **AUTH-020** When `GET /.well-known/portal-native-oidc` is requested and `Oidc:NativeClientId` is configured, the endpoint shall require no authentication and return `issuer`, `clientId`, `apiAudience`, and `scopes` from the configured OIDC authority, native public client ID, API audience, and native scopes; it shall not include a client secret, token, or redirect URI, and shall set `Cache-Control: no-cache`.
+- [x] **AUTH-021** When `GET /.well-known/portal-native-oidc` is requested without a configured `Oidc:NativeClientId`, the endpoint shall return `404` and shall not expose native OIDC metadata.
+- [x] **AUTH-022** When `Oidc:NativeScopes` contains non-whitespace characters, the endpoint shall return its whitespace-separated scope names in order as nonempty `scopes` entries; when the setting is absent, empty, or whitespace-only, it shall return `openid` and `groups`.

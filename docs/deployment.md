@@ -299,6 +299,8 @@ Startup does fail without `Oidc:Authority`, `Oidc:ClientId`, and
 | `Oidc__ClientSecret` | Yes | Plain-text client secret; load it from a Secret |
 | `Oidc__RequireHttpsMetadata` | No | Default `true`; keep it `true` in production |
 | `Oidc__ApiAudience` | No | Default `portal-api`; see [Audiences](#audiences) |
+| `Oidc__NativeClientId` | No | Public client ID; without it native OIDC metadata is unavailable |
+| `Oidc__NativeScopes` | No | Whitespace-separated native scopes; defaults to `openid groups` when unset or blank |
 | `SITE_PATH` | For file catalogs | A directory, or a `.zip` file whose root contains `manifest.json` |
 | `ASPNETCORE_FORWARDEDHEADERS_ENABLED` | Behind a TLS proxy | `true`; see [Reverse proxy](#reverse-proxy-and-tls) |
 | `KUBERNETES_SERVICE_HOST` | File-only phase | `""` disables in-cluster detection when no kubeconfig exists |

@@ -13,13 +13,17 @@ public static class NativeOidcMetadataEndpointExtensions
         IConfiguration configuration)
     {
         var oidc = configuration.GetSection("Oidc");
+        var nativeScopes = oidc["NativeScopes"];
+        string[] scopes = string.IsNullOrWhiteSpace(nativeScopes)
+            ? ["openid", "groups"]
+            : nativeScopes.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
         var metadata = new NativeOidcMetadata(
             oidc["Authority"] ?? throw new InvalidOperationException("Oidc:Authority is required."),
             oidc["NativeClientId"] ?? string.Empty,
             oidc["ApiAudience"] ?? "portal-api",
-            oidc.GetSection("NativeScopes").Get<string[]>() ?? ["openid", "groups"]);
+            scopes);
 
-        // @spec AUTH-020 AUTH-021
+        // @spec AUTH-020 AUTH-021 AUTH-022
         endpoints.MapGet("/.well-known/portal-native-oidc", (HttpContext context) =>
         {
             if (string.IsNullOrWhiteSpace(metadata.ClientId))

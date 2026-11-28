@@ -156,12 +156,15 @@ public sealed class ClientManifestEndpointTests
         Assert.Equal(503, body.RootElement.GetProperty("status").GetInt32());
     }
 
-    // @spec AUTH-020
+    // @spec AUTH-020 AUTH-022
     [Fact]
     public async Task NativeOidcMetadata_ExposesConfiguredPublicSettingsWithoutAuthentication()
     {
         using var provider = new MutablePortalProvider(PortalDetails());
-        using var factory = CreateFactory(provider, nativeClientId: "portal-native");
+        using var factory = CreateFactory(
+            provider,
+            nativeClientId: "portal-native",
+            nativeScopes: "  openid \tgroups\n offline_access  ");
         using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
         {
             AllowAutoRedirect = false
@@ -177,13 +180,34 @@ public sealed class ClientManifestEndpointTests
         Assert.Equal("portal-native", metadata.RootElement.GetProperty("clientId").GetString());
         Assert.Equal(Audience, metadata.RootElement.GetProperty("apiAudience").GetString());
         Assert.Equal(
-            ["openid", "groups"],
+            ["openid", "groups", "offline_access"],
             metadata.RootElement.GetProperty("scopes").EnumerateArray()
                 .Select(scope => scope.GetString()!).ToArray());
         Assert.Equal(
             ["apiAudience", "clientId", "issuer", "scopes"],
             metadata.RootElement.EnumerateObject().Select(property => property.Name)
                 .Order(StringComparer.Ordinal).ToArray());
+    }
+
+    // @spec AUTH-022
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData(" \t\n ")]
+    public async Task NativeOidcMetadata_UsesDefaultScopesWhenUnsetOrBlank(string? nativeScopes)
+    {
+        using var provider = new MutablePortalProvider(PortalDetails());
+        using var factory = CreateFactory(provider, nativeClientId: "portal-native", nativeScopes: nativeScopes);
+        using var client = factory.CreateClient();
+
+        var response = await client.GetAsync("/.well-known/portal-native-oidc");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var metadata = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.Equal(
+            ["openid", "groups"],
+            metadata.RootElement.GetProperty("scopes").EnumerateArray()
+                .Select(scope => scope.GetString()!).ToArray());
     }
 
     // @spec AUTH-021
@@ -261,9 +285,10 @@ public sealed class ClientManifestEndpointTests
     private static WebApplicationFactory<Program> CreateFactory(
         MutablePortalProvider provider,
         string environment = "Development",
-        string? nativeClientId = null)
+        string? nativeClientId = null,
+        string? nativeScopes = null)
     {
-        return new ManifestWebApplicationFactory(provider, SigningKey, environment, nativeClientId);
+        return new ManifestWebApplicationFactory(provider, SigningKey, environment, nativeClientId, nativeScopes);
     }
 
     private static HttpRequestMessage AuthorizedRequest(string token)
@@ -310,7 +335,8 @@ public sealed class ClientManifestEndpointTests
         MutablePortalProvider provider,
         SymmetricSecurityKey signingKey,
         string environment,
-        string? nativeClientId) : WebApplicationFactory<Program>
+        string? nativeClientId,
+        string? nativeScopes) : WebApplicationFactory<Program>
     {
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
@@ -322,8 +348,10 @@ public sealed class ClientManifestEndpointTests
             if (nativeClientId is not null)
             {
                 builder.UseSetting("Oidc:NativeClientId", nativeClientId);
-                builder.UseSetting("Oidc:NativeScopes:0", "openid");
-                builder.UseSetting("Oidc:NativeScopes:1", "groups");
+            }
+            if (nativeScopes is not null)
+            {
+                builder.UseSetting("Oidc:NativeScopes", nativeScopes);
             }
             builder.ConfigureServices(services =>
             {

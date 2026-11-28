@@ -89,8 +89,10 @@ and the `groups` scope. The Authelia client claims policy includes `groups` and
 `name` in the ID token for Portal, which currently does not fetch userinfo.
 The separate `portal-native` development client is public and uses PKCE with
 S256, a loopback callback, `offline_access`, and an RS256 access token for
-`portal-api`. The shared claims policy's `access_token` list places `groups` in
-that access JWT; see the native-client notes in `docs/deployment.md`.
+`portal-api`. The AppHost sets `Oidc__NativeScopes` to
+`openid groups offline_access`. The shared claims policy's `access_token`
+list places `groups` in that access JWT; see the native-client notes in
+`docs/deployment.md`.
 
 The authenticated `GET /api/manifest` endpoint accepts a signed JWT access
 token whose issuer matches `Oidc:Authority`, whose audience matches
