@@ -6,7 +6,7 @@ import { appsFor, badges, groupSites, iconClass, isWebUrl, statusLine } from '..
 
 const site = (id, categories = [], extra = {}) => ({ id, name: id, categories, apps: [], ...extra });
 
-async function catalogPage(manifest) {
+async function catalogPage(manifest, { windowsLineEndings = false } = {}) {
   let activeElement;
   const nodes = [];
   function element(tag = 'div') {
@@ -60,7 +60,8 @@ async function catalogPage(manifest) {
     }
     throw new Error(`Unexpected command: ${command}`);
   } } } };
-  const script = (await readFile(new URL('../src/portal.js', import.meta.url), 'utf8')).replace(/^import .*;\n/gm, '');
+  const source = await readFile(new URL('../src/portal.js', import.meta.url), 'utf8');
+  const script = (windowsLineEndings ? source.replace(/\r?\n/g, '\r\n') : source).replace(/^import .*;\r?\n/gm, '');
   runInNewContext(script, {
     appsFor, badges, groupSites, iconClass, isWebUrl, statusLine,
     CSS: { escape: value => value },
@@ -78,6 +79,14 @@ async function catalogPage(manifest) {
     setManifest(value) { currentManifest = value; },
   };
 }
+
+// @spec CLIENT-041 CLIENT-048
+it('runs category navigation with Windows line endings in the client script', async () => {
+  const page = await catalogPage({ name: 'Portal', sites: [site('photos', ['media'])] }, { windowsLineEndings: true });
+  const groups = page.elements['site-groups'];
+  groups.querySelectorAll('.category-card')[0].click();
+  assert.equal(groups.querySelectorAll('.site-card')[0].dataset.siteId, 'photos');
+});
 
 // @spec CLIENT-041 CLIENT-048
 it('starts with categories and drills into one list, returning with keyboard focus', async () => {
