@@ -86,19 +86,33 @@ pub async fn fetch_native_metadata(
     {
         return Err(MetadataError::Invalid);
     }
-    let body = response.bytes().await.map_err(|_| MetadataError::Unreachable)?;
-    if body.len() > METADATA_MAX_BYTES {
-        return Err(MetadataError::Invalid);
-    }
+    let body = read_limited(response).await?;
     serde_json::from_slice::<NativeOidcMetadata>(&body)
         .map_err(|_| MetadataError::Invalid)?
         .validate(policy)
+}
+
+async fn read_limited(mut response: reqwest::Response) -> Result<Vec<u8>, MetadataError> {
+    let mut body = Vec::new();
+    while let Some(chunk) = response
+        .chunk()
+        .await
+        .map_err(|_| MetadataError::Unreachable)?
+    {
+        if body.len().saturating_add(chunk.len()) > METADATA_MAX_BYTES {
+            return Err(MetadataError::Invalid);
+        }
+        body.extend_from_slice(&chunk);
+    }
+    Ok(body)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::test_server::{TestServer, json};
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    use tokio::net::TcpListener;
 
     fn metadata(issuer: &str, scopes: &[&str]) -> NativeOidcMetadata {
         NativeOidcMetadata {
@@ -155,6 +169,52 @@ mod tests {
         assert_eq!(
             fetch_native_metadata(&client, &missing.origin(), OriginPolicy::AllowHttpLoopback).await,
             Err(MetadataError::NotOffered)
+        );
+    }
+
+    // @spec CLIENT-014
+    #[tokio::test]
+    async fn rejects_chunked_metadata_as_soon_as_it_exceeds_limit() {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap();
+        let oversized = vec![b'a'; METADATA_MAX_BYTES + 1];
+        let server = tokio::spawn(async move {
+            let (mut socket, _) = listener.accept().await.unwrap();
+            let mut request = [0; 1024];
+            let _ = socket.read(&mut request).await;
+            socket
+                .write_all(
+                    format!(
+                        "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\nConnection: keep-alive\r\n\r\n{:X}\r\n",
+                        oversized.len()
+                    )
+                    .as_bytes(),
+                )
+                .await
+                .unwrap();
+            socket.write_all(&oversized).await.unwrap();
+            socket.write_all(b"\r\n").await.unwrap();
+            let mut byte = [0];
+            socket.read(&mut byte).await.unwrap()
+        });
+        let client = Client::builder()
+            .timeout(std::time::Duration::from_secs(2))
+            .build()
+            .unwrap();
+        let origin = PortalOrigin::parse(
+            &format!("http://{address}"),
+            OriginPolicy::AllowHttpLoopback,
+        )
+        .unwrap();
+
+        assert_eq!(
+            fetch_native_metadata(&client, &origin, OriginPolicy::AllowHttpLoopback).await,
+            Err(MetadataError::Invalid)
+        );
+        assert_eq!(
+            server.await.unwrap(),
+            0,
+            "client should stop reading the response"
         );
     }
 }

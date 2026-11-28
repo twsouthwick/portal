@@ -7,7 +7,7 @@ use url::Url;
 use crate::oidc::SignInError;
 
 pub const LOOPBACK_PORT: u16 = 49152;
-const CALLBACK_PATH: &str = "/callback";
+const CALLBACK_PATH: &str = "/oidc-callback";
 const MAX_REQUEST_BYTES: usize = 16 * 1024;
 
 const DONE_PAGE: &str = "<!doctype html><html><head><meta charset=\"utf-8\"><title>Digital Fortress</title></head>\
@@ -36,7 +36,7 @@ impl CallbackListener {
         self.listener.local_addr().map(|addr| addr.port()).unwrap_or_default()
     }
 
-    /// Waits for `GET /callback`, answering other requests with an error, and
+    /// Waits for `GET /oidc-callback`, answering other requests with an error, and
     /// returns the callback as a URL on `127.0.0.1`. The listener closes when
     /// this returns or the future is dropped.
     /// @spec CLIENT-030
@@ -99,16 +99,17 @@ mod tests {
         let base = format!("http://127.0.0.1:{port}");
 
         assert_eq!(http.get(format!("{base}/other")).send().await.unwrap().status(), 404);
+        assert_eq!(http.get(format!("{base}/callback")).send().await.unwrap().status(), 404);
         assert_eq!(
-            http.post(format!("{base}/callback?code=x&state=y")).send().await.unwrap().status(),
+            http.post(format!("{base}/oidc-callback?code=x&state=y")).send().await.unwrap().status(),
             404
         );
-        let ok = http.get(format!("{base}/callback?code=x&state=y")).send().await.unwrap();
+        let ok = http.get(format!("{base}/oidc-callback?code=x&state=y")).send().await.unwrap();
         assert_eq!(ok.status(), 200);
         let url = task.await.unwrap();
-        assert_eq!(url.as_str(), format!("{base}/callback?code=x&state=y"));
+        assert_eq!(url.as_str(), format!("{base}/oidc-callback?code=x&state=y"));
         // The listener is closed after the callback.
-        assert!(http.get(format!("{base}/callback")).send().await.is_err());
+        assert!(http.get(format!("{base}/oidc-callback")).send().await.is_err());
     }
 
     // @spec CLIENT-030

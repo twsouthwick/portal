@@ -16,7 +16,7 @@ use portal_onboarding::OriginPolicy;
 use crate::metadata::{NativeOidcMetadata, is_secure_url};
 
 /// Desktop loopback redirect URI.
-pub const DESKTOP_REDIRECT_URI: &str = "http://127.0.0.1:49152/callback";
+pub const DESKTOP_REDIRECT_URI: &str = "http://127.0.0.1:49152/oidc-callback";
 /// Android custom-scheme redirect URI.
 pub const ANDROID_REDIRECT_URI: &str = "digital-fortress:/oidc-callback";
 pub const SIGN_IN_TIMEOUT: Duration = Duration::from_secs(5 * 60);
@@ -40,6 +40,8 @@ pub enum SignInError {
     Provider(String),
     #[error("Could not complete sign-in with the identity provider.")]
     Token,
+    #[error("Could not safely replace the saved sign-in. Try again.")]
+    CredentialStore,
     #[error("Could not reach the identity provider.")]
     Unreachable,
     #[error("The identity provider returned an invalid sign-in.")]
@@ -69,9 +71,13 @@ impl PendingSignIn {
         now >= self.expires_at
     }
 
+    pub fn expires_at(&self) -> Instant {
+        self.expires_at
+    }
+
     #[cfg(test)]
-    pub(crate) fn expire(&mut self) {
-        self.expires_at = Instant::now();
+    pub(crate) fn expire_after(&mut self, duration: Duration) {
+        self.expires_at = Instant::now() + duration;
     }
 }
 
@@ -275,6 +281,7 @@ pub(crate) mod tests {
         pub nonce_override: Option<String>,
         pub audience_override: Option<String>,
         pub refresh_fails: bool,
+        pub token_delay: Duration,
     }
 
     pub struct MockIdp {
@@ -345,6 +352,7 @@ pub(crate) mod tests {
                     let access = format!("access-{}", i.lock().unwrap().len() + 1);
                     match form.get("grant_type").map(String::as_str) {
                         Some("authorization_code") => {
+                            std::thread::sleep(behavior.token_delay);
                             if !form.contains_key("code_verifier") {
                                 return json(400, r#"{"error":"invalid_grant"}"#);
                             }
@@ -425,12 +433,13 @@ pub(crate) mod tests {
             .unwrap()
     }
 
-    // @spec CLIENT-015 CLIENT-032
+    // @spec CLIENT-015 CLIENT-030 CLIENT-032
     #[tokio::test]
     async fn authorization_url_uses_pkce_state_nonce_scopes_and_audience() {
         let idp = mock_idp().await;
         let (_, url) = provider(&idp).await.begin(DESKTOP_REDIRECT_URI).unwrap();
         let query: std::collections::HashMap<String, String> = url.query_pairs().into_owned().collect();
+        assert_eq!(DESKTOP_REDIRECT_URI, "http://127.0.0.1:49152/oidc-callback");
         assert_eq!(query["response_type"], "code");
         assert_eq!(query["client_id"], "portal-native");
         assert_eq!(query["redirect_uri"], DESKTOP_REDIRECT_URI);
@@ -470,7 +479,7 @@ pub(crate) mod tests {
 
         let (mut pending, url) = provider.begin(DESKTOP_REDIRECT_URI).unwrap();
         let callback = authorize(&http, &url, DESKTOP_REDIRECT_URI).await;
-        pending.expire();
+        pending.expire_after(Duration::ZERO);
         assert_eq!(provider.complete(&http, pending, &callback).await, Err(SignInError::Expired));
 
         let (pending, url) = provider.begin(DESKTOP_REDIRECT_URI).unwrap();

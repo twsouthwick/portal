@@ -253,7 +253,10 @@ issuer's standard OIDC discovery document supplies protocol endpoints. The
 client validates both documents over HTTPS and requires the discovered issuer
 to match the Portal-provided issuer. It does not accept issuer or endpoint
 URLs from an authorization callback. This metadata endpoint is unauthenticated
-because it is needed before sign-in and contains no credentials.
+because it is needed before sign-in and contains no credentials. The client
+rejects metadata bodies larger than 64 KiB while streaming the response, so a
+chunked response cannot bypass the limit or force the client to buffer an
+unbounded body.
 
 After sign-in, the client validates the OIDC transaction and obtains an API
 access token for the configured Portal audience. The account key is the
@@ -267,6 +270,10 @@ On restart, before using a stored refresh token, the client compares the issuer
 from the provider it just discovered with the issuer bound to the stored
 account. If they differ, it must not send the refresh token to either issuer;
 it requires a fresh sign-in and keeps the account's cached manifest visible.
+If replacing a different account's credential entry fails, the client
+invalidates the previous entry before accepting a memory-only session. If
+invalidation also fails, it rejects the account switch and retains the prior
+active account so that it cannot be silently restored after restart.
 
 The cache contains only the authenticated, role-filtered client manifest DTO
 returned by `GET /api/manifest`, together with its ETag, account key, and
@@ -289,7 +296,10 @@ provider, or token-refresh failures keep the account's previous manifest
 visible and clearly marked stale; a `401` triggers at most one token refresh
 and retry before reporting that sign-in is required. No partial response is
 cached. A successful response for one account cannot update another account's
-entry.
+entry. The latest validated manifest and ETag also remain bound to the active
+account in memory, even if an encrypted cache write fails, so later refreshes
+can send the matching ETag and failure views can retain the latest data. This
+in-memory entry is discarded on sign-out or account change.
 
 Persistent cache data uses the platform-protected application-private storage
 available to the client target; credentials remain in the separate OS
@@ -314,9 +324,9 @@ discovered issuer must also equal the issuer stored with the account's refresh
 token; a mismatch requires a fresh sign-in without transmitting that token.
 
 **Redirects.** Linux and Windows use the fixed loopback redirect
-`http://127.0.0.1:49152/callback`, matching the local Authelia registration.
+`http://127.0.0.1:49152/oidc-callback`, matching the local Authelia registration.
 The host binds that port on `127.0.0.1` only for one sign-in. It accepts a
-single `GET /callback`, answers other paths with `404`, and reports an error
+single `GET /oidc-callback`, answers other paths with `404`, and reports an error
 if the port is unavailable. Android uses the custom scheme redirect
 `digital-fortress:/oidc-callback`, delivered by the Tauri deep-link plugin.
 Any Android app can register that scheme. The owner accepted this risk:
@@ -326,7 +336,11 @@ a competing handler from blocking sign-in. A verified HTTPS app link was
 rejected because its domain must be fixed at build time, while each
 self-hosted Portal has its own domain. Sign-in times out after five minutes
 and can be cancelled; a callback for a cancelled, expired, or already used
-transaction is rejected.
+transaction is rejected. The selected Portal address cannot be changed in the
+client while sign-in is pending, so a completed authorization result cannot
+replace a different Portal's view. The five-minute expiry and cancellation
+remain active through token exchange and the credential commit; a transaction
+cancelled or expired during exchange cannot update the active account.
 
 **Authorization.** The request uses `response_type=code`, PKCE S256, a fresh
 `state`, a nonce, and the metadata scopes. It also sends
@@ -395,7 +409,7 @@ goes through the Rust host's opener, never WebView navigation.
 | Native authentication | Separate public OIDC client with system-browser code flow and PKCE S256. **[owner-selected 2026-11-27; not validated]** | Portal-mediated session/API flow. | Avoids embedding the confidential web secret or assuming shared browser cookies; requires provider and API compatibility. |
 | Native OIDC configuration | Fetch non-secret issuer, public client ID, API audience, and scopes from the Portal's unauthenticated `/.well-known/portal-native-oidc` endpoint. **[owner-selected source; endpoint contract proposed]** | Manual issuer/client ID fields; build-time configuration. | Supports different Portal deployments while keeping the Portal URL as the user's sole endpoint selection. |
 | Manifest cache | Cache only the API's filtered DTO per validated `(iss, sub)`; show it as stale until successful refresh or sign-out. **[issue #12; owner-selected offline policy 2026-11-27]** | No offline cache; time-limited stale display; account-independent cache. | Preserves useful startup while preventing one authenticated account from displaying another account's manifest. |
-| Sign-in redirect | Fixed `http://127.0.0.1:49152/callback` on desktop; `digital-fortress:/oidc-callback` custom scheme on Android. **[owner-selected 2026-11-28]** | Ephemeral loopback port; verified HTTPS app link; loopback on Android. | Matches the Authelia registration; app links need a build-time domain that self-hosted Portals cannot share. |
+| Sign-in redirect | Fixed `http://127.0.0.1:49152/oidc-callback` on desktop; `digital-fortress:/oidc-callback` custom scheme on Android. **[owner-selected 2026-11-28; desktop path updated 2026-11-28]** | Ephemeral loopback port; verified HTTPS app link; loopback on Android. | Matches the Authelia registration; app links need a build-time domain that self-hosted Portals cannot share. |
 | Cache protection | XChaCha20-Poly1305 file encrypted with a per-account key held in the platform credential store. **[owner-selected 2026-11-28]** | Owner-only file permissions. | Uses the credential store's protection on every target and makes sign-out cryptographically discard the cache. |
 | Site list presentation | Category-grouped card grid with Private/Internal badges and a details view rendering sanitized Markdown and current-platform apps. **[owner-selected 2026-11-28]** | Flat grid with filters; compact list; direct launch; hiding private sites. | Mirrors the web portal's catalog while keeping launch decisions explicit. |
 | Manual Portal URL check | Rust host optionally resolves an externally supplied well-known document, then probes `/api/manifest` without credentials or redirects; the confirmed origin is saved untrusted. **[issues #15 and #16]** | Probe from the WebView; follow redirects; save on entry. | Keeps the network policy out of the WebView CSP, avoids leaking requests to redirect targets, and preserves confirmation and no-trust criteria. |

@@ -503,7 +503,7 @@ For a local reference, see `Portal.AppHost/Authelia/configuration.yml`.
 
 A native app needs a separate public client; it must not use the confidential
 `portal` client's secret. The native client signs in through
-`http://127.0.0.1:49152/callback` on Linux and Windows and through the
+`http://127.0.0.1:49152/oidc-callback` on Linux and Windows and through the
 `digital-fortress:/oidc-callback` deep link on Android, so register both:
 
 ```yaml
@@ -517,7 +517,7 @@ identity_providers:
         claims_policy: 'portal'
         authorization_policy: 'one_factor'
         redirect_uris:
-          - 'http://127.0.0.1:49152/callback'
+          - 'http://127.0.0.1:49152/oidc-callback'
           - 'digital-fortress:/oidc-callback'
         scopes: ['openid', 'groups', 'offline_access']
         response_types: ['code']

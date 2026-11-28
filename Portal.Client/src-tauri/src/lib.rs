@@ -154,13 +154,16 @@ async fn sign_in(
     }
 
     let outcome = tokio::select! {
-        callback = callback => callback.ok_or(SignInError::Cancelled),
+        result = async {
+            let callback = callback.await.ok_or(SignInError::Cancelled)?;
+            session.complete_sign_in(&origin, &callback).await
+        } => result,
         _ = cancel_rx => Err(SignInError::Cancelled),
         _ = tokio::time::sleep(SIGN_IN_TIMEOUT) => Err(SignInError::Expired),
     };
     slot.cancel.lock().unwrap().take();
     match outcome {
-        Ok(callback) => session.complete_sign_in(&origin, &callback).await.map_err(|e| e.to_string()),
+        Ok(view) => Ok(view),
         Err(error) => {
             session.cancel_sign_in().await;
             Err(error.to_string())

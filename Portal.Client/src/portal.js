@@ -177,12 +177,14 @@ function hideDetails() {
   card?.focus();
 }
 
+/** @spec CLIENT-032 */
 function render() {
   const showSignin = view.status === 'signedOut' || (!view.manifest && view.status === 'signInRequired');
   signinPanel.hidden = !showSignin;
   sitesPanel.hidden = showSignin;
   signinTitle.textContent = view.status === 'signInRequired' ? 'Sign in again' : 'Sign in to continue';
   signinButton.disabled = signingIn;
+  changeAddress.disabled = signingIn;
   if (showSignin) return;
   renderHeader();
   renderGrid();
@@ -251,6 +253,7 @@ bannerCancel.addEventListener('click', () => invoke('cancel_sign_in'));
 refreshButton.addEventListener('click', refresh);
 signoutButton.addEventListener('click', signOut);
 changeAddress.addEventListener('click', () => {
+  if (signingIn) return;
   portalView.hidden = true;
   onboardingView.hidden = false;
   $('portal-url')?.focus();

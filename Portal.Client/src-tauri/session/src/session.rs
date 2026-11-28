@@ -46,6 +46,7 @@ struct Active {
     access_token: Option<String>,
     expires_at: Option<Instant>,
     persisted: bool,
+    cached_manifest: Option<CachedManifest>,
 }
 
 impl Active {
@@ -60,6 +61,8 @@ struct State {
     active: Option<Active>,
     provider: Option<(String, OidcProvider)>,
     pending: Option<PendingSignIn>,
+    pending_id: Option<u64>,
+    next_pending_id: u64,
 }
 
 /// Owns the signed-in account, its tokens, and its encrypted manifest cache.
@@ -99,7 +102,9 @@ impl SessionManager {
     }
 
     fn read(&self, active: &Active) -> Option<CachedManifest> {
-        read_cache(&self.data_dir, &active.stored.cache_key, &active.stored.account)
+        active.cached_manifest.clone().or_else(|| {
+            read_cache(&self.data_dir, &active.stored.cache_key, &active.stored.account)
+        })
     }
 
     fn load(&self, state: &mut State) {
@@ -108,7 +113,14 @@ impl SessionManager {
         }
         state.loaded = true;
         if let Ok(Some(stored)) = self.store.load() {
-            state.active = Some(Active { stored, access_token: None, expires_at: None, persisted: true });
+            let cached_manifest = read_cache(&self.data_dir, &stored.cache_key, &stored.account);
+            state.active = Some(Active {
+                stored,
+                access_token: None,
+                expires_at: None,
+                persisted: true,
+                cached_manifest,
+            });
         }
     }
 
@@ -229,9 +241,9 @@ impl SessionManager {
                 cache.as_ref().and_then(|c| c.etag.clone())
             };
             let outcome = fetch_manifest(&self.http, origin, &token, etag.as_deref()).await;
-            let active = state.active.as_ref().expect("active session");
             match outcome {
                 FetchOutcome::Updated { manifest, etag } => {
+                    let active = state.active.as_mut().expect("active session");
                     let updated = CachedManifest {
                         account: active.stored.account.clone(),
                         etag,
@@ -243,13 +255,17 @@ impl SessionManager {
                 FetchOutcome::NotModified => match cache.take() {
                     Some(mut existing) if etag.is_some() => {
                         existing.refreshed_at = now_seconds();
+                        let active = state.active.as_mut().expect("active session");
                         return self.store_and_view(active, existing);
                     }
                     other if !retried_not_modified => {
                         cache = other;
                         retried_not_modified = true;
                     }
-                    other => return self.view(active, SessionStatus::Failed, other),
+                    other => {
+                        let active = state.active.as_ref().expect("active session");
+                        return self.view(active, SessionStatus::Failed, other);
+                    }
                 },
                 FetchOutcome::Unauthorized if !retried_unauthorized => retried_unauthorized = true,
                 FetchOutcome::Unauthorized => {
@@ -259,14 +275,19 @@ impl SessionManager {
                     return self.view(active, SessionStatus::SignInRequired, cache);
                 }
                 FetchOutcome::Failed(FetchFailure::Network) => {
+                    let active = state.active.as_ref().expect("active session");
                     return self.view(active, SessionStatus::Offline, cache);
                 }
-                FetchOutcome::Failed(_) => return self.view(active, SessionStatus::Failed, cache),
+                FetchOutcome::Failed(_) => {
+                    let active = state.active.as_ref().expect("active session");
+                    return self.view(active, SessionStatus::Failed, cache);
+                }
             }
         }
     }
 
-    fn store_and_view(&self, active: &Active, cached: CachedManifest) -> SessionView {
+    fn store_and_view(&self, active: &mut Active, cached: CachedManifest) -> SessionView {
+        active.cached_manifest = Some(cached.clone());
         let mut view = self.view(active, SessionStatus::UpToDate, Some(cached.clone()));
         // Without a persisted cache key the ciphertext could never be read again.
         if active.persisted
@@ -283,54 +304,120 @@ impl SessionManager {
     pub async fn begin_sign_in(&self, origin: &PortalOrigin, redirect_uri: &str) -> Result<Url, SignInError> {
         let mut state = self.state.lock().await;
         state.pending = None;
+        state.pending_id = None;
         // Re-fetch metadata for each sign-in.
         state.provider = None;
         let provider = self.provider(&mut state, origin).await?;
         let (pending, url) = provider.begin(redirect_uri)?;
+        state.next_pending_id = state.next_pending_id.wrapping_add(1);
+        state.pending_id = Some(state.next_pending_id);
         state.pending = Some(pending);
         Ok(url)
     }
 
     /// @spec CLIENT-032
     pub async fn cancel_sign_in(&self) {
-        self.state.lock().await.pending = None;
+        let mut state = self.state.lock().await;
+        state.pending = None;
+        state.pending_id = None;
     }
 
     /// Completes sign-in from the callback, persists the session, and loads
     /// the manifest.
-    /// @spec CLIENT-015 CLIENT-033 CLIENT-034
+    /// @spec CLIENT-015 CLIENT-032 CLIENT-033 CLIENT-034
     pub async fn complete_sign_in(&self, origin: &PortalOrigin, callback: &Url) -> Result<SessionView, SignInError> {
-        {
+        let (transaction_id, pending, expires_at, provider) = {
             let mut state = self.state.lock().await;
             self.load(&mut state);
             let pending = state.pending.take().ok_or(SignInError::Cancelled)?;
+            let transaction_id = state.pending_id.ok_or(SignInError::Cancelled)?;
+            if pending.is_expired(Instant::now()) {
+                state.pending_id = None;
+                return Err(SignInError::Expired);
+            }
             let provider = match &state.provider {
                 Some((cached_origin, provider)) if cached_origin == origin.as_str() => provider.clone(),
-                _ => return Err(SignInError::Cancelled),
-            };
-            let tokens = provider.complete(&self.http, pending, callback).await?;
-            let account = Account {
-                origin: origin.as_str().to_owned(),
-                issuer: tokens.issuer,
-                subject: tokens.subject.ok_or(SignInError::InvalidIdToken)?,
-            };
-            let cache_key = match state.active.take() {
-                Some(previous) if previous.stored.account == account => previous.stored.cache_key,
-                Some(previous) => {
-                    let _ = delete_cache(&self.data_dir, &previous.stored.account);
-                    CacheKey::generate().map_err(|_| SignInError::Token)?
+                _ => {
+                    state.pending_id = None;
+                    return Err(SignInError::Cancelled);
                 }
-                None => CacheKey::generate().map_err(|_| SignInError::Token)?,
             };
-            let stored = StoredSession { account, refresh_token: tokens.refresh_token, cache_key };
-            let persisted = self.store.save(&stored).is_ok();
-            state.active = Some(Active {
-                stored,
-                access_token: Some(tokens.access_token),
-                expires_at: tokens.expires_at,
-                persisted,
-            });
+            let expires_at = pending.expires_at();
+            (transaction_id, pending, expires_at, provider)
+        };
+        let tokens = match tokio::time::timeout_at(
+            tokio::time::Instant::from_std(expires_at),
+            provider.complete(&self.http, pending, callback),
+        )
+        .await
+        {
+            Ok(Ok(tokens)) => tokens,
+            Ok(Err(error)) => {
+                let mut state = self.state.lock().await;
+                if state.pending_id == Some(transaction_id) {
+                    state.pending_id = None;
+                }
+                return Err(error);
+            }
+            Err(_) => {
+                let mut state = self.state.lock().await;
+                if state.pending_id == Some(transaction_id) {
+                    state.pending_id = None;
+                }
+                return Err(SignInError::Expired);
+            }
+        };
+        let mut state = self.state.lock().await;
+        if state.pending_id != Some(transaction_id) {
+            return Err(SignInError::Cancelled);
         }
+        if expires_at <= Instant::now() {
+            state.pending_id = None;
+            return Err(SignInError::Expired);
+        }
+        state.pending_id = None;
+        let account = Account {
+            origin: origin.as_str().to_owned(),
+            issuer: tokens.issuer,
+            subject: tokens.subject.ok_or(SignInError::InvalidIdToken)?,
+        };
+        let same_account = state
+            .active
+            .as_ref()
+            .is_some_and(|active| active.stored.account == account);
+        let (cache_key, cached_manifest) = match state.active.as_ref() {
+            Some(previous) if same_account => (
+                previous.stored.cache_key.clone(),
+                previous.cached_manifest.clone(),
+            ),
+            _ => (CacheKey::generate().map_err(|_| SignInError::Token)?, None),
+        };
+        let stored = StoredSession { account: account.clone(), refresh_token: tokens.refresh_token, cache_key };
+        let persisted = match self.store.save(&stored) {
+            Ok(()) => true,
+            Err(_) => {
+                let replacing_persisted_account = state.active.as_ref().is_some_and(|previous| {
+                    previous.persisted && previous.stored.account != account
+                });
+                if replacing_persisted_account {
+                    self.store.delete().map_err(|_| SignInError::CredentialStore)?;
+                }
+                false
+            }
+        };
+        if let Some(previous) = state.active.as_ref()
+            && previous.stored.account != account
+        {
+            let _ = delete_cache(&self.data_dir, &previous.stored.account);
+        }
+        state.active = Some(Active {
+            stored,
+            access_token: Some(tokens.access_token),
+            expires_at: tokens.expires_at,
+            persisted,
+            cached_manifest,
+        });
+        drop(state);
         Ok(self.refresh(origin).await)
     }
 
@@ -340,6 +427,7 @@ impl SessionManager {
         let mut state = self.state.lock().await;
         self.load(&mut state);
         state.pending = None;
+        state.pending_id = None;
         let mut warning = None;
         if let Some(active) = state.active.take()
             && let Err(error) = delete_cache(&self.data_dir, &active.stored.account)
@@ -366,6 +454,40 @@ mod tests {
 
     /// (status, etag) per manifest request.
     type Script = Vec<(u16, Option<&'static str>)>;
+
+    #[derive(Default)]
+    struct FaultingCredentialStore {
+        inner: MemoryCredentialStore,
+        fail_save: StdMutex<bool>,
+        fail_delete: StdMutex<bool>,
+    }
+
+    impl FaultingCredentialStore {
+        fn set_failures(&self, save: bool, delete: bool) {
+            *self.fail_save.lock().unwrap() = save;
+            *self.fail_delete.lock().unwrap() = delete;
+        }
+    }
+
+    impl CredentialStore for FaultingCredentialStore {
+        fn load(&self) -> Result<Option<StoredSession>, crate::credentials::CredentialError> {
+            self.inner.load()
+        }
+
+        fn save(&self, session: &StoredSession) -> Result<(), crate::credentials::CredentialError> {
+            if *self.fail_save.lock().unwrap() {
+                return Err(crate::credentials::CredentialError("save failed".into()));
+            }
+            self.inner.save(session)
+        }
+
+        fn delete(&self) -> Result<(), crate::credentials::CredentialError> {
+            if *self.fail_delete.lock().unwrap() {
+                return Err(crate::credentials::CredentialError("delete failed".into()));
+            }
+            self.inner.delete()
+        }
+    }
 
     /// Portal script per manifest request; metadata always served.
     struct Portal {
@@ -583,13 +705,153 @@ mod tests {
     #[tokio::test]
     async fn unavailable_credential_store_keeps_session_in_memory_only() {
         let idp = mock_idp().await;
-        let portal = portal(&idp, vec![]).await;
+        let portal = portal(&idp, vec![(200, Some("\"v1\"")), (503, None), (503, None)]).await;
         let dir = tempfile::tempdir().unwrap();
         let manager = manager(dir.path(), Arc::new(MemoryCredentialStore::unavailable()));
         let view = sign_in(&manager, &portal.server.origin()).await;
         assert_eq!(view.status, SessionStatus::UpToDate);
         assert_eq!(view.warning.as_deref(), Some(NOT_PERSISTED_WARNING));
         assert!(!dir.path().join(crate::cache::CACHE_DIR).exists());
+
+        let failed = manager.refresh(&portal.server.origin()).await;
+        assert_eq!(failed.status, SessionStatus::Failed);
+        assert_eq!(failed.manifest.as_ref().unwrap().name, "Home");
+        assert_eq!(manager.refresh(&portal.server.origin()).await.manifest.unwrap().name, "Home");
+        assert_eq!(portal.manifest_requests()[2].header("if-none-match"), Some("\"v1\""));
+    }
+
+    // @spec CLIENT-019
+    #[tokio::test]
+    async fn keeps_new_manifest_in_memory_when_cache_write_fails() {
+        let idp = mock_idp().await;
+        let portal = portal(
+            &idp,
+            vec![(200, Some("\"v1\"")), (200, Some("\"v2\"")), (503, None)],
+        )
+        .await;
+        let dir = tempfile::tempdir().unwrap();
+        let manager = manager(dir.path(), Arc::new(MemoryCredentialStore::default()));
+        let origin = portal.server.origin();
+        sign_in(&manager, &origin).await;
+
+        let cache_dir = dir.path().join(crate::cache::CACHE_DIR);
+        std::fs::remove_dir_all(&cache_dir).unwrap();
+        std::fs::write(&cache_dir, "not a directory").unwrap();
+
+        let updated = manager.refresh(&origin).await;
+        assert_eq!(updated.status, SessionStatus::UpToDate);
+        assert_eq!(updated.manifest.as_ref().unwrap().name, "Home");
+        assert!(updated.warning.is_some());
+
+        let failed = manager.refresh(&origin).await;
+        assert_eq!(failed.status, SessionStatus::Failed);
+        assert_eq!(failed.manifest.unwrap().name, "Home");
+        assert_eq!(portal.manifest_requests()[2].header("if-none-match"), Some("\"v2\""));
+    }
+
+    // @spec CLIENT-034
+    #[tokio::test]
+    async fn failed_account_save_invalidates_previous_persisted_session() {
+        let idp = mock_idp().await;
+        let portal_a = portal(&idp, vec![]).await;
+        let portal_b = portal(&idp, vec![]).await;
+        let dir = tempfile::tempdir().unwrap();
+        let store = Arc::new(FaultingCredentialStore::default());
+        let session = manager(dir.path(), store.clone());
+        let origin_a = portal_a.server.origin();
+        let origin_b = portal_b.server.origin();
+        sign_in(&session, &origin_a).await;
+        assert!(store.load().unwrap().is_some());
+
+        store.set_failures(true, false);
+        let memory_only = sign_in(&session, &origin_b).await;
+
+        assert_eq!(memory_only.status, SessionStatus::UpToDate);
+        assert_eq!(memory_only.warning.as_deref(), Some(NOT_PERSISTED_WARNING));
+        assert!(store.load().unwrap().is_none());
+        let restarted = manager(dir.path(), store);
+        assert_eq!(restarted.startup(&origin_a).await.status, SessionStatus::SignedOut);
+        assert_eq!(restarted.startup(&origin_b).await.status, SessionStatus::SignedOut);
+    }
+
+    // @spec CLIENT-034
+    #[tokio::test]
+    async fn failed_credential_invalidation_rejects_account_switch() {
+        let idp = mock_idp().await;
+        let portal_a = portal(&idp, vec![]).await;
+        let portal_b = portal(&idp, vec![]).await;
+        let dir = tempfile::tempdir().unwrap();
+        let store = Arc::new(FaultingCredentialStore::default());
+        let session = manager(dir.path(), store.clone());
+        let origin_a = portal_a.server.origin();
+        let origin_b = portal_b.server.origin();
+        sign_in(&session, &origin_a).await;
+        let previous = store.load().unwrap();
+        store.set_failures(true, true);
+
+        let url = session.begin_sign_in(&origin_b, DESKTOP_REDIRECT_URI).await.unwrap();
+        let callback = authorize(&crate::http_client().unwrap(), &url, DESKTOP_REDIRECT_URI).await;
+        assert_eq!(
+            session.complete_sign_in(&origin_b, &callback).await,
+            Err(SignInError::CredentialStore)
+        );
+
+        assert_eq!(store.load().unwrap(), previous);
+        assert_eq!(session.startup(&origin_a).await.status, SessionStatus::Refreshing);
+        assert_eq!(session.startup(&origin_b).await.status, SessionStatus::SignedOut);
+    }
+
+    // @spec CLIENT-032
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn cancellation_during_token_exchange_prevents_session_commit() {
+        let idp = mock_idp().await;
+        idp.behavior.lock().unwrap().token_delay = Duration::from_millis(100);
+        let portal = portal(&idp, vec![]).await;
+        let dir = tempfile::tempdir().unwrap();
+        let store = Arc::new(MemoryCredentialStore::default());
+        let manager = Arc::new(manager(dir.path(), store.clone()));
+        let origin = portal.server.origin();
+        let url = manager.begin_sign_in(&origin, DESKTOP_REDIRECT_URI).await.unwrap();
+        let callback = authorize(&crate::http_client().unwrap(), &url, DESKTOP_REDIRECT_URI).await;
+        let completing = {
+            let manager = manager.clone();
+            tokio::spawn(async move { manager.complete_sign_in(&origin, &callback).await })
+        };
+        while idp.token_requests().is_empty() {
+            tokio::task::yield_now().await;
+        }
+        manager.cancel_sign_in().await;
+
+        assert_eq!(completing.await.unwrap(), Err(SignInError::Cancelled));
+        assert!(store.load().unwrap().is_none());
+    }
+
+    // @spec CLIENT-032
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn expiry_during_token_exchange_prevents_session_commit() {
+        let idp = mock_idp().await;
+        idp.behavior.lock().unwrap().token_delay = Duration::from_millis(100);
+        let portal = portal(&idp, vec![]).await;
+        let dir = tempfile::tempdir().unwrap();
+        let store = Arc::new(MemoryCredentialStore::default());
+        let session = Arc::new(manager(dir.path(), store.clone()));
+        let origin = portal.server.origin();
+        let url = session.begin_sign_in(&origin, DESKTOP_REDIRECT_URI).await.unwrap();
+        let callback = authorize(&crate::http_client().unwrap(), &url, DESKTOP_REDIRECT_URI).await;
+        {
+            let mut state = session.state.lock().await;
+            state.pending.as_mut().unwrap().expire_after(Duration::from_millis(30));
+        }
+        let completing = {
+            let session = session.clone();
+            tokio::spawn(async move { session.complete_sign_in(&origin, &callback).await })
+        };
+        while idp.token_requests().is_empty() {
+            tokio::task::yield_now().await;
+        }
+
+        assert_eq!(completing.await.unwrap(), Err(SignInError::Expired));
+        assert!(store.load().unwrap().is_none());
     }
 
     // @spec CLIENT-032

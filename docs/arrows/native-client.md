@@ -79,11 +79,11 @@ smoke scripts.
 | Sign-in, encrypted cache, and site list | CLIENT-030 to CLIENT-042 | 13 | 0 | Real Authelia, Android deep link/keystore, and native UI E2E remain unverified |
 
 **Traceability:** Android signing, ABI, versioning, and release workflow tests
-cite the approved EARS IDs. CLIENT-014 to CLIENT-022 and CLIENT-030 to CLIENT-035 are
-cited by `portal-session` unit tests (mock IdP, mock keyring) and the Tauri
-commands; CLIENT-036 to CLIENT-042 are cited by `sites.test.js`, `portal.js`,
-and `external.rs`. They remain `[ ]` until validated against Authelia and on
-native targets. Onboarding unit tests cite CLIENT-008 to CLIENT-013,
+cite the approved EARS IDs. CLIENT-014 to CLIENT-022, CLIENT-030 to CLIENT-035,
+and CLIENT-043 are cited by `portal-session` unit tests (mock IdP, mock keyring)
+and the Tauri commands; CLIENT-036 to CLIENT-042 are cited by `sites.test.js`,
+`portal.js`, and `external.rs`. They remain `[ ]` until validated against
+Authelia and on native targets. Onboarding unit tests cite CLIENT-008 to CLIENT-013,
 CLIENT-023 to CLIENT-026, and CLIENT-028 to CLIENT-029; the Tauri commands
 and UI cite the applicable IDs at entry points. CLIENT-027 has been checked at
 320 and 800 CSS pixels in a browser but has no automated viewport test.

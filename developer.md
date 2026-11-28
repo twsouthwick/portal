@@ -218,7 +218,7 @@ cargo test --locked -p portal-onboarding
 
 After the origin is saved, the client signs in with the system browser using
 the public `portal-native` OIDC client (authorization code with PKCE). Desktop
-builds receive the callback on `http://127.0.0.1:49152/callback`; Android uses
+builds receive the callback on `http://127.0.0.1:49152/oidc-callback`; Android uses
 `digital-fortress:/oidc-callback`. Both must be registered with the provider
 (see `docs/deployment.md`). The refresh token and a random cache key are kept
 in the OS credential store (Secret Service, Windows Credential Manager, or the
