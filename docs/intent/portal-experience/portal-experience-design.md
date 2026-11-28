@@ -18,6 +18,21 @@ group/order sites by the available categories and usage frequency. Cards
 display site metadata and may open usage instructions in a Markdown modal.
 Main layout provides the portal header and logout action.
 
+### Owner-approved layout restoration
+
+The Fluent UI v5 migration preserves the existing responsive grid and its
+24px inter-card gap, rather than introducing a new layout. Cards fill their
+grid row (at least 250px high), with launch actions at the bottom; longer
+content can increase the row height without clipping. The header sizes to its
+contents so its title, view selector, and sign-out action remain visible,
+including when they stack on narrow screens. Category and site headings use
+the v5 text component to retain a visual hierarchy above body descriptions.
+
+The deployed regression was confirmed in the browser: v5 cards use
+`height: fit-content` inside 250px wrappers, while the layout header defaults
+to a 44px row and the old label `Typo` parameter is no longer supported.
+Responsive column counts and the grid gap were working and are not changed.
+
 ## Browser-Aware Presentation and Launch
 
 `SiteProvider` obtains browser information after first render, filters private

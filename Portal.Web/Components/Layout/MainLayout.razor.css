@@ -36,7 +36,7 @@
     flex-shrink: 0;
 }
 
-.header-selector ::deep fluent-stack {
+.header-selector ::deep .fluent-stack-horizontal {
     padding: 0;
 }
 
@@ -93,13 +93,13 @@
         width: 100%;
     }
 
-    .header-selector ::deep fluent-stack {
+    .header-selector ::deep .fluent-stack-horizontal {
         width: 100%;
         flex-wrap: wrap;
         gap: 0.5rem;
     }
 
-    .header-selector ::deep fluent-select {
+    .header-selector ::deep fluent-field {
         width: 100% !important;
         max-width: 100%;
         flex: 1;

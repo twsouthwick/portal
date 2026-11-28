@@ -4,7 +4,8 @@
     <SiteProvider>
         <CascadingValue TValue="SiteViewMode" Value="viewMode" Name="CurrentViewMode">
             <FluentLayout>
-                <FluentLayoutItem Area="LayoutArea.Header">
+                @* @spec UX-010 *@
+                <FluentLayoutItem Area="LayoutArea.Header" Height="auto">
                     <header class="portal-header">
                     <PageTitle>@context.Name</PageTitle>
 

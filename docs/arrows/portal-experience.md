@@ -5,7 +5,7 @@ launch behavior in the web portal.
 
 ## Status
 
-**MAPPED** — first reconstructed 2026-11-27. Eight EARS requirements describe
+**MAPPED** — first reconstructed 2026-11-27. Eleven EARS requirements describe
 current UI behavior; several have no direct component or browser tests.
 
 ## References
@@ -17,10 +17,12 @@ current UI behavior; several have no direct component or browser tests.
 - `docs/intent/portal-experience/portal-experience-design.md`
 
 ### EARS
-- `docs/intent/portal-experience/portal-experience-specs.md` — 8 specs
+- `docs/intent/portal-experience/portal-experience-specs.md` — 11 specs
 
 ### Tests
-- No direct component or browser automation tests were found for the web UI.
+- `Portal.Web.Tests/PortalExperienceTests.cs` — static component rendering
+  regression for card height and heading markup (UX-009, UX-011).
+- No browser automation tests cover viewport sizing or computed layout.
 - Related server test: `Portal.Web.Tests/AuthenticationTests.cs`
 
 ### Code
@@ -44,10 +46,12 @@ abstraction; TypeScript launch, detection, and storage modules.
 | Category | Spec IDs | Implemented | Deferred | Gaps |
 |---|---|---:|---:|---:|
 | Discovery, browser filtering, launch, usage | UX-001, UX-002, UX-003, UX-004, UX-005, UX-006, UX-007, UX-008 | 8 | 0 | 0 known implementation gaps |
+| Card layout, header sizing, typography | UX-009, UX-010, UX-011 | 3 | 0 | Automated computed-layout and viewport coverage missing |
 
-**Traceability:** UI code and tests have no `@spec` annotations. The inspected
-test projects contain no direct web component/browser tests; the status is
-based on implementation inspection.
+**Traceability:** Layout entry points cite UX-009–011; the component rendering
+test cites UX-009 and UX-011. UX-001–008 still lack direct UI test citations.
+Computed layout was checked using a temporary browser preview, not automated
+viewport tests; the segment has not been audited.
 
 ## Key Findings
 
@@ -57,6 +61,9 @@ based on implementation inspection.
    presentation behavior (`Portal.Web/Components/SiteCard.razor:43-56`).
 3. App protocol attempts, store fallback, and site navigation are implemented
    in the site launcher/browser abstraction; no direct UI test was found.
+4. Fluent UI v5 cards require explicit row filling; header height is automatic,
+   and category/site headings use the supported text component. The repair
+   preserves grid breakpoints and its 24px gap.
 
 ## Work Required
 

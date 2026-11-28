@@ -1,8 +1,20 @@
 /* Card wrapper */
 .subsite-card-wrapper {
+    display: flex;
     height: 100%;
     min-height: 250px;
     transition: transform 0.3s ease;
+}
+
+.subsite-card-wrapper ::deep .subsite-card {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+}
+
+.subsite-card-wrapper ::deep fluent-text {
+    overflow-wrap: anywhere;
 }
 
 .subsite-card-wrapper:hover {

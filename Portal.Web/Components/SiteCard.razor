@@ -3,9 +3,10 @@
 @inject IDialogService DialogService
 @inject ISiteClickTracker ClickTracker
 
+@* @spec UX-009 UX-011 *@
 <div class="subsite-card-wrapper">
-    <FluentCard Class="subsite-card" Style="@CardStyle" @onclick="HandleCardClick">
-        <FluentStack Orientation="Orientation.Vertical" Width="100%" VerticalGap="12" Style="height: 100%;">
+    <FluentCard Class="subsite-card" Height="100%" Style="@CardStyle" @onclick="HandleCardClick">
+        <FluentStack Orientation="Orientation.Vertical" Width="100%" VerticalGap="12" Style="flex: 1;">
             @if (IsDisabledDueToRemote)
             {
                 <FluentMessageBar Title="Remote Connection Required" Intent="@MessageBarIntent.Warning" AllowDismiss="false" />
@@ -16,10 +17,10 @@
             </div>
 
             <FluentStack Orientation="Orientation.Vertical" VerticalGap="8" Style="flex: 1;">
-                <FluentLabel Typo="Typography.H5">@Site.Name</FluentLabel>
-                <FluentLabel Typo="Typography.Body" Style="color: var(--neutral-foreground-rest);">
+                <FluentText As="TextTag.H3" Size="TextSize.Size400" Weight="TextWeight.Semibold">@Site.Name</FluentText>
+                <FluentText Size="TextSize.Size300" Style="color: var(--neutral-foreground-rest);">
                     @Site.Description
-                </FluentLabel>
+                </FluentText>
             </FluentStack>
 
             <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
