@@ -44,11 +44,11 @@ export function configureAndroidGradleSigning(source) {
     `${buildIndent}signingConfigs {`,
     `${buildIndent}    create("portalRelease") {`,
     `${buildIndent}        val keystorePropertiesFile = rootProject.file("keystore.properties")`,
-    `${buildIndent}        val keystoreProperties = java.util.Properties()`,
+    `${buildIndent}        val keystoreProperties = Properties()`,
     `${buildIndent}        if (!keystorePropertiesFile.exists()) {`,
     `${buildIndent}            throw GradleException("Missing Android release keystore properties")`,
     `${buildIndent}        }`,
-    `${buildIndent}        keystoreProperties.load(java.io.FileInputStream(keystorePropertiesFile))`,
+    `${buildIndent}        keystorePropertiesFile.inputStream().use { keystoreProperties.load(it) }`,
     `${buildIndent}        keyAlias = keystoreProperties["keyAlias"] as String`,
     `${buildIndent}        keyPassword = keystoreProperties["password"] as String`,
     `${buildIndent}        storeFile = file(keystoreProperties["storeFile"] as String)`,
@@ -63,6 +63,10 @@ export function configureAndroidGradleSigning(source) {
     releaseBuildTypes[0][0],
     `${releaseIndent}getByName("release") {\n${releaseIndent}    signingConfig = signingConfigs.getByName("portalRelease")`,
   );
+  // Inside android {}, `java` resolves to a Gradle extension, so the type must be imported; duplicate imports are ambiguous.
+  if (!/^import java\.util\.Properties\s*$/m.test(configured)) {
+    configured = `import java.util.Properties\n${configured}`;
+  }
   return configured;
 }
 
